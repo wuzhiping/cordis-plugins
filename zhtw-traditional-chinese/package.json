@@ -1,0 +1,28 @@
+{
+  "name": "zhtw-traditional-chinese",
+  "version": "0.1.1",
+  "description": "Traditional Chinese (zh-TW) locale for the DSH Web GUI: monkey-patches LocaleRuntime, registers a zh-TW option in the Language picker, and converts Simplified Chinese strings from 27 namespaces into Traditional on the fly.",
+  "private": true,
+  "type": "commonjs",
+  "main": "lib/client.js",
+  "exports": {
+    ".": "./lib/client.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/client.js",
+    "cordis.patch.yml",
+    "package.json"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,10 @@
+# zhtw-traditional-chinese bundle patch.
+#
+# Adds a single host plugin entry whose `name` is our own package name.
+# The dsh-client-modules host half then scans this entry, reads our
+# package.json `dsh.client.platform: "web"` declaration, and composes
+# `window.__DSH_BOOT__` so the browser fetches /plugins/zhtw-traditional-chinese/client.js.
+# The factory inside that bundle patches LocaleRuntime and switches to
+# `zh-TW` as the active locale.
+- id: zhtw-traditional-chinese
+  name: zhtw-traditional-chinese
