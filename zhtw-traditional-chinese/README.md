@@ -29,7 +29,8 @@ monorepo under `zhtw-traditional-chinese/`.
 Add it to the `web` profile:
 
 ```sh
-dsh plugin --profile web add github:wuzhiping/cordis-plugins/zhtw-traditional-chinese
+dsh plugin --profile web add "github:wuzhiping/cordis-plugins#path:/zhtw-traditional-chinese"
+
 ```
 
 If you cloned the monorepo locally, use the relative path:
