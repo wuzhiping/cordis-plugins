@@ -14,7 +14,7 @@ registry picks up their `lib/client.js`.
 
 | Subdirectory | Purpose | Install |
 |--------------|---------|---------|
-| [`zhtw-traditional-chinese/`](./zhtw-traditional-chinese) | Adds 繁體中文 (zh-TW) to the Web GUI language picker; converts Simplified Chinese strings from all 27 DSH namespaces to Traditional on the fly | `dsh plugin --profile web add web add "github:wuzhiping/cordis-plugins#path:/zhtw-traditional-chinese"` |
+| [`zhtw-traditional-chinese/`](./zhtw-traditional-chinese) | Adds 繁體中文 (zh-TW) to the Web GUI language picker; converts Simplified Chinese strings from all 27 DSH namespaces to Traditional on the fly | `dsh plugin --profile web add  "github:wuzhiping/cordis-plugins#path:/zhtw-traditional-chinese"` |
 
 Each subdirectory is also a standalone DSH install target — you can add
 `file:./zhtw-traditional-chinese` while inside this repo, or use the GitHub
