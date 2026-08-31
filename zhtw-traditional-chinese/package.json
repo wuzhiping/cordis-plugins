@@ -1,6 +1,6 @@
 {
   "name": "zhtw-traditional-chinese",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Traditional Chinese (zh-TW) locale for the DSH Web GUI: monkey-patches LocaleRuntime, registers a zh-TW option in the Language picker, and converts Simplified Chinese strings from 27 namespaces into Traditional on the fly.",
   "private": true,
   "type": "commonjs",

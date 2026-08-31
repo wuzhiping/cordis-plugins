@@ -128,6 +128,33 @@ window.__ModuleLoader__.load({
       return result;
     }
 
+    // === zh-TW choice persistence ===
+    // The framework's `locale.preference` schema only accepts 'zh'/'en', so
+    // `host.set('preference', 'zh-TW')` is rejected by the host and the choice
+    // is never saved. On restart the async settings mirror then calls adopt(),
+    // which re-applies the persisted preference (or the browser language) and
+    // overrides the zh-TW forced at plugin boot -- hence the user must re-select
+    // Traditional Chinese after every restart. Fix: record the choice in
+    // localStorage and re-assert zh-TW after adopt() unless the user explicitly
+    // picked zh/en (which the framework itself persists).
+    var STORAGE_KEY = "zhtw-traditional-chinese:preference";
+
+    function readStoredChoice() {
+      try {
+        if (typeof localStorage === "undefined") return null;
+        return localStorage.getItem(STORAGE_KEY);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function writeStoredChoice(id) {
+      try {
+        if (typeof localStorage === "undefined") return;
+        localStorage.setItem(STORAGE_KEY, id);
+      } catch (e) {}
+    }
+
     return {
       inject: ["locale"],
       apply: function (ctx) {
@@ -165,9 +192,14 @@ window.__ModuleLoader__.load({
           var originalSetLocale = locale.setLocale.bind(locale);
           locale.setLocale = function patchedSetLocale(id) {
             if (id === "zh-TW") {
+              writeStoredChoice("zh-TW");
+              // Clear any stale zh/en preference so adopt() cannot flip back
+              // to Simplified on the next restart.
+              try { this.host && this.host.unset && this.host.unset("preference"); } catch (e) {}
               this.publish("zh-TW", this.snapshot.active !== "zh-TW");
               return;
             }
+            writeStoredChoice(id);
             return originalSetLocale(id);
           };
 
@@ -193,6 +225,23 @@ window.__ModuleLoader__.load({
             return undefined;
           };
 
+          // Patch adopt: the settings mirror arrives asynchronously and adopt()
+          // re-applies the persisted preference (or browser language) on top of
+          // the zh-TW forced at boot. Re-assert zh-TW afterwards, unless the
+          // user explicitly chose zh/en (the framework persists those itself).
+          var originalAdopt = locale.adopt.bind(locale);
+          locale.adopt = function patchedAdopt(host) {
+            originalAdopt(host);
+            var value = host.getSnapshot().value;
+            var preference = value && value.preference;
+            var stored = readStoredChoice();
+            var wantsZhTW = stored === "zh-TW" ||
+              (stored === null && preference !== "zh" && preference !== "en");
+            if (wantsZhTW && this.snapshot.active !== "zh-TW") {
+              this.publish("zh-TW", true);
+            }
+          };
+
           safeRegister("common", {
             "zh-TW": {
               "ok": "確定", "cancel": "取消", "close": "關閉", "copy": "複製",
@@ -208,12 +257,19 @@ window.__ModuleLoader__.load({
             "zh-TW": { "language.title": "語言" }
           });
 
-          locale.setLocale("zh-TW");
+          // Startup default: enter Traditional Chinese when no choice was
+          // recorded yet (or zh-TW was chosen); leave zh/en users alone so the
+          // async adopt() applies their persisted preference without a zh-TW flash.
+          var stored = readStoredChoice();
+          if (stored !== "zh" && stored !== "en") {
+            locale.publish("zh-TW", locale.snapshot.active !== "zh-TW");
+          }
 
           return function restore() {
             locale.setLocale = originalSetLocale;
             locale.publish = originalPublish;
             locale.lookup = originalLookup;
+            locale.adopt = originalAdopt;
             for (var k = 0; k < disposers.length; k++) {
               try { disposers[k](); } catch (e) {}
             }
