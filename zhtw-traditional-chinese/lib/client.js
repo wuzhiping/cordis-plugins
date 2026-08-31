@@ -164,11 +164,11 @@ window.__ModuleLoader__.load({
     // - document.title / favicon / PWA manifest are rebranded too.
     // NOTE: hHd-Xa_* / pXSMma_* are CSS-module hashes emitted by the DSH build;
     // they can go stale after a DSH upgrade and need to be refreshed.
-    var BRAND_NAME = "at-worke harness @ AIFE";
+    var BRAND_NAME = "at-worker harness @AIFE";
     var BRAND_HEADLINE = {
-      "zh": "欢迎使用 at-worke harness",
-      "zh-TW": "歡迎使用 at-worke harness",
-      "en": "Welcome to at-worke harness"
+      "zh": "欢迎使用 at-worker harness",
+      "zh-TW": "歡迎使用 at-worker harness",
+      "en": "Welcome to at-worker harness"
     };
     var BRAND_STRINGS = {
       conversation: { "hero.headline": BRAND_HEADLINE }
