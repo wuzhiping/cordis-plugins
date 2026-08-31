@@ -58,7 +58,7 @@ A DSH install command points at one bundle, not the whole repo. The
 GitHub short reference accepts a subdirectory path:
 
 ```sh
-dsh plugin --profile web add github:wuzhiping/cordis-plugins/<bundle-name>
+dsh plugin --profile web add "github:wuzhiping/cordis-plugins#path:/<bundle-name>"
 ```
 
 For a local clone:
