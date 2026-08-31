@@ -155,6 +155,103 @@ window.__ModuleLoader__.load({
       } catch (e) {}
     }
 
+    // === feg.cn brand replacement (rebrand) ===
+    // Pure CSS + copy override, no React dependency:
+    // - Sidebar logo row (hHd-Xa_logoRow): hide the DeepSeek fish mark and
+    //   wordmark, show the BRAND_NAME text instead.
+    // - Hero headline (pXSMma_headline): hide the fish mark, center the title,
+    //   override the copy with BRAND_HEADLINE.
+    // - document.title / favicon / PWA manifest are rebranded too.
+    // NOTE: hHd-Xa_* / pXSMma_* are CSS-module hashes emitted by the DSH build;
+    // they can go stale after a DSH upgrade and need to be refreshed.
+    var BRAND_NAME = "feg.cn";
+    var BRAND_HEADLINE = {
+      "zh": "欢迎使用 feg.cn",
+      "zh-TW": "歡迎使用 feg.cn",
+      "en": "Welcome to feg.cn"
+    };
+    var BRAND_STRINGS = {
+      conversation: { "hero.headline": BRAND_HEADLINE }
+    };
+    var BRAND_CSS = [
+      // Sidebar logo row: hide fish mark / wordmark / collapsed rail fish; show text brand via ::before.
+      ".hHd-Xa_logoRow{justify-content:space-between;padding-left:12px}",
+      ".hHd-Xa_brandMark{display:none!important}",
+      ".hHd-Xa_brandName{display:none!important}",
+      ".hHd-Xa_railMark{display:none!important}",
+      '.hHd-Xa_brand::before{content:"' + BRAND_NAME + '";font-size:18px;font-weight:600;letter-spacing:.02em;color:var(--dsw-alias-label-primary);white-space:nowrap}',
+      // Hero headline: hide fish and preview badge, center the title.
+      ".pXSMma_headline{grid-template-columns:1fr auto 1fr;justify-content:center}",
+      ".pXSMma_fishHitbox{display:none!important}",
+      ".pXSMma_headlineText{grid-area:1/2}",
+      ".pXSMma_previewBadge{display:none!important}"
+    ].join("");
+    var BRAND_FAVICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#16324f"/><text x="32" y="45" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="32" font-weight="700" fill="#ffffff">f</text></svg>';
+
+    function applyBranding() {
+      if (typeof document === "undefined") return function noop() {};
+      var disposers = [];
+
+      // 1) Brand CSS (appended at the end of head so it overrides the framework).
+      var tag = document.createElement("style");
+      tag.dataset.plugin = "zhtw-traditional-chinese";
+      tag.dataset.pluginCss = "zhtw-traditional-chinese/brand.css";
+      tag.textContent = BRAND_CSS;
+      document.head.appendChild(tag);
+      disposers.push(function () { tag.remove(); });
+
+      // 2) document.title: replace "DeepSeek Harness" with BRAND_NAME (follows session-title changes).
+      var originalTitle = document.title;
+      var rewriteTitle = function () {
+        if (document.title.indexOf("DeepSeek Harness") !== -1) {
+          document.title = document.title.split("DeepSeek Harness").join(BRAND_NAME);
+        } else if (!document.title) {
+          document.title = BRAND_NAME;
+        }
+      };
+      rewriteTitle();
+      var titleEl = document.querySelector("title");
+      if (!titleEl) {
+        titleEl = document.createElement("title");
+        document.head.appendChild(titleEl);
+      }
+      var titleObserver = new MutationObserver(rewriteTitle);
+      titleObserver.observe(titleEl, { childList: true, characterData: true, subtree: true });
+      disposers.push(function () { titleObserver.disconnect(); document.title = originalTitle; });
+
+      // 3) favicon
+      var faviconHref = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(BRAND_FAVICON_SVG);
+      var faviconLink = document.querySelector('link[rel="icon"]');
+      if (!faviconLink) {
+        faviconLink = document.createElement("link");
+        faviconLink.rel = "icon";
+        faviconLink.type = "image/svg+xml";
+        document.head.appendChild(faviconLink);
+      }
+      var previousFavicon = faviconLink.href;
+      faviconLink.href = faviconHref;
+      disposers.push(function () { faviconLink.href = previousFavicon; });
+
+      // 4) PWA manifest name
+      var manifestLink = document.querySelector('link[rel="manifest"]');
+      if (manifestLink) {
+        try {
+          var manifestUrl = URL.createObjectURL(new Blob([
+            JSON.stringify({ name: BRAND_NAME, short_name: BRAND_NAME, start_url: "/", display: "standalone" })
+          ], { type: "application/manifest+json" }));
+          var previousManifest = manifestLink.href;
+          manifestLink.href = manifestUrl;
+          disposers.push(function () { manifestLink.href = previousManifest; URL.revokeObjectURL(manifestUrl); });
+        } catch (e) {}
+      }
+
+      return function restoreBranding() {
+        for (var i = disposers.length - 1; i >= 0; i--) {
+          try { disposers[i](); } catch (e) {}
+        }
+      };
+    }
+
     return {
       inject: ["locale"],
       apply: function (ctx) {
@@ -205,6 +302,14 @@ window.__ModuleLoader__.load({
 
           var originalLookup = locale.lookup.bind(locale);
           locale.lookup = function patchedLookup(ns, key) {
+            // Brand copy override (hero.headline etc.) wins over the dictionary chain.
+            var custom = BRAND_STRINGS[ns] && BRAND_STRINGS[ns][key];
+            if (custom) {
+              var active = this.snapshot.active;
+              if (custom[active] !== undefined) return custom[active];
+              if (active === "zh-TW" && custom["zh"] !== undefined) return convertS2T(custom["zh"]);
+              if (custom["en"] !== undefined) return custom["en"];
+            }
             var locales = this.dicts.get(ns);
             if (!locales) return undefined;
             var active = this.snapshot.active;
@@ -256,6 +361,9 @@ window.__ModuleLoader__.load({
           safeRegister("settings.locale", {
             "zh-TW": { "language.title": "語言" }
           });
+
+          // feg.cn brand replacement (CSS / title / favicon / manifest).
+          disposers.push(applyBranding());
 
           // Startup default: enter Traditional Chinese when no choice was
           // recorded yet (or zh-TW was chosen); leave zh/en users alone so the
