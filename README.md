@@ -1,3 +1,5 @@
+# [dsh-v0.1.5-rc.2](https://github.com/deepseek-ai/deepseek-harness/tree/dsh-v0.1.5-rc.2)
+
 # cordis-plugins
 
 A monorepo of DSH (DeepSeek Harness) profile bundles — community packages
