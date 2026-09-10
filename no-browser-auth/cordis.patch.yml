@@ -1,0 +1,19 @@
+# no-browser-auth bundle patch.
+#
+# Adds a single host plugin row whose `name` is our own package name; the
+# Cordis Loader resolves it from the profile's node_modules (the profile
+# dependency installed by `dsh plugin --profile web add`) and mounts
+# lib/index.js as a plugin.
+#
+# The row lands at the END of the composed root entry list, so it loads after
+# the dsh-web-app layer's `connection` row. Ordering is not what makes it
+# correct, though: the plugin declares `inject: ['connection']`, so Cordis
+# parks it until that service is provided and re-applies it if the transport is
+# ever re-provided.
+#
+# LOCAL FIX: dsh patch-loader semantics — a plain `- id:` row only patches an
+# EXISTING entry; new entries must be added with an `insert:` block, and an
+# `insert` without an `id` appends to the root entry list.
+- insert:
+    - id: no-browser-auth
+      name: no-browser-auth

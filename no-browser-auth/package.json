@@ -1,0 +1,26 @@
+{
+  "name": "no-browser-auth",
+  "version": "0.1.0",
+  "description": "DSH profile bundle that disables the Web transport's browser-session check (process launch token + signed cookie) so the GUI opens from a plain local URL. The Host/Origin trust fence is left intact.",
+  "private": true,
+  "type": "commonjs",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "cordis.patch.yml",
+    "package.json"
+  ],
+  "scripts": {
+    "test": "node test/smoke.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT"
+}
