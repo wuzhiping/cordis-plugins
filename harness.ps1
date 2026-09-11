@@ -36,7 +36,7 @@ $nodeVersion = "node-v24.19.0-win-x64"
 
 $nodeUrl = "https://abc.feg.com.tw/share/ehr/pages/dev/node-v24.19.0-win-x64.zip"
 
-$dshVersion = "0.1.1-rc.2"
+$dshVersion = "0.1.5-rc.2"
 
 $dshBaseUrl = "https://abc.feg.com.tw/vx"
 
@@ -307,6 +307,13 @@ $plugins = @(
         Profile = "web"
     }
 
+    @{
+        Name    = "no-browser-auth"
+        Version = "0.1.0"
+        Source  = "github:wuzhiping/cordis-plugins#path:/no-browser-auth"
+        Profile = "web"
+    }
+
     # 以后继续增加：
     #
     # @{
@@ -395,7 +402,9 @@ foreach ($pluginItem in $plugins) {
 
 $listener = Get-NetTCPConnection `
     -LocalPort $port `
+    -State Listen,Established `
     -ErrorAction SilentlyContinue |
+    Where-Object { $_.OwningProcess -gt 0 } |
     Select-Object -First 1
 
 if ($listener) {
@@ -422,47 +431,86 @@ if (-not (Test-Path $dshCmd)) {
 }
 
 # ============================================================
-# 7. Start DSH
+# 7. PROCESS OUTPUT
+# ============================================================
+
+function Process-ProcessOutput {
+
+    param(
+        [string]$Line
+    )
+
+    if ($null -eq $Line) {
+        return
+    }
+
+    $Line = [string]$Line
+
+    # 记录原始 DSH 输出
+    Log "[original] $Line"
+
+    # 去除 ANSI 转义字符
+    $cleanLine = $Line -replace "`e\[[0-9;?]*[ -/]*[@-~]", ""
+
+    # 提取 URL
+    $urlMatches = [regex]::Matches(
+        $cleanLine,
+        'https?://[^\s\]\)\>]+'
+    )
+
+    foreach ($match in $urlMatches) {
+
+        $url = $match.Value.TrimEnd(
+            '.',
+            ',',
+            ';',
+            ':',
+            ')',
+            ']',
+            '>',
+            '"',
+            "'"
+        )
+
+        if ([string]::IsNullOrWhiteSpace($url)) {
+            continue
+        }
+
+        # 如果 URL 与上一次发现的 URL 相同，则跳过
+        if ($script:DSH_URL -eq $url) {
+            continue
+        }
+
+        $script:DSH_URL = $url
+
+        # 保存 URL
+        Set-Content -Path "$base\harness.txt" -Value $url -Encoding UTF8
+        
+        Log "<<<<$url>>>>"
+    }
+}
+
+# ============================================================
+# 8. Start DSH
 # ============================================================
 
 Log "Starting dsh web..."
-Log "Model : $dshModel"
-Log "Host  : $hostAddress"
-Log "Port  : $port"
-Log "URL   : http://$hostAddress`:$port"
-Log ""
 
 # IMPORTANT:
 # Do NOT use npx here.
 #
-# npm global installation creates:
-#
-#   $globalDir\dsh.cmd
+# npm global installation creates: $globalDir\dsh.cmd
 #
 # Directly execute it for faster startup.
 
-# 后台启动，获取进程对象
-$dsh = Start-Process $dshCmd `
-    -ArgumentList "web","--host",$hostAddress,"--port",$port,"--no-open" `
-    -PassThru -NoNewWindow
-
-# 轮询等端口就绪
-$wait = 30
-while ($wait-- -gt 0 -and -not (Get-NetTCPConnection -LocalPort $port -EA SilentlyContinue)) {
-    Start-Sleep 1
-}
-
-if ($wait -le 0) {
-    $dsh | Stop-Process -Force
-    Fail "dsh start timeout"
-}
-
-# 成功后写入时间
-Get-Date -Format "yyyy-MM-dd HH:mm:ss" | Out-File harness.txt -Encoding utf8
-Log "dsh web ready."
-
-# 挂住脚本，保持 dsh 运行（按 Ctrl+C 退出；用 taskkill、关闭终端、或者让 dsh 一直后台跑 不需要）
-# $dsh.WaitForExit()
+& $dshCmd `
+    web `
+    --host $hostAddress `
+    --port $port `
+    --no-open 2>&1 |
+    ForEach-Object {
+        Process-ProcessOutput ([string]$_)
+    }
 
 # # 停止 dsh
 # taskkill /F /IM node.exe 2>$null; Remove-Item -Path "$PSScriptRootdsh.log" -Force -ErrorAction SilentlyContinue; Write-Output "STOPPED"
