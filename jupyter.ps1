@@ -577,14 +577,6 @@ try {
     if ($needSync) {
 
         Write-Host ""
-        Write-Host "Updating lockfile..."
-
-        & $uvExe lock
-        if ($LASTEXITCODE -ne 0) {
-            throw "uv lock failed"
-        }
-
-        Write-Host ""
         Write-Host "Syncing dependencies..."
 
         & $uvExe sync --locked
