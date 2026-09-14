@@ -615,7 +615,6 @@ try {
     Write-Host "========================================"
 
     Write-Host "Jupyter:"
-    Write-Host "http://127.0.0.1:3088/lab"
 
     Write-Host ""
 
