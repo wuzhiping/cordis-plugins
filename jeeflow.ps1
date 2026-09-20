@@ -19,6 +19,7 @@ $uvExe = "$uvDir\uv.exe"
 # Git repository
 $repoDir = "$base\jeeflow"
 $repoUrl = "https://github.com/wuzhiping/jeeflow"
+# $targetBranch = "main"
 $targetBranch = "dev"
 
 # Project files
@@ -144,7 +145,7 @@ if (-not (Test-Path $uvExe)) {
     exit 1
 }
 
-# Clone or check jeeflow
+# Clone or update jeeflow
 if (-not (Test-Path "$repoDir\.git")) {
     # Remove existing invalid directory
     if (Test-Path $repoDir) {
@@ -170,24 +171,48 @@ else {
     Write-Host "Current branch: $currentBranch"
     Write-Host "Target branch: $targetBranch"
 
-    # Re-clone when branch is different
-    if ($currentBranch -ne $targetBranch) {
-        Write-Host "Branch mismatch detected."
-        Write-Host "Removing existing repository..."
-        Remove-Item $repoDir -Recurse -Force
+    Push-Location $repoDir
 
-        Write-Host "Cloning wuzhiping/jeeflow [$targetBranch]..."
-        & $gitExe clone -b $targetBranch $repoUrl $repoDir
+    try {
+        # Fetch latest remote information
+        Write-Host "Fetching latest remote changes..."
+        & $gitExe fetch origin
 
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "Git clone failed."
+            Write-Error "Git fetch failed."
             exit $LASTEXITCODE
         }
 
-        Write-Host "jeeflow cloned."
+        # Switch to target branch
+        if ($currentBranch -ne $targetBranch) {
+            Write-Host "Switching from $currentBranch to $targetBranch..."
+
+            & $gitExe checkout -B $targetBranch "origin/$targetBranch"
+
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error "Failed to switch to $targetBranch."
+                exit $LASTEXITCODE
+            }
+
+            Write-Host "Switched to $targetBranch."
+        }
+        else {
+            Write-Host "Already on $targetBranch."
+        }
+
+        # Pull latest changes
+        Write-Host "Updating $targetBranch..."
+        & $gitExe pull --ff-only
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Git pull failed."
+            exit $LASTEXITCODE
+        }
+
+        Write-Host "jeeflow is up to date."
     }
-    else {
-        Write-Host "jeeflow branch is correct."
+    finally {
+        Pop-Location
     }
 }
 
