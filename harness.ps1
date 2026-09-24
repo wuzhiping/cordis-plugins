@@ -314,6 +314,13 @@ $plugins = @(
         Profile = "web"
     }
 
+    # @{
+    #     Name    = "scene-template"
+    #     Version = "0.1.0"
+    #     Source  = "github:wuzhiping/cordis-plugins#path:/scene-template"
+    #     Profile = "web"
+    # }
+    
     # 以后继续增加：
     #
     # @{
@@ -514,4 +521,3 @@ Log "Starting dsh web..."
 
 # # 停止 dsh
 # taskkill /F /IM node.exe 2>$null; Remove-Item -Path "$PSScriptRootdsh.log" -Force -ErrorAction SilentlyContinue; Write-Output "STOPPED"
-
