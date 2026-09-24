@@ -1,0 +1,31 @@
+{
+  "name": "scene-template",
+  "version": "0.1.0",
+  "description": "AI 工作流输入区:场景 / 分支 / 模板三级选择。场景与分支挂在输入框上方、模板海报墙挂在下方,自带推荐翻批、按住拖动平移与双击预览;选中的场景与模板会作为运行时上下文注入模型每一步(模板案例内容一并带上)。",
+  "private": true,
+  "type": "commonjs",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "cordis.patch.yml",
+    "mock",
+    "README.md",
+    "package.json"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "license": "MIT"
+}

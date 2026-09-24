@@ -1,0 +1,28 @@
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Local install (someone running pnpm install in the bundle to inspect)
+node_modules/
+
+# pnpm build artifacts (in case anyone adds a build step later)
+dist/
+build/
+*.tsbuildinfo
+
+# Never commit secrets; this file only exists to be defensive
+.env
+.env.local

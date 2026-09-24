@@ -1,0 +1,23 @@
+{
+  "scn_writing": {
+    "scenarioId": "scn_writing",
+    "branchId": "br_essay",
+    "input": "這是一份按會議紀要模板整理好的最終文字……",
+    "templateIds": [
+      "tpl_meeting",
+      "tpl_paper"
+    ],
+    "workspace": "default",
+    "permission": "private"
+  },
+  "scn_analysis": {
+    "scenarioId": "scn_analysis",
+    "branchId": "br_quarter",
+    "input": "按經營看板速覽的欄位填好的分析結論……",
+    "templateIds": [
+      "tpl_dashboard"
+    ],
+    "workspace": "default",
+    "permission": "private"
+  }
+}

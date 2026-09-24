@@ -1,0 +1,336 @@
+{
+  "scn_writing": {
+    "id": "scn_writing",
+    "name": "長篇內容創作與結構化改寫",
+    "description": "寫作場景:面向散文、論文與營銷文案,提供結構梳理、長文寫作與語氣潤色三類分支提示詞。",
+    "icon": "✍️",
+    "hasDynamicTemplates": true,
+    "branches": [
+      {
+        "id": "br_essay",
+        "name": "靈感速記與片段整理",
+        "preset": "請幫我把以下零散片段整理成一篇結構清晰、過渡自然的散文,保留我原本的語氣:\n\n"
+      },
+      {
+        "id": "br_long",
+        "name": "深度長文與論證結構",
+        "preset": "請圍繞下面的主題寫一篇約 2000 字的深度文章,要求有清晰的三段式論證、每段有小標題,並在結尾給出一句結論:\n\n主題:"
+      },
+      {
+        "id": "br_polish",
+        "name": "語氣潤色與表達優化",
+        "preset": "請潤色以下文字:保持原意,提升準確性與可讀性,並在最後列出三處最值得改的地方:\n\n"
+      },
+      {
+        "id": "br_outline",
+        "name": "標題提煉與摘要生成",
+        "preset": "請為以下內容提煉三個標題(克制 / 中性 / 有吸引力各一),並寫一段不超過 120 字的摘要:\n\n"
+      }
+    ],
+    "templates": [
+      {
+        "id": "tpl_meeting",
+        "title": "會議紀要與決議看板",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(210%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(248%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%93%8B%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_meeting/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_paper",
+        "title": "學術論文標準骨架",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(190%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(228%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%93%91%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_paper/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_outline",
+        "title": "長文寫作大綱模板",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(262%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(300%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%A7%AD%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_outline/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_story",
+        "title": "品牌故事與文案腳本",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(24%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(62%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%8E%AC%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_story/preview",
+        "contentType": "html"
+      }
+    ]
+  },
+  "scn_code": {
+    "id": "scn_code",
+    "name": "代碼編寫、調試與漸進式重構",
+    "description": "編程場景:覆蓋腳本編寫、線上缺陷定位與遺留模塊重構,按語言與運行環境給出可直接執行的提示詞。",
+    "icon": "💻",
+    "hasDynamicTemplates": false,
+    "branches": [
+      {
+        "id": "br_script",
+        "name": "Python 腳本生成與參數校驗",
+        "preset": "請用 Python 寫一個腳本:帶參數校驗、錯誤處理與 --help 說明,並在注釋裡說明關鍵取捨:\n\n需求:"
+      },
+      {
+        "id": "br_debug",
+        "name": "線上缺陷快速定位",
+        "preset": "請幫我定位以下線上缺陷:先列出三種最可能的原因並排序,再給出驗證方法,最後給最小修復補丁:\n\n現象:"
+      },
+      {
+        "id": "br_refactor",
+        "name": "遺留模塊漸進式重構",
+        "preset": "請為下面的遺留代碼設計漸進式重構方案:分三批改,每批都能獨立上線,說明每批的風險與回歸重點:\n\n"
+      },
+      {
+        "id": "br_test",
+        "name": "單元測試與邊界用例補全",
+        "preset": "請為以下函數補齊單元測試,覆蓋正常路徑、邊界值與異常分支,並指出當前實現裡最可疑的一處:\n\n"
+      }
+    ],
+    "templates": [
+      {
+        "id": "tpl_review",
+        "title": "代碼評審檢查清單",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(220%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(258%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%E2%9C%85%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_review/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_postmortem",
+        "title": "缺陷復盤模板",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(160%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(198%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%A9%B9%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_postmortem/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_api",
+        "title": "API 設計與兼容性說明卡",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(282%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(320%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%94%8C%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_api/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_migration",
+        "title": "數據遷移執行方案",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(200%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(238%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%9A%9A%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_migration/preview",
+        "contentType": "html"
+      }
+    ]
+  },
+  "scn_analysis": {
+    "id": "scn_analysis",
+    "name": "財報與經營數據分析",
+    "description": "分析場景:從財報、經營報表與埋點數據中提取關鍵指標,輸出結論、歸因鏈路與下一步行動建議。",
+    "icon": "📊",
+    "hasDynamicTemplates": true,
+    "branches": [
+      {
+        "id": "br_quarter",
+        "name": "季度財報要點提取",
+        "preset": "請從下面的財報內容裡提取要點:先給三條結論,再列關鍵指標(含同比/環比),最後標出異常項:\n\n"
+      },
+      {
+        "id": "br_attrib",
+        "name": "指標異動歸因分析",
+        "preset": "請對以下指標異動做歸因:按量、價、結構三層拆解,給出主因假設與驗證方法,並說明還需要哪些數據:\n\n"
+      },
+      {
+        "id": "br_competitor",
+        "name": "競品對比與差距量化",
+        "preset": "請把以下競品資訊整理成對比記分卡:按維度打分,指出我們最該補的兩項,並估算補齊成本:\n\n"
+      }
+    ],
+    "templates": [
+      {
+        "id": "tpl_dashboard",
+        "title": "經營看板速覽",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(205%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(243%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%93%8A%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_dashboard/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_attrib",
+        "title": "指標異動歸因框架",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(340%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(378%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%94%8D%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_attrib/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_competitor",
+        "title": "競品對比記分卡",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(30%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(68%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%E2%9A%96%EF%B8%8F%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_competitor/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_forecast",
+        "title": "捲動預測與情景假設",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(250%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(288%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%93%88%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_forecast/preview",
+        "contentType": "html"
+      }
+    ]
+  },
+  "scn_meeting": {
+    "id": "scn_meeting",
+    "name": "會議紀要與行動項跟蹤",
+    "description": "協作場景:把會議轉寫整理成決議、待辦與責任人清單,並標註風險、依賴與待確認事項。",
+    "icon": "🗂️",
+    "hasDynamicTemplates": false,
+    "branches": [
+      {
+        "id": "br_decision",
+        "name": "決議與待辦提取",
+        "preset": "請把下面的會議記錄整理成:決議清單(定了什麼)、待辦清單(動詞開頭 + 負責人 + 截止時間),不要保留討論過程:\n\n"
+      },
+      {
+        "id": "br_risk",
+        "name": "風險、依賴與待確認項",
+        "preset": "請從下面的會議記錄裡挑出風險、外部依賴和還沒說清的問題,按影響程度排序,並寫出各自需要誰來拍板:\n\n"
+      },
+      {
+        "id": "br_merge",
+        "name": "多會議串講與合併",
+        "preset": "請把下面多次會議的記錄合併成一份進展總覽:按主題而不是按時間組織,標出觀點變化與仍未收斂的分歧:\n\n"
+      }
+    ],
+    "templates": [
+      {
+        "id": "tpl_minutes",
+        "title": "會議紀要標準模板",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(172%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(210%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%97%92%EF%B8%8F%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_minutes/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_action",
+        "title": "行動項跟蹤表",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(215%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(253%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%93%8C%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_action/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_retro",
+        "title": "復盤會引導提綱",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(300%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(338%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%94%84%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_retro/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_onepage",
+        "title": "一頁紙決策備忘",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(45%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(83%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%93%84%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_onepage/preview",
+        "contentType": "html"
+      }
+    ]
+  },
+  "scn_translate": {
+    "id": "scn_translate",
+    "name": "多語種技術文檔翻譯與本地化",
+    "description": "本地化場景:面向產品文檔與介面文案,兼顧術語一致性、語氣風格與長度約束,適配不同地區的表達習慣。",
+    "icon": "🌐",
+    "hasDynamicTemplates": false,
+    "branches": [
+      {
+        "id": "br_glossary",
+        "name": "術語一致性與譯法校驗",
+        "preset": "請按術語表校驗以下譯文:列出不一致的術語(原文 → 當前譯法 → 建議譯法),並說明理由:\n\n"
+      },
+      {
+        "id": "br_ui",
+        "name": "介面文案精簡本地化",
+        "preset": "請把以下介面文案本地化:保持簡潔,按鈕類不超過原文 1.3 倍長度,並保留全部佔位符與複數形式:\n\n"
+      },
+      {
+        "id": "br_doc",
+        "name": "長文技術翻譯與校對",
+        "preset": "請翻譯並校對以下技術文檔:術語統一、語氣中性、代碼與命令保持原樣,翻譯後列出不確定的 3 處:\n\n"
+      }
+    ],
+    "templates": [
+      {
+        "id": "tpl_glossary",
+        "title": "術語表模板",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(192%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(230%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%93%9A%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_glossary/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_l10n_check",
+        "title": "本地化檢查清單",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(275%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(313%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%8C%90%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_l10n_check/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_style",
+        "title": "語氣風格指南",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(330%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(368%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%8E%A8%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_style/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_review_en",
+        "title": "譯文評審記錄表",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(205%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(243%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%A7%90%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_review_en/preview",
+        "contentType": "html"
+      }
+    ]
+  },
+  "scn_review": {
+    "id": "scn_review",
+    "name": "合規與安全評審材料準備",
+    "description": "評審場景:把現狀材料整理成合規論證、風險評級與整改計畫三件套,並預演評審委員可能追問的問題。",
+    "icon": "🛡️",
+    "hasDynamicTemplates": false,
+    "branches": [
+      {
+        "id": "br_gap",
+        "name": "控制點差距自查",
+        "preset": "請對照以下控制點做差距自查:逐條給出“滿足/部分滿足/不滿足”、現有證據和缺口,最後按風險排序:\n\n"
+      },
+      {
+        "id": "br_plan",
+        "name": "風險評級與整改計畫",
+        "preset": "請基於下面的發現做風險評級(高/中/低)並給出整改計畫:措施、責任人、時限、驗收標準:\n\n"
+      },
+      {
+        "id": "br_rehearsal",
+        "name": "評審問答預演",
+        "preset": "請扮演嚴格的評審委員,針對下面的材料提出 10 個最可能被追問的問題,並給出建議的回答要點:\n\n"
+      }
+    ],
+    "templates": [
+      {
+        "id": "tpl_evidence",
+        "title": "評審證據清單",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(0%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(38%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%A7%BE%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_evidence/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_remediation",
+        "title": "整改計畫模板",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(35%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(73%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%9B%A0%EF%B8%8F%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_remediation/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_matrix",
+        "title": "控制點矩陣",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(215%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(253%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%A7%AE%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_matrix/preview",
+        "contentType": "html"
+      },
+      {
+        "id": "tpl_qna",
+        "title": "評審問答預演稿",
+        "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(265%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(303%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%8E%A4%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+        "previewUrl": "/api/templates/tpl_qna/preview",
+        "contentType": "html"
+      }
+    ]
+  }
+}

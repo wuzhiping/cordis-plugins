@@ -1,0 +1,64 @@
+{
+  "scn_writing": {
+    "request": {
+      "input": "我想把最近三個月的訪談筆記整理成一篇結構清晰的長文,主題是遠端協作裡的資訊衰減。",
+      "branchId": "br_essay"
+    },
+    "response": {
+      "templates": [
+        {
+          "id": "tpl_weekly",
+          "title": "本週工作週報",
+          "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(205%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(243%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%93%85%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+          "previewUrl": "/api/templates/tpl_weekly/preview",
+          "contentType": "html"
+        },
+        {
+          "id": "tpl_brief",
+          "title": "項目簡報一頁紙",
+          "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(255%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(293%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%93%B0%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+          "previewUrl": "/api/templates/tpl_brief/preview",
+          "contentType": "html"
+        },
+        {
+          "id": "tpl_recap",
+          "title": "階段復盤紀要",
+          "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(25%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(63%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%A7%AD%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+          "previewUrl": "/api/templates/tpl_recap/preview",
+          "contentType": "html"
+        }
+      ]
+    }
+  },
+  "scn_analysis": {
+    "request": {
+      "input": "幫我分析這份季報:收入同比漲了 12%,但毛利率掉了將近兩個點,想搞清楚錢到底漏在哪。",
+      "branchId": "br_quarter"
+    },
+    "response": {
+      "templates": [
+        {
+          "id": "tpl_metric",
+          "title": "指標口徑說明卡",
+          "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(200%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(238%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%93%90%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+          "previewUrl": "/api/templates/tpl_metric/preview",
+          "contentType": "html"
+        },
+        {
+          "id": "tpl_attrib_card",
+          "title": "異動歸因結論卡",
+          "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(335%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(373%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%94%8D%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+          "previewUrl": "/api/templates/tpl_attrib_card/preview",
+          "contentType": "html"
+        },
+        {
+          "id": "tpl_scenario",
+          "title": "情景測算卡",
+          "thumbnailUrl": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22296%22%20viewBox%3D%220%200%20400%20296%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22hsl(155%2C74%25%2C60%25)%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22hsl(193%2C72%25%2C42%25)%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22400%22%20height%3D%22296%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22330%22%20cy%3D%2260%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22250%22%20r%3D%2270%22%20fill%3D%22rgba(255%2C255%2C255%2C0.08)%22%2F%3E%3Ctext%20x%3D%22200%22%20y%3D%22165%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%F0%9F%93%89%3C%2Ftext%3E%3Crect%20x%3D%2228%22%20y%3D%22228%22%20width%3D%22150%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.55)%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%22250%22%20width%3D%2296%22%20height%3D%2212%22%20rx%3D%226%22%20fill%3D%22rgba(255%2C255%2C255%2C0.32)%22%2F%3E%3C%2Fsvg%3E",
+          "previewUrl": "/api/templates/tpl_scenario/preview",
+          "contentType": "html"
+        }
+      ]
+    }
+  }
+}

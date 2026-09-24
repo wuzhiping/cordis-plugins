@@ -1,0 +1,17 @@
+# scene-template bundle patch.
+#
+# Adds a single host plugin row whose `name` is our own package name. The
+# dsh-client-modules host half then scans this entry, reads our package.json
+# `dsh.client.platform: "web"` declaration, and composes `window.__DSH_BOOT__`
+# so the browser fetches /plugins/scene-template/client.js.
+#
+# The row is also a real host plugin (lib/index.js): it receives the composer's
+# selection over an exact same-origin route and registers it as a runtime prompt
+# context, so the model sees the selected scenario / branch / template on every
+# step. Without it the UI still renders — only the context would be missing.
+#
+# LOCAL FIX: dsh patch-loader semantics — a plain `- id:` row only patches an
+# EXISTING entry; new entries must be added with an `insert:` block.
+- insert:
+    - id: scene-template
+      name: scene-template

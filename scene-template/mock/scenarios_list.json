@@ -1,0 +1,40 @@
+{
+  "scenarios": [
+    {
+      "id": "scn_writing",
+      "name": "長篇內容創作與結構化改寫",
+      "icon": "✍️",
+      "hasDynamicTemplates": true
+    },
+    {
+      "id": "scn_code",
+      "name": "代碼編寫、調試與漸進式重構",
+      "icon": "💻",
+      "hasDynamicTemplates": false
+    },
+    {
+      "id": "scn_analysis",
+      "name": "財報與經營數據分析",
+      "icon": "📊",
+      "hasDynamicTemplates": true
+    },
+    {
+      "id": "scn_meeting",
+      "name": "會議紀要與行動項跟蹤",
+      "icon": "🗂️",
+      "hasDynamicTemplates": false
+    },
+    {
+      "id": "scn_translate",
+      "name": "多語種技術文檔翻譯與本地化",
+      "icon": "🌐",
+      "hasDynamicTemplates": false
+    },
+    {
+      "id": "scn_review",
+      "name": "合規與安全評審材料準備",
+      "icon": "🛡️",
+      "hasDynamicTemplates": false
+    }
+  ]
+}

@@ -17,6 +17,7 @@ registry picks up their `lib/client.js`.
 | Subdirectory | Purpose | Install |
 |--------------|---------|---------|
 | [`zhtw-traditional-chinese/`](./zhtw-traditional-chinese) | Adds 繁體中文 (zh-TW) to the Web GUI language picker; converts Simplified Chinese strings from all 27 DSH namespaces to Traditional on the fly | `dsh plugin --profile web add  "github:wuzhiping/cordis-plugins#path:/zhtw-traditional-chinese"` |
+| [`scene-template/`](./scene-template) | AI 工作流输入区:场景 / 分支选择挂在输入框上方,模板海报墙挂在下方(推荐翻批、按住拖曳平移、双击预览);数据来自 `abc.feg.com.tw` 的 BDD API 并自带回退 mock;选中的场景/模板会作为运行时上下文注入模型每一步;界面文案全为**繁体(zh-TW 惯用)** | `dsh plugin --profile web add  "github:wuzhiping/cordis-plugins#path:/scene-template"` |
 
 Each subdirectory is also a standalone DSH install target — you can add
 `file:./zhtw-traditional-chinese` while inside this repo, or use the GitHub
@@ -28,13 +29,23 @@ short reference above.
 cordis-plugins/
 ├── README.md                   this file (monorepo overview)
 ├── LICENSE                     shared MIT
-└── zhtw-traditional-chinese/   first bundle
+├── zhtw-traditional-chinese/   first bundle
+│   ├── package.json            dsh.bundle + dsh.client declarations
+│   ├── cordis.patch.yml        host composition patch
+│   ├── lib/
+│   │   └── client.js           window.__ModuleLoader__.load bundle
+│   ├── README.md               bundle-specific docs
+│   └── LICENSE                 (symlink or duplicate; both MIT)
+└── scene-template/             AI 工作流输入区 (browser bundle + host stub)
     ├── package.json            dsh.bundle + dsh.client declarations
-    ├── cordis.patch.yml        host composition patch
+    ├── cordis.patch.yml        inserts the host row that triggers client discovery
     ├── lib/
+    │   ├── index.js            host-side stub (keeps the row loadable)
     │   └── client.js           window.__ModuleLoader__.load bundle
-    ├── README.md               bundle-specific docs
-    └── LICENSE                 (symlink or duplicate; both MIT)
+    ├── mock/                   per-endpoint data snapshot + handover notes
+    ├── tools/s2t/              one-shot Simplified→Traditional converter (dev-only)
+    ├── UI.md                   design + handover notes for this bundle
+    └── README.md               bundle-specific docs
 ```
 
 ## Adding a new bundle
