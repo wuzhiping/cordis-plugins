@@ -1,0 +1,1457 @@
+<!doctype html>
+<html lang="zh-Hans" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DSH Web GUI 布局图谱 · CLIENT-LAYOUT</title>
+<style>
+/* ===========================================================================
+   本文件自身的配色刻意使用**与 DSH 同名的令牌**（--dsw-alias-* / --dsw-specific-*
+   / --dsh-*），所以这张图本身就在演示第 7 章讲的令牌体系：
+   切换明暗时不改任何组件规则，只换令牌值（就像 DSH 的 theme presenter 做的那样）。
+   注意：这里的取值是**示意近似值**，真实值由 ui-theme 的样式表提供。
+   =========================================================================== */
+:root{
+  --dsw-alias-bg-base:#f6f7f9;
+  --dsw-alias-bg-layer-1:#ffffff;
+  --dsw-alias-bg-layer-2:#f2f4f7;
+  --dsw-alias-bg-layer-3:#e9ecf1;
+  --dsw-alias-bg-overlay:rgba(15,23,42,.42);
+  --dsw-alias-border-l1:#dfe3ea;
+  --dsw-alias-border-l2:#c9d0da;
+  --dsw-alias-border-l3:#aeb7c4;
+  --dsw-alias-label-primary:#131926;
+  --dsw-alias-label-secondary:#43506b;
+  --dsw-alias-label-tertiary:#6b7891;
+  --dsw-alias-label-caption:#8b95a8;
+  --dsw-alias-brand-primary:#4d6bfe;
+  --dsw-alias-brand-primary-invert:#ffffff;
+  --dsw-alias-interactive-bg-hover:rgba(77,107,254,.08);
+  --dsw-alias-state-success-primary:#16a34a;
+  --dsw-alias-state-warn-primary:#d97706;
+  --dsw-alias-state-error-primary:#dc2626;
+  --dsw-alias-state-business-primary:#7c3aed;
+  --dsw-specific-sidebar-fill:#eef1f6;
+  --dsw-specific-bubble:#e4e9f7;
+  --dsw-specific-input-major:#ffffff;
+  --dsw-specific-menu:#ffffff;
+  --dsw-elevation-soft:0 2px 10px rgba(15,23,42,.06);
+  --dsw-elevation-panel:0 6px 26px rgba(15,23,42,.10);
+
+  /* 示意用的"座位"色板（不是 DSH 令牌，只用于边界标注） */
+  --seat-open:#0ea5e9;        /* 虚线：空座位，你可以注册 */
+  --seat-taken:#64748b;       /* 实线：shipped 已占用 */
+  --seat-private:#a855f7;     /* 点线：由别人声明、通常不动 */
+  --scope-root:#4d6bfe;
+  --scope-session:#16a34a;
+  --scope-maybe:#d97706;
+
+  --dsh-content-font-size:14px;
+  --dsh-content-font-size-secondary:13px;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;
+}
+html[data-theme="dark"]{
+  --dsw-alias-bg-base:#0d1017;
+  --dsw-alias-bg-layer-1:#151a24;
+  --dsw-alias-bg-layer-2:#1c2230;
+  --dsw-alias-bg-layer-3:#242b3b;
+  --dsw-alias-bg-overlay:rgba(0,0,0,.62);
+  --dsw-alias-border-l1:#252c3a;
+  --dsw-alias-border-l2:#333c4e;
+  --dsw-alias-border-l3:#465165;
+  --dsw-alias-label-primary:#e7ecf5;
+  --dsw-alias-label-secondary:#aab6ca;
+  --dsw-alias-label-tertiary:#8592a8;
+  --dsw-alias-label-caption:#6d7a90;
+  --dsw-alias-brand-primary:#6d8bff;
+  --dsw-alias-brand-primary-invert:#0b0e14;
+  --dsw-alias-interactive-bg-hover:rgba(109,139,255,.14);
+  --dsw-specific-sidebar-fill:#11151d;
+  --dsw-specific-bubble:#25304a;
+  --dsw-specific-input-major:#1a2029;
+  --dsw-specific-menu:#1c2230;
+  --dsw-elevation-soft:0 2px 12px rgba(0,0,0,.45);
+  --dsw-elevation-panel:0 8px 30px rgba(0,0,0,.55);
+  --seat-open:#38bdf8;
+  --seat-taken:#94a3b8;
+  --seat-private:#c084fc;
+  --scope-root:#6d8bff;
+  --scope-session:#4ade80;
+  --scope-maybe:#fbbf24;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--sans);
+  font-size:var(--dsh-content-font-size);
+  line-height:1.5;
+  color:var(--dsw-alias-label-primary);
+  background:var(--dsw-alias-bg-base);
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--dsw-alias-brand-primary)}
+
+/* ---------- 页头 ---------- */
+header.top{
+  position:sticky;top:0;z-index:50;
+  background:color-mix(in srgb,var(--dsw-alias-bg-layer-1) 92%,transparent);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--dsw-alias-border-l1);
+  padding:14px 20px 12px;
+}
+header.top h1{margin:0 0 4px;font-size:17px;letter-spacing:.2px}
+header.top p.sub{margin:0;color:var(--dsw-alias-label-tertiary);font-size:12.5px}
+.controls{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:12px}
+.ctl{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--dsw-alias-label-secondary);
+  border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);
+  padding:4px 10px;border-radius:999px;cursor:pointer;user-select:none}
+.ctl:hover{background:var(--dsw-alias-interactive-bg-hover)}
+.ctl input{accent-color:var(--dsw-alias-brand-primary);margin:0}
+.ctl.on{border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-brand-primary)}
+.views{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.views button{
+  font:inherit;font-size:12.5px;cursor:pointer;padding:5px 12px;border-radius:8px;
+  border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);
+  color:var(--dsw-alias-label-secondary)}
+.views button:hover{background:var(--dsw-alias-interactive-bg-hover)}
+.views button[aria-selected="true"]{
+  background:var(--dsw-alias-brand-primary);border-color:var(--dsw-alias-brand-primary);
+  color:var(--dsw-alias-brand-primary-invert);font-weight:600}
+
+/* ---------- 图例 ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:12px;font-size:12px;color:var(--dsw-alias-label-secondary)}
+.lg{display:inline-flex;align-items:center;gap:6px}
+.sw{display:inline-block;width:26px;height:14px;border-radius:4px;flex:none;background:var(--dsw-alias-bg-layer-1)}
+.sw.open{border:1.5px dashed var(--seat-open)}
+.sw.taken{border:1.5px solid var(--seat-taken)}
+.sw.private{border:1.5px dotted var(--seat-private)}
+.sw.root{background:linear-gradient(90deg,var(--scope-root) 0 4px,transparent 4px)}
+.sw.session{background:linear-gradient(90deg,var(--scope-session) 0 4px,transparent 4px)}
+.sw.maybe{background:linear-gradient(90deg,var(--scope-maybe) 0 4px,transparent 4px)}
+
+/* ---------- 主区 ---------- */
+main{padding:22px 20px 80px;max-width:1760px;margin:0 auto}
+.view{display:none}
+.view.active{display:block}
+.view > h2{margin:0 0 6px;font-size:15.5px}
+.view > p.hint{margin:0 0 18px;color:var(--dsw-alias-label-tertiary);font-size:12.5px;max-width:110ch}
+.figure{border:1px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-layer-1);
+  padding:16px;overflow-x:auto}
+.figure + .figure{margin-top:20px}
+.figure > figcaption{margin:0 0 12px;font-size:12.5px;color:var(--dsw-alias-label-secondary)}
+.figure > figcaption b{color:var(--dsw-alias-label-primary)}
+
+/* ---------- 座位盒子：核心视觉语言 ---------- */
+.slot{position:relative;border-radius:8px;padding:10px;margin:0;
+  background:var(--dsw-alias-bg-layer-1);min-width:0}
+.slot.taken{border:1.5px solid var(--seat-taken)}
+.slot.open{border:1.5px dashed var(--seat-open);background:color-mix(in srgb,var(--seat-open) 6%,var(--dsw-alias-bg-layer-1))}
+.slot.private{border:1.5px dotted var(--seat-private);background:color-mix(in srgb,var(--seat-private) 5%,var(--dsw-alias-bg-layer-1))}
+.slot.plain{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2)}
+/* 标注（tag）一律**在文档流里**，作为方块的第一行 —— 这样再长的标注也不会越界或被裁掉，
+   它本身就是"这一块的边界标签"。 */
+.slot > .tag{
+  display:flex;align-items:center;gap:5px;flex-wrap:wrap;
+  width:fit-content;max-width:100%;
+  font-family:var(--mono);font-size:10.5px;line-height:1.6;
+  padding:1px 7px;border-radius:5px;margin:0 0 8px;
+  background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);
+  color:var(--dsw-alias-label-secondary);word-break:break-word}
+.slot.open > .tag{border-color:var(--seat-open);color:var(--seat-open)}
+.slot.taken > .tag{border-color:var(--seat-taken)}
+.slot.private > .tag{border-color:var(--seat-private);color:var(--seat-private)}
+.kind{display:none;font-weight:700;letter-spacing:.4px}
+body.show-kind .kind{display:inline}
+.kind.single{color:#e11d48}.kind.list{color:#2563eb}.kind.keyed{color:#7c3aed}.kind.chain{color:#ea580c}
+.scope{display:none;font-size:10px;padding:0 4px;border-radius:3px;color:#fff}
+body.show-scope .scope{display:inline}
+.scope.root{background:var(--scope-root)}
+.scope.session{background:var(--scope-session)}
+.scope.maybe{background:var(--scope-maybe)}
+.slot .who{display:none;font-size:10.5px;color:var(--dsw-alias-label-caption);font-weight:400}
+body.show-who .who{display:inline}
+
+.slot:hover{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px;cursor:help}
+.slot.sel{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px}
+/* 「只看可注册」：不强改透明度（嵌套会连乘），而是把空座位圈亮、把已占用的标签压暗 */
+body.only-open .slot.open{outline:2.5px dashed var(--seat-open);outline-offset:2px;
+  background:color-mix(in srgb,var(--seat-open) 12%,var(--dsw-alias-bg-layer-1))}
+body.only-open .slot.taken > .tag,
+body.only-open .slot.private > .tag{opacity:.3}
+
+/* 骨架里"不是座位"的普通块 */
+.box{border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:var(--dsw-alias-bg-layer-2);
+  padding:8px 10px;font-size:12px;color:var(--dsw-alias-label-secondary);min-width:0}
+.box .lb{font-family:var(--mono);font-size:10.5px;color:var(--dsw-alias-label-caption);display:block}
+.stack{display:flex;flex-direction:column;gap:8px;min-width:0}
+.row{display:flex;gap:8px;min-width:0}
+.row.wrap{flex-wrap:wrap}
+.grow{flex:1 1 auto;min-width:0}
+.note{font-size:11px;color:var(--dsw-alias-label-caption);margin-top:6px}
+.anno{font-family:var(--mono);font-size:10.5px;color:var(--dsw-alias-state-business-primary)}
+.pill{display:inline-block;font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:999px;
+  background:var(--dsw-alias-bg-layer-3);color:var(--dsw-alias-label-secondary);margin:0 4px 4px 0}
+
+/* ---------- 具体图的骨架尺寸 ---------- */
+.frame{
+  border:1.5px solid var(--seat-taken);border-radius:10px;padding:12px;position:relative;
+  background:var(--dsw-alias-bg-base);min-width:1080px}
+.frame > .tag{display:flex;width:fit-content;max-width:100%;margin:0 0 10px;
+  font-family:var(--mono);font-size:10.5px;padding:1px 7px;border-radius:5px;line-height:1.6;
+  background:var(--dsw-alias-bg-layer-2);border:1px solid var(--seat-taken);color:var(--dsw-alias-label-secondary)}
+.cols{display:grid;grid-template-columns:250px minmax(0,1fr) 220px;gap:0;align-items:stretch;
+  border:1px solid var(--dsw-alias-border-l2);border-radius:8px;overflow:hidden;
+  background:var(--dsw-alias-bg-layer-1);min-height:520px}
+.col{padding:12px 10px;display:flex;flex-direction:column;gap:8px;min-width:0;position:relative}
+.col.side{background:var(--dsw-specific-sidebar-fill);border-right:1px solid var(--dsw-alias-border-l2)}
+.col.center{background:var(--dsw-alias-bg-base)}
+.col.right{background:var(--dsw-alias-bg-layer-2);border-left:1px solid var(--dsw-alias-border-l2)}
+.colhead{font-family:var(--mono);font-size:10.5px;color:var(--dsw-alias-label-caption);text-transform:none;
+  border-bottom:1px dashed var(--dsw-alias-border-l2);padding-bottom:6px;margin-bottom:2px;display:flex;
+  justify-content:space-between;gap:8px;flex-wrap:wrap}
+.sidebar-foot{margin-top:auto;display:flex;flex-direction:column;gap:8px}
+
+/* 输入区放大图 */
+.composer-zoom{display:grid;grid-template-columns:1fr 1fr;gap:14px;min-width:900px}
+.card{border:1.5px solid var(--dsw-alias-border-l2);border-radius:12px;background:var(--dsw-specific-input-major);
+  padding:12px;display:flex;flex-direction:column;gap:8px;
+  box-shadow:var(--dsw-elevation-soft,0 2px 10px rgba(15,23,42,.06))}
+.dock{border:1.5px dashed var(--seat-open);border-radius:8px;padding:10px;
+  background:color-mix(in srgb,var(--seat-open) 5%,transparent)}
+.dock > .tag{display:flex;width:fit-content;max-width:100%;margin:0 0 8px;font-family:var(--mono);font-size:10.5px;
+  padding:1px 7px;border-radius:5px;line-height:1.6;background:var(--dsw-alias-bg-layer-1);
+  border:1px solid var(--seat-open);color:var(--seat-open)}
+/* composerStack：不是座位，是 flex column 容器 */
+.stackwrap{position:relative;display:flex;flex-direction:column;gap:8px;min-width:0;
+  border:1.5px solid var(--dsw-alias-state-business-primary);border-radius:10px;
+  padding:10px;background:var(--dsw-alias-bg-base)}
+.stackwrap > .tag{display:flex;width:fit-content;max-width:100%;margin:0 0 8px;font-family:var(--mono);font-size:10.5px;
+  padding:1px 7px;border-radius:5px;line-height:1.6;background:var(--dsw-alias-bg-layer-1);
+  border:1px solid var(--dsw-alias-state-business-primary);color:var(--dsw-alias-state-business-primary)}
+/* shell.overlay 的示意条 */
+.overlaybar{margin-top:14px;border-style:dashed;background:color-mix(in srgb,var(--seat-open) 7%,transparent)}
+.dock.gone{border-style:dotted;border-color:var(--dsw-alias-state-error-primary);opacity:.55}
+.dock.gone > .tag{border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary)}
+.contents-anchor{border-left:3px solid var(--dsw-alias-state-business-primary);padding-left:8px}
+.toolrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;border-top:1px dashed var(--dsw-alias-border-l2);padding-top:8px}
+.chip{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--dsw-alias-bg-layer-3);
+  color:var(--dsw-alias-label-secondary);font-family:var(--mono)}
+.chip.brand{background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-brand-primary-invert)}
+
+/* tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--dsw-alias-border-l2);padding-bottom:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap}
+.tab{font-size:12.5px;padding:4px 12px;border-radius:999px;border:1px solid transparent;color:var(--dsw-alias-label-secondary)}
+.tab.on{background:var(--dsw-alias-bg-layer-3);border-color:var(--dsw-alias-border-l2);color:var(--dsw-alias-label-primary);font-weight:600}
+.tab.ord{font-family:var(--mono);font-size:10px;color:var(--dsw-alias-label-caption);padding:0 2px}
+
+/* z 序图 */
+.zstack{display:flex;flex-direction:column;gap:14px;min-width:820px}
+.zrow{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;align-items:center}
+.zlvl{font-family:var(--mono);font-size:11px;color:var(--dsw-alias-label-caption);text-align:right}
+.zbox{border:1.5px solid var(--seat-taken);border-radius:8px;padding:10px 12px;background:var(--dsw-alias-bg-layer-2);font-size:12.5px}
+.zbox.hi{border-color:var(--dsw-alias-brand-primary);background:color-mix(in srgb,var(--dsw-alias-brand-primary) 10%,var(--dsw-alias-bg-layer-1))}
+.zbar{height:8px;border-radius:999px;background:var(--dsw-alias-bg-layer-3);margin-top:6px;overflow:hidden}
+.zbar > i{display:block;height:100%;background:var(--dsw-alias-brand-primary)}
+
+/* 令牌地图 */
+.tokenmap{display:grid;grid-template-columns:1fr 260px;gap:16px;min-width:900px}
+.tm-page{border:1px solid var(--dsw-alias-border-l1);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.tm-region{padding:10px 12px;font-size:12px;border-bottom:1px dashed var(--dsw-alias-border-l1);position:relative}
+.tm-region:last-child{border-bottom:0}
+.tm-region code{font-family:var(--mono);font-size:10.5px;color:var(--dsw-alias-state-business-primary)}
+.tm-list{font-size:12px}
+.tm-list table{width:100%;border-collapse:collapse}
+.tm-list th,.tm-list td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--dsw-alias-border-l1);vertical-align:top}
+.tm-list th{font-size:11px;color:var(--dsw-alias-label-caption);font-weight:600}
+.tm-list td code{font-family:var(--mono);font-size:10.5px;white-space:nowrap}
+
+/* ---------- 右侧详情面板 ---------- */
+aside.detail{
+  position:fixed;right:18px;bottom:18px;width:400px;max-width:calc(100vw - 36px);max-height:64vh;overflow:auto;
+  background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:12px;
+  box-shadow:0 12px 40px rgba(2,6,23,.22);padding:14px 16px;z-index:60;font-size:12.5px}
+aside.detail h3{margin:0 0 2px;font-size:13.5px;font-family:var(--mono)}
+aside.detail .meta{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 10px}
+aside.detail .meta span{font-family:var(--mono);font-size:10.5px;padding:2px 7px;border-radius:999px;
+  background:var(--dsw-alias-bg-layer-3);color:var(--dsw-alias-label-secondary)}
+aside.detail dl{margin:0;display:grid;grid-template-columns:74px minmax(0,1fr);gap:6px 10px}
+aside.detail dt{color:var(--dsw-alias-label-caption);font-size:11.5px}
+aside.detail dd{margin:0;font-size:12px}
+aside.detail dd code{font-family:var(--mono);font-size:11px;word-break:break-all}
+aside.detail .close{position:absolute;top:8px;right:10px;border:0;background:transparent;color:var(--dsw-alias-label-tertiary);
+  font-size:16px;cursor:pointer;line-height:1}
+aside.detail .empty{color:var(--dsw-alias-label-caption)}
+.callout{margin-top:10px;padding:8px 10px;border-left:3px solid var(--dsw-alias-brand-primary);
+  background:var(--dsw-alias-bg-layer-2);border-radius:0 6px 6px 0;font-size:11.5px;color:var(--dsw-alias-label-secondary)}
+.warn{border-left-color:var(--dsw-alias-state-warn-primary)}
+footer.foot{padding:24px 20px 60px;max-width:1760px;margin:0 auto;color:var(--dsw-alias-label-caption);font-size:12px}
+</style>
+</head>
+<body class="show-kind show-scope show-who">
+
+<header class="top">
+  <h1>DSH Web GUI 布局图谱 —— 座位（Slot）与视觉边界</h1>
+  <p class="sub">
+    每个方块 = 一个可见区域。「虚线」= 平台预留的<b>空座位，你可以注册</b>；「实线灰」= shipped 已占用；
+    「点线紫」= 由别的包声明、你通常不动。<b>悬停任意方块</b>看它的契约（key / kind / scope / ownerProps / 真实范例）。
+  </p>
+
+  <div class="controls">
+    <label class="ctl"><input type="checkbox" id="tg-theme" /> 暗色主题</label>
+    <label class="ctl on"><input type="checkbox" id="tg-kind" checked /> 显示 kind</label>
+    <label class="ctl on"><input type="checkbox" id="tg-scope" checked /> 显示 scope</label>
+    <label class="ctl on"><input type="checkbox" id="tg-who" checked /> 显示已占用者</label>
+    <label class="ctl"><input type="checkbox" id="tg-hero" /> Hero（新建空会话）布局</label>
+    <label class="ctl"><input type="checkbox" id="tg-onlyopen" /> 只看"可注册"座位</label>
+  </div>
+
+  <div class="views" role="tablist">
+    <button role="tab" data-view="frame" aria-selected="true">1 · 整页框架</button>
+    <button role="tab" data-view="sidebar">2 · 左栏 sidebar</button>
+    <button role="tab" data-view="conv">3 · 会话区 / tabs</button>
+    <button role="tab" data-view="composer">4 · 输入区 composerStack</button>
+    <button role="tab" data-view="settings">5 · 设定弹窗</button>
+    <button role="tab" data-view="z">6 · 叠放层级 z 序</button>
+    <button role="tab" data-view="tokens">7 · 主题令牌地图</button>
+    <button role="tab" data-view="geo">8 · 几何与约束</button>
+  </div>
+
+  <div class="legend">
+    <span class="lg"><i class="sw open"></i>空座位 · 可注册</span>
+    <span class="lg"><i class="sw taken"></i>shipped 已占用</span>
+    <span class="lg"><i class="sw private"></i>别包声明 · 通常不动</span>
+    <span class="lg"><i class="sw root"></i><code>scope: root</code></span>
+    <span class="lg"><i class="sw session"></i><code>scope: session</code></span>
+    <span class="lg"><i class="sw maybe"></i><code>scope: session-maybe</code></span>
+    <span class="lg"><code>■ single</code></span>
+    <span class="lg"><code>☰ list</code></span>
+    <span class="lg"><code>⌗ keyed</code></span>
+    <span class="lg"><code>⇉ chain</code></span>
+  </div>
+</header>
+
+<main>
+
+<!-- ===================================================================== -->
+<!-- VIEW 1 · 整页框架 -->
+<!-- ===================================================================== -->
+<section class="view active" id="view-frame">
+  <h2>1 · 整页框架：三列 + 帧级浮层</h2>
+  <p class="hint">
+    <code>root</code>（single, root）是全站唯一被 shell 渲染的座位，由 <code>ui-layout</code> 的 <code>AppFrame</code> 占据。
+    AppFrame 是一个 CSS grid：<code>grid-template-columns: 侧栏px | minmax(0,1fr) | 右栏px</code>，
+    并在同一份 JSX 里 <b>声明</b>了 sidebar / main / rightbar / shell.overlay 四个子座位。
+    <br><b>不要注册 <code>root</code> 或 <code>sidebar</code></b> —— 它们是 single，你会把整个框架顶掉。
+  </p>
+
+  <figure class="figure">
+    <figcaption><b>图 1</b> · 浏览器视口内的完整嵌套。虚框就是你能坐的位置。</figcaption>
+
+    <div class="frame slot taken" data-slot="root" data-kind="single" data-scope="root"
+         data-owner="{}（shell 不传任何东西；AppFrame 是注入装配的）"
+         data-who="ui-layout 的 AppFrame"
+         data-note="全站唯一由 shell 渲染的座位（唯一的 ctx.renderSlot('root') 调用）。注册它会顶掉 AppFrame，页面只剩你的组件，sidebar/会话/右栏全部消失。要用整页浮层请去 shell.overlay。"
+         data-example="dsh-client-ui-layout/lib/types/client/registry.d.ts:23-31（明确写着 DO NOT register here）">
+      <span class="tag"><span class="kind single">■ single</span><span class="scope root">root</span> root <span class="who">← ui-layout / AppFrame</span></span>
+
+      <div class="cols">
+
+        <!-- ---------- 左栏 ---------- -->
+        <div class="col side slot taken" data-slot="sidebar" data-kind="single" data-scope="root"
+             data-owner="{ collapsed: boolean, width: number }"
+             data-who="ui-sidebar 的 SidebarRoot"
+             data-note="整个左栏。声明了 brand.mark / brand.name / panellist / workspaces / settings / footer.action 六个子座位。注册 sidebar 本身 = 顶掉导航列，连同这六个子座位一起消失。"
+             data-example="dsh-client-ui-layout/lib/types/client/index.d.ts:29-38">
+          <span class="tag"><span class="kind single">■ single</span><span class="scope root">root</span> sidebar <span class="who">← ui-sidebar</span></span>
+
+          <div class="colhead"><span>左栏 · 264–420px（默认 280）</span><span>折叠 = 56px rail</span></div>
+
+          <div class="slot taken" data-slot="sidebar.brand.mark" data-kind="single" data-scope="root"
+               data-owner="{ size: number }"
+               data-who="ui-brand-official 的官方标（未注册时回落成鱼形）"
+               data-note="展开态品牌视觉，折叠态 rail 也渲染同一个座位。"
+               data-example="dsh-client-ui-sidebar/lib/types/client/contract/slots.d.ts:21-24">
+            <span class="tag"><span class="kind single">■</span><span class="scope root">root</span> sidebar.brand.mark</span>
+            <div class="box"><span class="lb">品牌标</span>◆ 未注册时：鱼形 fallback</div>
+          </div>
+
+          <div class="slot taken" data-slot="sidebar.brand.name" data-kind="single" data-scope="root"
+               data-owner="{}（occupant 自己拥有内容与宽度）"
+               data-who="ui-brand-official"
+               data-note="与 mark 相互独立；未注册时用本地化标签。完整构建会在标签下叠一个版本徽章 version[-commit][-dirty]。"
+               data-example="dsh-client-ui-sidebar/.../contract/slots.d.ts:25-32">
+            <span class="tag"><span class="kind single">■</span><span class="scope root">root</span> sidebar.brand.name</span>
+            <div class="box"><span class="lb">品牌名 + 版本徽章</span>DeepSeek Harness</div>
+          </div>
+
+          <div class="box"><span class="lb">shipped 控件（非座位）</span>＋ New Session ／ ⇤ 折叠</div>
+
+          <div class="slot open" data-slot="sidebar.panellist" data-kind="list" data-scope="root"
+               data-owner="{ size: number, active: boolean }"
+               data-who="（shipped 没有注册任何示例面板）"
+               data-note="全局面板图标行。用 id + order + label 注册一个图标；再用同一个 id 作为 key 注册到 main（keyed）。label 同时是可见文本、无障碍名和折叠提示。没有任何注册时，这一行与它的间距完全不渲染。选中不存在的 main key 会抛错且不改当前选择。"
+               data-example="bundles/fdep-api-request/lib/client.js:908-918（MCP Gateway 实例）">
+            <span class="tag"><span class="kind list">☰ list</span><span class="scope root">root</span> sidebar.panellist <span class="who">← 你可以加</span></span>
+            <div class="row wrap">
+              <span class="chip">◈ 面板 A</span><span class="chip">◈ 面板 B</span>
+              <span class="chip" style="border:1px dashed var(--seat-open);background:transparent;color:var(--seat-open)">+ 你的图标</span>
+            </div>
+          </div>
+
+          <div class="slot private" data-slot="sidebar.workspaces" data-kind="single" data-scope="root"
+               data-owner="{ wide: boolean, expandSidebar: () => void }"
+               data-who="ui-workspace（会话/工作区浏览树）"
+               data-note="工作区与会话浏览区：节标题、搜索、分组/扁平列表、所有工作区对话框都归 occupant 所有。侧栏只给它列状态。"
+               data-example="dsh-client-ui-sidebar/.../contract/slots.d.ts:44-54">
+            <span class="tag"><span class="kind single">■</span><span class="scope root">root</span> sidebar.workspaces <span class="who">← ui-workspace</span></span>
+            <div class="stack">
+              <div class="box"><span class="lb">搜索 / 分组</span>所有会话…</div>
+              <div class="box"><span class="lb">会话列表</span>├ 会话 1<br>├ 会话 2（状态点）<br>└ 会话 3</div>
+            </div>
+          </div>
+
+          <div class="sidebar-foot">
+            <div class="slot open" data-slot="sidebar.footer.action" data-kind="list" data-scope="root"
+                 data-owner="{ wide: boolean }"
+                 data-note="设置旁边的可选动作；每个动作只拿到列状态。"
+                 data-example="dsh-client-ui-sidebar/.../contract/slots.d.ts:69-73">
+              <span class="tag"><span class="kind list">☰</span><span class="scope root">root</span> sidebar.footer.action</span>
+              <div class="row"><span class="chip" style="border:1px dashed var(--seat-open);background:transparent;color:var(--seat-open)">+ 你的动作</span></div>
+            </div>
+
+            <div class="slot private" data-slot="sidebar.settings" data-kind="single" data-scope="root"
+                 data-owner="{ wide: boolean }"
+                 data-who="ui-settings-general（触发行 + 弹窗）"
+                 data-note="底部钉住的设置入口。它只渲染这一格并共享列状态；shell 自身零文案 —— 触发文案由 settings.trigger 座位提供（点「设定弹窗」页看内部）。"
+                 data-example="dsh-client-ui-sidebar/.../contract/slots.d.ts:60-64 + dsh-client-ui-settings-general">
+              <span class="tag"><span class="kind single">■</span><span class="scope root">root</span> sidebar.settings <span class="who">← ui-settings-general</span></span>
+              <div class="box"><span class="lb">底部钉住</span>⚙ 设置　→ 打开模态（见第 5 页）</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ---------- 中栏 ---------- -->
+        <div class="col center">
+          <div class="colhead"><span>中栏 · <code>main</code>（keyed，<code>conversation</code> 是保留 key）</span><span>minmax(0,1fr)</span></div>
+
+          <div class="slot taken grow" data-slot="main" data-kind="keyed" data-scope="root"
+               data-owner="（keyed 座位：owner 由 selection 决定）"
+               data-who="key='conversation' → ui-conversation；其它 key → 各自的全局面板"
+               data-note="中央面板，按 sidebar 条目的 id 选择。保留 key conversation 承载会话；其它 key 不获得 Session 绑定。ctx.layout.selectPanel(id) 切换；null 回到会话且不改当前 Session。"
+               data-example="dsh-client-ui-layout/lib/types/client/index.d.ts:44-51">
+            <span class="tag"><span class="kind keyed">⌗ keyed</span><span class="scope root">root</span> main <span class="who">key = 'conversation' | 你的面板 id</span></span>
+
+            <div class="slot taken" data-slot="main.conversation" data-kind="single" data-scope="session-maybe"
+                 data-owner="{ selectWorkspace, hooks.composerBlock }（注入 face）"
+                 data-who="ui-conversation 的 ConversationRoot"
+                 data-note="会话壳。session-maybe：没有选中会话时也渲染（hero 空态），此时标准 props 里的 sessionId 是 undefined。"
+                 data-example="dsh-client-ui-conversation/lib/types/client/contract/slots.d.ts:112-116">
+              <span class="tag"><span class="kind single">■</span><span class="scope maybe">session-maybe</span> main.conversation</span>
+
+              <!-- 会话头 -->
+              <div class="slot private" data-slot="conversation.session.header" data-kind="single" data-scope="session"
+                   data-owner="{ hooks.conversationViews, open(sessionId), selectView(view) }"
+                   data-note="严格 per-Session 的标题 + 动作 + View 导航。注意：sessionId === undefined（无会话）时整个 header 都不渲染 —— 见 ConversationRoot 的 sessionId === void 0 ? null : renderSlot(...)。"
+                   data-example="dsh-client-ui-conversation/.../contract/slots.d.ts:122-130">
+                <span class="tag"><span class="kind single">■</span><span class="scope session">session</span> conversation.session.header</span>
+                <div class="row wrap">
+                  <div class="slot open grow" data-slot="conversation.session.header.lineage" data-kind="single" data-scope="session"
+                       data-owner="{ lineageSessionId, displayTitle, openTitle? }"
+                       data-note="单个会话面包屑标题的可选替代品（分叉/子代理链用）。"
+                       data-example="ui-subagent 注册它显示父子链">
+                    <span class="tag"><span class="kind single">■</span><span class="scope session">session</span> .lineage</span>
+                    <div class="box">标题 / 面包屑</div>
+                  </div>
+                  <div class="slot open grow" data-slot="conversation.session.header.actions" data-kind="list" data-scope="session"
+                       data-owner="{}（从标准 Session props 取状态）"
+                       data-note="标题旁的会话动作，升序排列。"
+                       data-example="ui-jobs（后台任务）、ui-open-in-app">
+                    <span class="tag"><span class="kind list">☰</span><span class="scope session">session</span> .actions</span>
+                    <div class="row"><span class="chip">＋</span><span class="chip">◇</span></div>
+                  </div>
+                  <div class="slot open grow" data-slot="conversation.session.header.utilities" data-kind="list" data-scope="session"
+                       data-owner="{}"
+                       data-note="右对齐的会话工具，升序排列。"
+                       data-example="ui-schedule（活动日程目录）">
+                    <span class="tag"><span class="kind list">☰</span><span class="scope session">session</span> .utilities</span>
+                    <div class="row"><span class="chip">⧉</span></div>
+                  </div>
+                  <div class="slot open" data-slot="conversation.session.header.corner" data-kind="single" data-scope="session"
+                       data-owner="{}"
+                       data-note="头部最右角，越过 utilities 的边缘进入 header 自己的 padding。只有在 occupant 真有内容时才占位；没内容时 utilities 直接贴到边缘。"
+                       data-example="ui-sidebar-right 的右栏展开按钮（= 左栏折叠图标的镜像）">
+                    <span class="tag"><span class="kind single">■</span><span class="scope session">session</span> .corner</span>
+                    <div class="box">◨</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- tabs -->
+              <div class="tabs" data-slot="conversation.view" data-kind="list" data-scope="session"
+                   data-owner="{ viewRequest, openView(view, focus), completeViewRequest() }"
+                   data-who="ui-chat（order 0）、ui-trajectory（order 10）"
+                   style="border:1.5px dashed var(--seat-open);border-radius:8px;padding:6px 8px"
+                   data-note="Conversation View 列表座位。注册项被投影成 ViewTab { id, label }（label 缺省回落成 id）。每会话的当前 tab 存在 Conversation shell 的 per-session store 里（view: string | null，null 解析到已注册的 Chat），外加一次性的 viewRequest。"
+                   data-example="dsh-client-ui-chat/lib/client.js（id:'chat', order:0）；-trajectory（id:'trajectory', order:10）；自建排 20 就在轨迹右边">
+                <span class="tag"><span class="kind list">☰ list</span><span class="scope session">session</span> conversation.view <span class="who">← 会话 / 轨迹 / 你可以加</span></span>
+                <span class="tab on">会话 <span class="ord">order 0</span></span>
+                <span class="tab">轨迹 <span class="ord">order 10</span></span>
+                <span class="tab" style="border:1px dashed var(--seat-open);color:var(--seat-open)">工作流 <span class="ord">order 20 ← 你的</span></span>
+              </div>
+
+              <!-- 会话体 -->
+              <div class="slot taken" data-slot="conversation.session" data-kind="single" data-scope="session"
+                   data-owner="{ hooks.conversationViews, bindDraftMirror, openView }"
+                   data-who="ui-conversation"
+                   data-note="严格的 per-Session 会话体。它渲染「当前选中的那个 conversation.view」—— 也就是说你注册的 tab 组件会被挂在这里。"
+                   data-example="dsh-client-ui-conversation/.../contract/slots.d.ts:117-121">
+                <span class="tag"><span class="kind single">■</span><span class="scope session">session</span> conversation.session <span class="who">← 渲染当前 view</span></span>
+
+                <div class="box" style="margin-bottom:8px">
+                  <span class="lb">当前 view 的内容（第 3 页详图）</span>
+                  消息流 / 轨迹账本 —— 内部还有 <code>conversation.chat.node</code>（keyed）、
+                  <code>conversation.chat.commandview</code>（keyed）、<code>conversation.chat.turnTail</code>（chain）、
+                  <code>conversation.chat.assistant-actions</code>（list）、<code>conversation.message.images</code>（single）
+                </div>
+
+                <!-- composerStack -->
+                <div class="stackwrap"
+                     data-slot="composerStack（不是座位，是 flex column 容器）"
+                     data-kind="—" data-scope="—"
+                     data-note="composer 所在的 flex column。它的直接子项顺序是：[HeroShell] → [heroWorkspaceRow] → [conversation.input.dock 锚点] → [inputBar] → [composer.dock]。因为座位锚点是 display:contents，座位内容在布局上『穿透』到这层，所以座位里的元素就是这里的 flex item。"
+                     data-example="dsh-client-ui-conversation/lib/client.js 的 composerBar 定义">
+                  <span class="tag">composerStack · flex column · gap = --dsh-composer-stack-gap</span>
+
+                  <div class="box heroonly" style="border-style:dashed"><span class="lb">仅 hero：HeroShell + heroWorkspaceRow</span>
+                    <span class="pill">conversation.hero.brand.mark</span>
+                    <span class="pill">conversation.hero.workspace</span>
+                    <span class="pill">conversation.hero.agentPreset</span>
+                    <span class="note">三个都是 single / root，由 ui-conversation 声明。</span>
+                  </div>
+
+                  <div class="dock" data-slot="conversation.input.dock" data-kind="list" data-scope="session"
+                       data-owner="{ session: SessionSnapshot, input: InputState }"
+                       data-who="ui-goal（GoalBar 停在输入卡上方）"
+                       data-note="输入卡片上方的整宽条目，order 升序。锚点是 display:contents → 你的 entry 根元素直接成为 composerStack 的 flex item，所以 order/flex/gap 都按『父容器的子项』算。行内任何 entry return null 就不产生 flex item。"
+                       data-example="ui-goal；scene-template 的 TopScenarioPanel（order 1）与 HeroTemplateEntry（order 2）">
+                    <span class="tag"><span class="kind list">☰ list</span><span class="scope session">session</span> conversation.input.dock · 卡片上方</span>
+                    <div class="row wrap"><span class="chip">你的面板（order 1）</span><span class="chip" style="border:1px dashed var(--seat-open);background:transparent;color:var(--seat-open)">+ 再加一个</span></div>
+                  </div>
+
+                  <div class="card slot taken" data-slot="conversation.composer.bar" data-kind="single" data-scope="session-maybe"
+                       data-owner="{ variant: 'hero'|'composer', blocked?, disabled?, placeholder?, accessory?, workspacePickerOpen?, onRequestWorkspace? }"
+                       data-who="ui-conversation 的常驻 composer"
+                       data-note="输入卡片本体。是 session-maybe：没有会话时渲染 inert 状态（disabled/placeholder 由 block 决定）。它声明并渲染下面 6 个子座位，还声明了 conversation.composer.dock。注册它会顶掉整张卡片 —— 想有条件接管请用 conversation.composer（chain）。"
+                       data-example="dsh-client-ui-conversation/.../contract/slots.d.ts:212-217, 329-346">
+                    <span class="tag"><span class="kind single">■</span><span class="scope maybe">session-maybe</span> conversation.composer.bar · 输入卡片</span>
+
+                    <div class="slot open" data-slot="conversation.input.attachments" data-kind="single" data-scope="session-maybe"
+                         data-owner="{ attachments, canAcceptDrop, onAddFiles, onRemoveAttachment, uploads, onRetryFile, dropLimits? }"
+                         data-note="草稿附件轨道与放置目标。文件在『挑选时』上传，不是发送时。"
+                         data-example="ui-attachment">
+                      <span class="tag"><span class="kind single">■</span><span class="scope maybe">session-maybe</span> .input.attachments</span>
+                      <div class="row"><span class="chip">🖼 附件缩略</span><span class="chip" style="border:1px dashed var(--seat-open);background:transparent;color:var(--seat-open)">+ 你的渲染</span></div>
+                    </div>
+
+                    <div class="slot open" data-slot="conversation.input.overlay" data-kind="list" data-scope="session"
+                         data-owner="（无 owner props）"
+                         data-note="渲染在卡片内部的浮层。'/' '@' 候选菜单就坐在这里（MenuView 自己注册，关闭时 return null）。"
+                         data-example="dsh-client-ui-input-trigger（MenuView 自注册进本座位）">
+                      <span class="tag"><span class="kind list">☰</span><span class="scope session">session</span> .input.overlay</span>
+                      <div class="box" style="border-style:dashed"><span class="lb">浮层示例</span>/ 命令候选 · @ 文件引用 · @ 会话引用</div>
+                    </div>
+
+                    <div class="box"><span class="lb">Lexical contenteditable（草稿区 · 不是 textarea）</span>
+                      读写只能走 <code>inputActions.setDraft()</code> / <code>useInput(s =&gt; s.draft)</code>
+                    </div>
+
+                    <div class="toolrow">
+                      <div class="slot open grow" data-slot="conversation.input.left" data-kind="list" data-scope="session"
+                           data-note="卡片工具行左侧的紧凑控件。" data-example="（shipped 示例少，是干净的空座位）">
+                        <span class="tag"><span class="kind list">☰</span><span class="scope session">session</span> .input.left</span>
+                        <div class="row"><span class="chip" style="border:1px dashed var(--seat-open);background:transparent;color:var(--seat-open)">+ 控件</span></div>
+                      </div>
+                      <div class="slot private" data-slot="conversation.input.plan" data-kind="single" data-scope="session"
+                           data-owner="{ locked: boolean }" data-who="ui-plan"
+                           data-note="计划模式控件：坐在这个座位，读 plan 投影，并接 /plan 命令通道。"
+                           data-example="dsh-client-ui-plan">
+                        <span class="tag"><span class="kind single">■</span><span class="scope session">session</span> .input.plan</span>
+                        <div class="box">📋 计划</div>
+                      </div>
+                      <div class="slot private" data-slot="conversation.input.model" data-kind="single" data-scope="session"
+                           data-owner="{ locked: boolean }" data-who="ui-model-selection"
+                           data-note="模型选择器：坐在这个座位，读共享模型目录与会话投影。"
+                           data-example="dsh-client-ui-model-selection">
+                        <span class="tag"><span class="kind single">■</span><span class="scope session">session</span> .input.model</span>
+                        <div class="box">◈ 模型 ▾</div>
+                      </div>
+                      <div class="slot open grow" data-slot="conversation.input.right" data-kind="list" data-scope="session"
+                           data-note="提交键之前的紧凑控件。" data-example="（干净的空座位）">
+                        <span class="tag"><span class="kind list">☰</span><span class="scope session">session</span> .input.right</span>
+                        <div class="row"><span class="chip" style="border:1px dashed var(--seat-open);background:transparent;color:var(--seat-open)">+ 控件</span><span class="chip brand">↑ 发送</span></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="dock composeronly" data-slot="conversation.composer.dock" data-kind="list" data-scope="session"
+                       data-owner="（无 owner props）"
+                       data-who="ui-conversation（todo/goal/queue 类面板）"
+                       data-note="输入卡片下方的整宽条目。⚠️ 只在 variant === 'composer' 时渲染 —— 新建空会话（hero）时这个座位根本不存在。要在两种布局下都出现，请『注册两个 entry』（一个进 input.dock 并给 order:2，一个进这里，各自在不适用的那边 return null）。"
+                       data-example="scene-template/UI.md §4.4 的完整推理">
+                    <span class="tag"><span class="kind list">☰ list</span><span class="scope session">session</span> conversation.composer.dock · 卡片下方</span>
+                    <div class="row wrap"><span class="chip">你的面板（order 100）</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- composer chain（与 composerStack 是替代关系） -->
+              <div class="slot open" data-slot="conversation.composer" data-kind="chain" data-scope="session"
+                   data-owner="{ sessionId, session, pendingInteraction }"
+                   data-who="ui-approval（priority 1）、ui-user-questions、ui-subagent（priority -10）"
+                   data-note="⚠️ 座位层级上它是 composerStack 的『上一层』：ConversationRoot 调 renderSlotChain('conversation.composer', owner, { fallback: composerBar, fallbackOnly: sessionId===undefined, overlay:true })。注册者提供 select(owner) => value | null，返回非 null 即接管；priority 大者优先；没人接管就用 fallback = composerStack。"
+                   data-example="dsh-client-ui-approval/lib/client.js（select: pendingInteraction instanceof PendingApproval ? ... : null）">
+                <span class="tag"><span class="kind chain">⇉ chain</span><span class="scope session">session</span> conversation.composer <span class="who">← 有条件接管输入区</span></span>
+                <div class="box">判定顺序：priority 高 → 低；第一个 select 返回非 null 的 occupant 渲染。
+                  <br>fallback（= 上面的 composerStack）在无人接管时渲染；<code>fallbackOnly: sessionId===undefined</code> 表示无会话时只允许 fallback。</div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- ---------- 右栏 ---------- -->
+        <div class="col right">
+          <div class="colhead"><span>右栏 · 首次 45% 视口</span><span>上限 70%</span></div>
+
+          <div class="slot taken grow" data-slot="rightbar" data-kind="single" data-scope="root"
+               data-owner="{ width: number, viewportWidth: number, canShow: boolean }"
+               data-who="ui-sidebar-right"
+               data-note="右栏是一条『轨道』：显示与否、是否占轨道，都是 occupant 自己记录的业务；它通过 ctx.layout.openRightbar(track, fullscreen) / closeRightbar() 报告。canShow=false 时确定性关闭，且变宽不会自动重开。为保住中央 400px，先把右栏压到 300px，再报告空间不足。"
+               data-example="dsh-client-ui-layout/README.md（panel geometry）">
+            <span class="tag"><span class="kind single">■</span><span class="scope root">root</span> rightbar <span class="who">← ui-sidebar-right</span></span>
+
+            <div class="slot private" data-slot="rightbar.session" data-kind="single" data-scope="session"
+                 data-owner="（通过 useTabInfo() 读 { sidebar, panel, tab }）"
+                 data-who="ui-sidebar-right（仅当 Conversation 被选中时挂载）"
+                 data-note="每会话一个停靠面。切到全局面板会隐藏右栏并释放帧轨道，但不删除该会话的 tab 状态。状态是 memory-only，刷新回到折叠默认。"
+                 data-example="dsh-client-ui-sidebar-right/README.md">
+              <span class="tag"><span class="kind single">■</span><span class="scope session">session</span> rightbar.session</span>
+
+              <div class="slot open" data-slot="sidebar.right.pane.tab" data-kind="keyed" data-scope="session"
+                   data-note="tab 本体，key = tab 类型注册时的 id。类型注册分两阶段：① ctx.sidebarRightTabs.register({id, kind, patterns?, priority?, canOpen?, title, guide?})；② 用 definition.id 作为 key 注册本体。"
+                   data-example="ui-sidebar-files、ui-sidebar-documentpreview（第三方类型的活证明）">
+                <span class="tag"><span class="kind keyed">⌗ keyed</span><span class="scope session">session</span> sidebar.right.pane.tab</span>
+                <div class="box">文档预览 / 文件树 / 你的 tab</div>
+              </div>
+              <div class="slot open" data-slot="sidebar.right.pane.tab.title" data-kind="keyed" data-scope="session"
+                   data-note="tab 标题座位；缺席时用 tab 打开时捕获的 title(address) 文本（标题在打开时定死）。">
+                <span class="tag"><span class="kind keyed">⌗</span><span class="scope session">session</span> .tab.title</span>
+                <div class="box">标题</div>
+              </div>
+              <div class="slot open" data-slot="sidebar.right.tab.guide" data-kind="chain" data-scope="session"
+                   data-note="替换 guide tab 的『体』而不替换 tab 本身。">
+                <span class="tag"><span class="kind chain">⇉ chain</span><span class="scope session">session</span> .tab.guide</span>
+              </div>
+              <div class="slot open" data-slot="sidebar.right.tab.menu.item" data-kind="list" data-scope="session"
+                   data-note="在 kit 自己的布局动作之后，往 tab 菜单追加内容级动作。">
+                <span class="tag"><span class="kind list">☰ list</span><span class="scope session">session</span> .tab.menu.item</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- shell.overlay -->
+      <div class="slot open overlaybar" data-slot="shell.overlay" data-kind="list" data-scope="root"
+           data-owner="（无 owner props）"
+           data-note="帧级浮层：在所有列之上、在它们的滚动容器之外。故意是通用的、不属于任何 feature —— badge、toast 栈、状态胶囊都该放这里，条目之间自己排序。这一层本身『点击穿透』，occupant 要自己 opt-in pointer-events，所以永远不会挡住下面的应用。这是加一块属于你自己的框架级浮层的正确座位。"
+           data-example="shipped composition 不注册任何示例面板">
+        <span class="tag"><span class="kind list">☰ list</span><span class="scope root">root</span> shell.overlay · 帧级浮层 · 点击穿透</span>
+        <div class="row wrap"><span class="chip">🔔 toast</span><span class="chip">⏺ 状态胶囊</span><span class="chip" style="border:1px dashed var(--seat-open);background:transparent;color:var(--seat-open)">+ 你的浮层</span></div>
+      </div>
+
+    </div>
+    <p class="note">上图刻意把 <code>conversation.composer</code>（chain）画成 composerStack 的“上一层”，因为这正是
+      <code>renderSlotChain(..., { fallback: composerBar })</code> 的关系：chain 是接管逻辑，composerStack 是默认实现。</p>
+  </figure>
+</section>
+
+<!-- ===================================================================== -->
+<!-- VIEW 2 · 左栏 -->
+<!-- ===================================================================== -->
+<section class="view" id="view-sidebar">
+  <h2>2 · 左栏 sidebar —— 六个子座位</h2>
+  <p class="hint">侧栏是纯组合：<code>SidebarRootComponentProps = PropsRuntime&lt;'sidebar'&gt; &amp; PropsRenderSlots&lt;六个子座位&gt; &amp; InjectFace&lt;SidebarRootInjected&gt; &amp; PropsLocale&lt;'sidebar'&gt;</code>。
+    面板元数据是座位注册表 + locale 的<b>只读投影</b>，没有独立的写 API。</p>
+
+  <figure class="figure">
+    <figcaption><b>图 2</b> · 展开态 vs 折叠态（56px rail）。同一个 <code>wide</code> 布尔量穿给三个座位。</figcaption>
+    <div class="row" style="gap:18px;align-items:flex-start;min-width:760px">
+
+      <div style="flex:0 0 300px">
+        <div class="box" style="margin-bottom:8px"><span class="lb">wide = true · 264–420px（默认 280）</span></div>
+        <div class="stack" style="border:1.5px solid var(--seat-taken);border-radius:8px;padding:10px;background:var(--dsw-specific-sidebar-fill)">
+          <div class="box"><span class="lb">sidebar.brand.mark + .name</span>◆ DeepSeek Harness</div>
+          <div class="box"><span class="lb">＋ New Session ／ ⇤ 折叠</span></div>
+          <div class="box" style="border-style:dashed"><span class="lb">sidebar.panellist (list, root)</span>
+            <span class="pill">owner: { size, active }</span></div>
+          <div class="box"><span class="lb">sidebar.workspaces</span>owner: { wide, expandSidebar }</div>
+          <div class="box" style="border-style:dashed"><span class="lb">sidebar.footer.action (list, root)</span>
+            <span class="pill">owner: { wide }</span></div>
+          <div class="box"><span class="lb">sidebar.settings</span>owner: { wide } → 触发行</div>
+        </div>
+        <p class="note">折叠动画：展开内容在当前宽度淡出；上方控件共享一次淡出 + 向左位移进入 56px rail；
+          布局的列滑动结束整个动作。<code>reduced-motion</code> 下两个过渡都关掉。</p>
+      </div>
+
+      <div style="flex:0 0 120px">
+        <div class="box" style="margin-bottom:8px"><span class="lb">wide = false</span></div>
+        <div class="stack" style="border:1.5px solid var(--seat-taken);border-radius:8px;padding:8px;background:var(--dsw-specific-sidebar-fill);align-items:center">
+          <div class="box" style="text-align:center">◆</div>
+          <div class="box" style="text-align:center" title="panellist 折叠成图标列">◈</div>
+          <div class="box" style="text-align:center">◈</div>
+          <div class="box" style="text-align:center">⌕</div>
+          <div style="margin-top:auto"></div>
+          <div class="box" style="text-align:center">⚙</div>
+        </div>
+        <p class="note">rail 渲染同一个 <code>brand.mark</code> 座位；
+          <code>panellist</code> 的 label 变成折叠提示；<code>settings</code> 只共享淡出时序、<b>不做水平位移</b>。</p>
+      </div>
+
+      <div style="flex:1 1 auto;min-width:260px">
+        <div class="box" style="margin-bottom:8px"><span class="lb">加一个"全局面板" = 两步</span></div>
+        <div class="stack">
+          <div class="box"><span class="lb">① 图标</span>
+            <code>ctx.slots.inject('sidebar.panellist', …)</code><br>
+            <code>{ name:'sidebar.panellist', id:'my-panel', order:50, label:() =&gt; '我的面板' }</code></div>
+          <div class="box"><span class="lb">② 页面本体（同一个 id 作 key）</span>
+            <code>ctx.slots.inject('main', …)</code><br>
+            <code>{ name:'main', key:'my-panel' }</code></div>
+          <div class="box" style="border-left:3px solid var(--dsw-alias-state-warn-primary)">
+            <span class="lb">⚠️ 三步都别忘</span>
+            · <code>inject: ['slots']</code>（服务级）<br>
+            · 组件必须转发 props：<code>(p) =&gt; e(Panel, p)</code><br>
+            · 选中一个不存在的 <code>main</code> key 会 <b>抛错</b>且不改当前选择
+          </div>
+        </div>
+        <p class="note">真实范例：<code>bundles/fdep-api-request/lib/client.js:908-925</code>（MCP Gateway）。</p>
+      </div>
+    </div>
+  </figure>
+</section>
+
+<!-- ===================================================================== -->
+<!-- VIEW 3 · 会话区 -->
+<!-- ===================================================================== -->
+<section class="view" id="view-conv">
+  <h2>3 · 会话区：头部 → tabs → 会话体</h2>
+  <p class="hint">用户说的「会话建立后的 tabs（会话、追踪）」精确对应 <code>conversation.view</code>（list / session）。
+    tab 由注册项<b>投影</b>成 <code>ViewTab { id, label }</code>，<code>label</code> 缺省回落成 <code>id</code>。</p>
+
+  <figure class="figure">
+    <figcaption><b>图 3a</b> · tab 的注册与投影链条。</figcaption>
+    <div class="row wrap" style="gap:10px;align-items:stretch;min-width:900px">
+      <div class="box grow"><span class="lb">注册（list 座位）</span>
+        <code>ctx.slots.register({ name:'conversation.view', id:'mine', order:20, locale:NS, label:() =&gt; t('view.mine') }, Comp)</code>
+      </div>
+      <div style="align-self:center;font-size:18px;color:var(--dsw-alias-label-caption)">→</div>
+      <div class="box grow"><span class="lb">座位层排序</span>按 <code>order</code> 升序；
+        <span class="pill">chat = 0</span><span class="pill">trajectory = 10</span><span class="pill">你的 = 20</span></div>
+      <div style="align-self:center;font-size:18px;color:var(--dsw-alias-label-caption)">→</div>
+      <div class="box grow"><span class="lb">投影</span><code>ViewTab { id, label }</code> —— <code>useConversationViews()</code> 读到的就是它；
+        <code>label</code> 缺省 = <code>id</code></div>
+      <div style="align-self:center;font-size:18px;color:var(--dsw-alias-label-caption)">→</div>
+      <div class="box grow"><span class="lb">选中状态</span>每会话 store：<code>view: string | null</code>（null 解析到已注册的 Chat）
+        + 一次性的 <code>viewRequest</code></div>
+    </div>
+  </figure>
+
+  <figure class="figure">
+    <figcaption><b>图 3b</b> · 会话体内部会分发到哪些座位（keyed / chain 的目标）。</figcaption>
+    <div class="stack" style="min-width:900px">
+      <div class="slot taken" data-slot="conversation.chat.node" data-kind="keyed" data-scope="session"
+           data-owner="{ cwd?, openFile, inspectCall, forkAt, loadImage, renderMessageImages, fileMentions, turnProcess? }"
+           data-note="最终的 Chat 节点渲染器，key = ChatNodeKind。复用 key = 替换该节点的渲染器；没有 occupant 的 kind 就『不渲染那一行』。"
+           data-example="ui-tool、ui-workflow-run、ui-cordis（cordis_define 的 keyed 卡片）">
+        <span class="tag"><span class="kind keyed">⌗ keyed</span><span class="scope session">session</span> conversation.chat.node <span class="who">key = ChatNodeKind</span></span>
+        <div class="row wrap"><span class="chip">assistant</span><span class="chip">tool</span><span class="chip">command</span>
+          <span class="chip">compaction</span><span class="chip">turn-error</span><span class="chip" style="border:1px dashed var(--seat-open);background:transparent;color:var(--seat-open)">+ 你的 kind 渲染器</span></div>
+      </div>
+      <div class="slot open" data-slot="conversation.chat.commandview" data-kind="keyed" data-scope="session"
+           data-owner="{ node: CommandNode, compaction?: CompactionSummaryNode }"
+           data-note="按命令名索引的命令行渲染器。复用 key = 替换该命令的渲染器；未占用的 key 用通用卡片。"
+           data-example="ui-commands">
+        <span class="tag"><span class="kind keyed">⌗</span><span class="scope session">session</span> conversation.chat.commandview <span class="who">key = 命令名</span></span>
+      </div>
+      <div class="slot open" data-slot="conversation.chat.turnTail" data-kind="chain" data-scope="session"
+           data-owner="{ turn: TurnLocation, seq: number, openFile: (path) =&gt; void }"
+           data-note="已完成 Turn 的动作行之前的扩展。第一个 select 接受的 occupant 渲染；全部拒绝就是空。"
+           data-example="ui-deliverables（select: selectDeliverables）">
+        <span class="tag"><span class="kind chain">⇉ chain</span><span class="scope session">session</span> conversation.chat.turnTail</span>
+      </div>
+      <div class="slot open" data-slot="conversation.chat.assistant-actions" data-kind="list" data-scope="session"
+           data-owner="{ messageId: MessageId }"
+           data-note="每条『已定稿』助手消息的动作。新 id = 新增一个动作；复用 id = 替换那一格。没有任何条目时标准动作行保持不变。"
+           data-example="ui-message-feedback（👍/👎 + 反馈对话框）">
+        <span class="tag"><span class="kind list">☰ list</span><span class="scope session">session</span> conversation.chat.assistant-actions</span>
+      </div>
+      <div class="slot open" data-slot="conversation.message.images" data-kind="single" data-scope="session"
+           data-owner="{ images, loadImage, align: 'start'|'end', compact? }"
+           data-note="一组连续消息图片的渲染器。注册会替换 shipped 画廊；不注册则图片被省略。"
+           data-example="ui-attachment">
+        <span class="tag"><span class="kind single">■</span><span class="scope session">session</span> conversation.message.images</span>
+      </div>
+    </div>
+    <p class="note">轨迹侧是 <code>ui-trajectory</code>：一个<b>纯消费者</b>插件（不提供任何服务），把轨迹事件账本
+      + 交互式时序总览注册进 Conversation 的 view 表 —— 它是"只读 tab"的最好范本。</p>
+  </figure>
+</section>
+
+<!-- ===================================================================== -->
+<!-- VIEW 4 · 输入区 -->
+<!-- ===================================================================== -->
+<section class="view" id="view-composer">
+  <h2>4 · 输入区：composerStack 的盒子层级（hero vs composer）</h2>
+  <p class="hint">这一页是整个图谱最值得反复看的一张。左侧是 <b>composer</b>（有内容的会话），
+    右侧是 <b>hero</b>（新建空会话）。差别只有一处，但它会造成"我的东西在新会话里不见了"。</p>
+
+  <figure class="figure">
+    <figcaption><b>图 4a</b> · 两种布局并排。<code>conversation.composer.dock</code> 只在右侧<b>不存在</b>。</figcaption>
+    <div class="composer-zoom">
+
+      <div>
+        <div class="box" style="margin-bottom:10px;border-color:var(--scope-session)">
+          <span class="lb">variant = 'composer'（有内容的会话）</span>
+          <code>hero = false</code> → 两个 dock 都在
+        </div>
+        <div class="stackwrap">
+          <span class="tag">composerStack · flex column（variant = composer）</span>
+
+          <div class="dock" data-slot="conversation.input.dock" data-kind="list" data-scope="session"
+               data-note="order 0 = 卡片之前；order 2 = 落到卡片之后（同一个座位、靠 flex order 排序）。"
+               data-example="scene-template：TopScenarioPanel order 1；HeroTemplateEntry order 2（视觉在卡片下方）">
+            <span class="tag">① conversation.input.dock（锚点 display:contents）</span>
+            <div class="row wrap"><span class="chip">order 1 · 场景面板</span><span class="chip" style="opacity:.55">order 2 · 第二个 entry → 视觉落到卡片后</span></div>
+          </div>
+
+          <div class="card" style="margin:10px 0">
+            <div class="box"><span class="lb">inputBar = conversation.composer.bar</span>
+              宽度 = <code>min(stack宽 − 2×side-clearance, card-max-width)</code></div>
+            <div class="row"><span class="chip">.input.left</span><span class="chip">.input.plan</span>
+              <span class="chip">.input.model</span><span class="chip">.input.right → ↑</span></div>
+          </div>
+
+          <div class="dock" data-slot="conversation.composer.dock" data-kind="list" data-scope="session"
+               data-note="座位本身就在卡片下方；公式与上方 dock 不同（嵌套层数不同，shipped 组件用的是 padding: 0 8px，多减 2 个 dock-inset）。"
+               data-example="TodoPanel 的 .lXshSW_root、Goal 的 dock">
+            <span class="tag">② conversation.composer.dock（卡片下方 · 座位在这里）</span>
+            <div class="row wrap"><span class="chip">order 100 · 模板墙 / 你的面板</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="box" style="margin-bottom:10px;border-color:var(--scope-maybe)">
+          <span class="lb">variant = 'hero'（新建空会话）</span>
+          <code>hero = true</code> → <b>下方 dock 根本不存在</b>
+        </div>
+        <div class="stackwrap">
+          <span class="tag">composerStack · flex column（hero 变体）</span>
+
+          <div class="box" style="border-style:dashed;margin-bottom:10px">
+            <span class="lb">HeroShell + heroWorkspaceRow</span>
+            <span class="pill">conversation.hero.brand.mark</span>
+            <span class="pill">conversation.hero.workspace</span>
+            <span class="pill">conversation.hero.agentPreset</span>
+          </div>
+
+          <div class="dock">
+            <span class="tag">① conversation.input.dock（同样的座位）</span>
+            <div class="row wrap"><span class="chip">order 1 · 场景面板</span>
+              <span class="chip" style="border:1px solid var(--dsw-alias-state-success-primary);color:var(--dsw-alias-state-success-primary)">order 2 · 模板墙 ← 就是靠它顶替缺失的 dock</span></div>
+          </div>
+
+          <div class="card" style="margin:10px 0">
+            <div class="box"><span class="lb">inputBar = conversation.composer.bar</span>placeholder = t('placeholder.hero')</div>
+          </div>
+
+          <div class="dock gone" data-slot="conversation.composer.dock（不渲染）" data-kind="list" data-scope="session"
+               data-note="源码门控：composer.dock 只在 variant === 'composer' 时渲染。hero 下这个座位在 DOM 里完全不存在，所以注册进去的 entry 永远不会被挂载。"
+               data-example="dsh-client-ui-conversation/lib/client.js:16259（行号见 scene-template/UI.md §8）">
+            <span class="tag">② conversation.composer.dock —— ✗ 不存在</span>
+            <div class="box" style="border-style:dotted">注册在这里的东西在 hero 下不会出现</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </figure>
+
+  <figure class="figure">
+    <figcaption><b>图 4b</b> · 与输入卡等宽的正确公式，以及"为什么不能量 DOM"。</figcaption>
+    <div class="row wrap" style="gap:16px;min-width:900px">
+      <div class="box grow" style="border-left:3px solid var(--dsw-alias-state-success-primary)">
+        <span class="lb">✓ 正确：抄输入卡自己的盒子</span>
+        <pre style="margin:6px 0 0;font-family:var(--mono);font-size:11px;white-space:pre-wrap">.my-panel{
+  /* 100% = composerStack 宽度（因为锚点是 display:contents） */
+  width:          calc(100% - 2 * var(--dsh-composer-side-clearance));
+  max-width:      var(--dsh-composer-card-max-width);
+  margin:         0 auto;   /* 居中靠 auto margin，不用算 */
+  padding:        0 14px;   /* 内文左边界对齐输入文字 */
+}</pre>
+      </div>
+      <div class="box grow" style="border-left:3px solid var(--dsw-alias-state-error-primary)">
+        <span class="lb">✗ 三个失败过的做法</span>
+        ① 写死 <code>maxWidth: 768</code> → 比卡片窄<br>
+        ② 改成"满宽" → 比卡片宽<br>
+        ③ 运行时 <code>getBoundingClientRect()</code> 量宽补偿 → <b>数据一多就飘</b>，
+           因为父容器会被 flex 居中/紧贴内容收缩，基准成了<b>自我依赖</b>的量<br>
+        ④ 照抄 TodoPanel 的 <code>calc(100% − 2*clearance − 4*inset)</code> →
+           多减的 4 个 <code>dock-inset</code> 是<b>它自己那层浮起提示卡</b>的几何，落到平级面板上正好每侧窄 16px
+      </div>
+      <div class="box grow">
+        <span class="lb">涉及变量</span>
+        <span class="pill">--dsh-composer-card-max-width</span>
+        <span class="pill">--dsh-composer-side-clearance</span>
+        <span class="pill">--dsh-composer-dock-inset</span>
+        <span class="pill">--dsh-composer-stack-gap</span>
+        <span class="pill">--dsh-chat-content-width</span>
+        <p class="note" style="margin-top:8px">变量的定义点在会话根 <code>.wSkVaW_root</code> 上，向下继承。
+          <b>先确认"我和谁平级"，再决定抄哪一行公式。</b></p>
+      </div>
+    </div>
+  </figure>
+
+  <figure class="figure">
+    <figcaption><b>图 4c</b> · 写入/读取输入框的两条唯一合法通道。</figcaption>
+    <div class="row wrap" style="gap:12px;min-width:820px">
+      <div class="box grow" style="border-left:3px solid var(--dsw-alias-brand-primary)">
+        <span class="lb">写：inputActions.setDraft(text)</span>
+        契约措辞是 <b>"Replace the whole draft"</b>（整体替换）。还有
+        <code>addAttachments</code> / <code>removeAttachment</code> / <code>pruneAttachments</code> / <code>submit</code>。<br>
+        <code>contract/input.d.ts:210-221</code>
+      </div>
+      <div class="box grow" style="border-left:3px solid var(--dsw-alias-brand-primary)">
+        <span class="lb">读：useInput(s =&gt; s.draft)</span>
+        <code>InputState.draft</code> 是编辑器文档的 clipboard-text 投影。做防抖要
+        <code>inject:['timer']</code> + <code>ctx.timeout()</code>（动态形态）或普通 <code>setTimeout</code>（静态形态）。<br>
+        <code>contract/input.d.ts:303-305</code>
+      </div>
+      <div class="box grow" style="border-left:3px solid var(--dsw-alias-state-error-primary)">
+        <span class="lb">✗ 不要做的事</span>
+        输入框是 <b>Lexical 驱动的 contenteditable</b>，不是 <code>&lt;textarea&gt;</code>。
+        <code>el.textContent = text</code> + 手派 <code>input</code> 事件会被编辑器用自己的模型重渲染时冲掉。
+        <br>另：注册时若写成 <code>register(opts, () =&gt; e(Comp))</code>，slot props 根本没传进去，<code>inputActions</code> 就是 undefined —— 这是"点了没反应"的第一大原因。
+      </div>
+    </div>
+  </figure>
+</section>
+
+<!-- ===================================================================== -->
+<!-- VIEW 5 · 设置弹窗 -->
+<!-- ===================================================================== -->
+<section class="view" id="view-settings">
+  <h2>5 · 设定弹窗：一个域，不是一个组件</h2>
+  <p class="hint">要点：<b>底座不渲染任何界面</b>。渲染 shell 的是 <code>ui-settings-general</code>（它占 <code>sidebar.settings</code>），
+    它自身<b>零文案</b> —— 触发文案、面板标题、关闭的无障碍名、每个 section 的内容，全部来自注册者。
+    弹窗是<b>模态</b>：它不画在侧栏列里，而是盖在整个应用之上。</p>
+
+  <figure class="figure">
+    <figcaption><b>图 5a</b> · 触发链与模态的位置关系。</figcaption>
+    <div class="row" style="gap:16px;align-items:flex-start;min-width:980px">
+      <div style="flex:0 0 240px">
+        <div class="stack" style="border:1.5px solid var(--seat-taken);border-radius:8px;padding:10px;background:var(--dsw-specific-sidebar-fill);min-height:300px">
+          <div class="box">◆ 品牌</div>
+          <div class="box" style="margin-top:auto">会话列表…</div>
+          <div class="box" style="border-color:var(--dsw-alias-brand-primary)">
+            <span class="lb">sidebar.settings（触发座位）</span>⚙ 设置
+            <div class="note">内容由 <code>settings.trigger</code> 提供（owner: <code>{ wide }</code>）；
+              缺席时退化成"没有无障碍名的纯图标按钮"（坏组合态）。</div>
+          </div>
+        </div>
+      </div>
+      <div style="align-self:center;font-size:22px;color:var(--dsw-alias-label-caption)">→ 打开 →</div>
+      <div style="flex:1 1 auto;min-width:560px;position:relative">
+        <div style="border:1.5px solid var(--dsw-alias-border-l2);border-radius:12px;background:var(--dsw-alias-bg-layer-1);padding:16px;box-shadow:0 18px 50px rgba(2,6,23,.28)">
+          <div class="row" style="gap:14px;align-items:flex-start">
+            <div style="flex:0 0 190px" class="stack">
+              <div class="slot open" data-slot="settings.header" data-kind="single" data-scope="root" data-owner="{}"
+                   data-note="面板标题文字座位。内容渲染在 nav 标题行里；对话框的 accessible name 通过 aria-labelledby 指向那个节点。缺席 → 标题为空。">
+                <span class="tag"><span class="kind single">■</span><span class="scope root">root</span> settings.header</span>
+                <div class="box">设置</div>
+              </div>
+              <div class="box" style="border-style:dashed;border-color:var(--seat-open)">
+                <span class="lb">settings.section（list, root）</span>
+                <div class="note">一页 = 一个 section。选项带导航身份：<code>id</code>（页面 key）、
+                  <code>order</code>（导航位置）、<code>label</code>（<b>注册者本地化</b>）。
+                  ownerProps = <code>{ close }</code>。</div>
+                <div class="stack" style="margin-top:6px">
+                  <div class="box">通用</div><div class="box">模型</div><div class="box">插件</div>
+                  <div class="box" style="border:1px dashed var(--seat-open)">+ 你的页面</div>
+                </div>
+              </div>
+            </div>
+            <div style="flex:1 1 auto" class="stack">
+              <div class="row wrap" style="justify-content:space-between;border-bottom:1px solid var(--dsw-alias-border-l1);padding-bottom:8px">
+                <span style="font-weight:600">通用</span>
+                <div class="row" style="gap:6px">
+                  <div class="slot open" data-slot="settings.action" data-kind="list" data-scope="root" data-owner="{}"
+                       data-note="内容列头部、Close 之前的可选动作。注册者拥有可见性、行为、文案和失败呈现；shell 只提供这个有序渲染位。">
+                    <span class="tag"><span class="kind list">☰</span><span class="scope root">root</span> settings.action</span>
+                  </div>
+                  <div class="slot open" data-slot="settings.close" data-kind="single" data-scope="root" data-owner="{}"
+                       data-note="关闭按钮的『视觉隐藏标签文本』座位（按钮本身 —— 图标、几何、焦点 —— 是 shell chrome）。缺席 → 按钮没有无障碍名。">
+                    <span class="tag"><span class="kind single">■</span><span class="scope root">root</span> settings.close</span>
+                    <div class="box">✕</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="slot open" data-slot="settings.general.item" data-kind="list" data-scope="root"
+                   data-owner="{}（owner props 刻意为空 —— section 不投影任何东西给它）"
+                   data-note="⚠️ 这是最反直觉的一个座位：section 只把行竖着堆起来，行要自己画内部『包括它自己的标签』。文案、当前值、写入路径全是你的（通过你自己的 inject face + ctx.settingsScope）。不能靠 label 选项投影文本。"
+                   data-example="ui-theme 的 Appearance（order 10）与 Font size（order 11）；ui-locale 的 Language；ui-chat 的 Transcript view（order 12）；ui-permission-presets">
+                <span class="tag"><span class="kind list">☰ list</span><span class="scope root">root</span> settings.general.item <span class="who">← 一行偏好</span></span>
+                <div class="stack">
+                  <div class="box"><span class="lb">order 10 · Appearance</span>◉ 跟随系统 ○ 浅色 ○ 深色　<span class="note">（ui-theme）</span></div>
+                  <div class="box"><span class="lb">order 11 · Font size</span>内容字号 12–17（默认 14）　<span class="note">（ui-theme）</span></div>
+                  <div class="box"><span class="lb">order 12 · Transcript view</span>…　<span class="note">（ui-chat）</span></div>
+                  <div class="box" style="border:1px dashed var(--seat-open)">+ 你的偏好行（自画标签 + 自走写路径）</div>
+                </div>
+              </div>
+
+              <div class="row wrap" style="gap:10px">
+                <div class="slot open grow" data-slot="settings.plugins.tab" data-kind="list" data-scope="root" data-owner="{}"
+                     data-note="「插件」页里的一个 tab。由拥有 Plugins section 的 feature 在运行时声明；类型放在 settings 底座里，好让 inventory 与 config 插件互不依赖。">
+                  <span class="tag"><span class="kind list">☰</span><span class="scope root">root</span> settings.plugins.tab</span>
+                  <div class="box">清单 / 配置 / 你的 tab</div>
+                </div>
+                <div class="slot open grow" data-slot="settings.onboarding" data-kind="list" data-scope="root"
+                     data-owner="{ stepId, complete, openSection(id) }"
+                     data-note="引导步骤。shell 一次挂载一个有序步骤；活跃的注册者要么自己完成、要么一直持有。注册者拥有『包括可见 chrome』：一个 step 要自己把内容包进模态面（含 #root 的 inert 归属），并在私有事实还在加载时 return null。shell 自己不画任何 chrome。">
+                  <span class="tag"><span class="kind list">☰</span><span class="scope root">root</span> settings.onboarding</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="note">模态之外的页面被 <code>--dsw-alias-bg-overlay</code> 遮罩；<code>settings.onboarding</code> 的 occupant
+          自己负责 <code>#root</code> 的 <code>inert</code> 归属。</p>
+      </div>
+    </div>
+  </figure>
+
+  <figure class="figure">
+    <figcaption><b>图 5b</b> · 设置域的三层职责划分（照这个做就不会错）。</figcaption>
+    <div class="row wrap" style="gap:12px;min-width:900px">
+      <div class="box grow"><span class="lb">① 底座 dsh-client-ui-settings</span>
+        只声明座位类型 + 提供传输层（<code>ctx.settingsScope</code>、<code>ctx.settingsSchema</code>、共享 describe 镜像）。
+        <b>不渲染任何界面。</b></div>
+      <div class="box grow"><span class="lb">② shell ui-settings-general</span>
+        占 <code>sidebar.settings</code>，画触发按钮 + 导航 + 模态 chrome。
+        <b>零自有文案。</b></div>
+      <div class="box grow"><span class="lb">③ 你（feature owner）</span>
+        拥有自己的设置面：文案、当前值、写入路径、失败呈现。
+        偏好走 <code>ctx.settingsScope.bind({namespace})</code>，行注册进 <code>settings.general.item</code> 或 <code>settings.section</code>。</div>
+    </div>
+  </figure>
+</section>
+
+<!-- ===================================================================== -->
+<!-- VIEW 6 · z 序 -->
+<!-- ===================================================================== -->
+<section class="view" id="view-z">
+  <h2>6 · 叠放层级（从下到上）</h2>
+  <p class="hint">这张图回答"我的东西为什么被盖住了 / 为什么点不到"。层的顺序由架构决定，你只能选择坐进哪一层。</p>
+
+  <figure class="figure">
+    <figcaption><b>图 6</b> · 每一层的可见性与点击穿透语义。</figcaption>
+    <div class="zstack">
+      <div class="zrow">
+        <div class="zlvl">层 0 · 基面</div>
+        <div class="zbox"><b>html / body</b> —— <code>html{color-scheme}</code>、<code>body[data-ds-dark-theme]</code>、
+          body 上的 inline alias 令牌、<code>--dsh-content-font-size</code>、一只 shell 拥有的
+          <code>&lt;meta name="theme-color"&gt;</code>（跟随计算出的 body 背景）</div>
+      </div>
+      <div class="zrow">
+        <div class="zlvl">层 1 · AppFrame</div>
+        <div class="zbox">grid 三列：<code>sidebar</code> | <code>main</code> | <code>rightbar</code>。
+          三列的容器<b>始终挂载</b>（AppFrame keeps the column containers mounted）</div>
+      </div>
+      <div class="zrow">
+        <div class="zlvl">层 2 · 列内容</div>
+        <div class="zbox">侧栏内容 / <code>main</code> 里选中的面板 / 右栏 occupant。
+          右栏在 <code>fullscreen</code> 呈现时覆盖整个视口，同时<b>在下方保留宽屏的列轨道</b></div>
+      </div>
+      <div class="zrow">
+        <div class="zlvl">层 3 · 浮出面</div>
+        <div class="zbox hi"><b><code>shell.overlay</code></b>（list, root）—— 帧级浮层，
+          在所有列之上、在所有列的滚动容器之外。<b>这一层本身点击穿透</b>（click-through），
+          entry 要自己 opt-in <code>pointer-events</code>，所以 occupant 永远不会挡住下面的应用。
+          <div class="zbar"><i style="width:42%"></i></div>
+          <span class="note">toast / badge / 状态胶囊 / 你自己的框架级浮层都该放这里。</span></div>
+      </div>
+      <div class="zrow">
+        <div class="zlvl">层 4 · 菜单 / popover</div>
+        <div class="zbox">抬升面：用 <code>--dsw-elevation-panel</code> / <code>--dsw-elevation-prominent</code>，
+          <b><code>border: 0</code></b>（发丝线走 <code>--dsw-elevation-stroke</code>，不占布局）。
+          这些面上要把滚动条令牌重绑到 l2</div>
+      </div>
+      <div class="zrow">
+        <div class="zlvl">层 5 · 模态</div>
+        <div class="zbox hi">设置弹窗（以及 onboarding 步骤自带的模态面）。
+          遮罩 <code>--dsw-alias-bg-overlay</code>；onboarding 的 step 自己拥有 <code>#root</code> 的 inert 归属
+          <div class="zbar"><i style="width:100%"></i></div></div>
+      </div>
+    </div>
+    <div class="callout warn">
+      <b>已知约束（shipped 文档明说）</b>：右栏面板与 float host 使用<b>固定的 z-index 值</b>，
+      因为客户端目前<b>没有 z-index 令牌层</b>。所以不要试图靠调 z-index 去"压过"右栏 —— 选对座位比竞争层级便宜得多。
+    </div>
+  </figure>
+</section>
+
+<!-- ===================================================================== -->
+<!-- VIEW 7 · 令牌地图 -->
+<!-- ===================================================================== -->
+<section class="view" id="view-tokens">
+  <h2>7 · 主题令牌地图</h2>
+  <p class="hint">左边是"哪个区域归哪类令牌"的<b>语义示意</b>（不是逐元素的权威映射）；右边是三层令牌的分工与命名规则。
+    切换页头的「暗色主题」可以看到：<b>这张图本身没有改任何组件规则，只换了令牌值</b> —— 这正是 presenter 的工作方式。</p>
+
+  <figure class="figure">
+    <figcaption><b>图 7</b> · 令牌三层：static（原始色板）→ alias（语义，你的默认选择）→ specific（组件专用）。</figcaption>
+    <div class="tokenmap">
+      <div class="tm-page">
+        <div class="tm-region" style="background:var(--dsw-alias-bg-base)">
+          <b>页面底色</b> <code>--dsw-alias-bg-base</code>
+          <div class="note">会话区、右栏的"地面"。不是卡片。</div>
+        </div>
+        <div class="tm-region" style="background:var(--dsw-specific-sidebar-fill)">
+          <b>左栏填充</b> <code>--dsw-specific-sidebar-fill</code>
+          <div class="note">组件专用语义。侧栏导航项另有 <code>--dsw-specific-sidebar-nav-item-hover/-active/-active-accent</code>。</div>
+        </div>
+        <div class="tm-region" style="background:var(--dsw-alias-bg-layer-1);border-left:4px solid var(--dsw-alias-border-l1)">
+          <b>卡片 / 抬升面 l1</b> <code>--dsw-alias-bg-layer-1</code> + <code>--dsw-alias-border-l1</code>
+          <div class="note">l1 → l2 → l3 是逐级抬升；边框 l1 最淡、l4 最强。</div>
+        </div>
+        <div class="tm-region" style="background:var(--dsw-specific-input-major)">
+          <b>输入卡</b> <code>--dsw-specific-input-major</code> + 抬升
+          <div class="note">抬升面设 <code>border: 0</code>，用 <code>--dsw-elevation-stroke</code> /
+            <code>--dsw-elevation-soft</code>；圆角整套走 <code>--dsw-corner-shape</code>。</div>
+        </div>
+        <div class="tm-region" style="background:var(--dsw-specific-bubble);margin:10px;border-radius:10px">
+          <b>用户气泡</b> <code>--dsw-specific-bubble</code>
+          <div class="note">直接读正文那对字号变量（<code>--dsh-content-font-size</code>），不在阶梯里。</div>
+        </div>
+        <div class="tm-region" style="background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-brand-primary-invert)">
+          <b>品牌 / 主按钮</b> <code>--dsw-alias-brand-primary</code>
+          <div class="note">按钮族另有 <code>--dsw-alias-button-primary-fill/-hover/-dimmed</code>、
+            <code>--dsw-alias-button-ghost-active-fill/-border</code>、<code>--dsw-alias-button-tool-bar-*</code>。</div>
+        </div>
+        <div class="tm-region" style="color:var(--dsw-alias-label-caption)">
+          <b>文字四档</b> <code>--dsw-alias-label-primary</code> → <code>-secondary</code> →
+          <code>-tertiary</code> → <code>-caption</code>
+          <div class="note">还有 <code>-dimmed</code> / <code>-primary-foreground</code> / <code>-primary-inverted</code> / <code>-primary-bluish</code>。</div>
+        </div>
+        <div class="tm-region">
+          <b>状态</b>
+          <span class="pill" style="color:var(--dsw-alias-state-success-primary)">success primary/secondary/tertiary</span>
+          <span class="pill" style="color:var(--dsw-alias-state-warn-primary)">warn + label</span>
+          <span class="pill" style="color:var(--dsw-alias-state-error-primary)">error primary/secondary</span>
+          <span class="pill" style="color:var(--dsw-alias-state-business-primary)">business primary/tertiary</span>
+        </div>
+      </div>
+
+      <div class="tm-list">
+        <table>
+          <tr><th>层</th><th>例子</th><th>用不用</th></tr>
+          <tr><td><code>--dsw-static-*</code></td>
+              <td><code>-deepseek-450</code><br><code>-neutral-bluish-100</code><br><code>-red-600</code></td>
+              <td>原始色板，<b>不随主题变</b>。一般别直接用。</td></tr>
+          <tr><td><code>--dsw-alias-*</code></td>
+              <td><code>-bg-base</code><br><code>-bg-layer-1/2/3</code><br><code>-border-l1..l4</code><br><code>-label-primary..caption</code><br><code>-brand-primary</code><br><code>-interactive-bg-hover</code></td>
+              <td><b>你的默认选择</b>。语义层，随主题变。</td></tr>
+          <tr><td><code>--dsw-specific-*</code></td>
+              <td><code>-bubble</code><br><code>-sidebar-fill</code><br><code>-input-major</code><br><code>-menu</code><br><code>-tip</code></td>
+              <td>组件专用语义。只有对应组件该用。</td></tr>
+          <tr><td><code>--dsh-*</code></td>
+              <td><code>-content-font-size</code><br><code>-content-font-size-secondary</code><br><code>-scrollbar-thumb</code><br><code>-composer-card-max-width</code></td>
+              <td><b>不是配色</b>，是布局 / 字号 / 滚动条派生量。</td></tr>
+          <tr><td><code>--dsw-font-*</code></td>
+              <td><code>-xs-13</code><br><code>-markdown-h1..h4</code><br><code>-markdown-code</code></td>
+              <td>字体阶梯（family/size/weight/line-height 成套）。</td></tr>
+          <tr><td><code>--dsw-elevation-*</code><br><code>--dsw-shadow-lv*</code><br><code>--dsw-corner-shape</code></td>
+              <td><code>-stroke</code> <code>-stroke-color</code><br><code>-panel</code> <code>-prominent</code> <code>-soft</code></td>
+              <td>抬升与圆角。整圆/胶囊要成对写 <code>corner-shape: round</code>。</td></tr>
+        </table>
+
+        <div class="callout">
+          <b>唯一颜色权威</b>：官方 README 原文 —— *"The token sheets are the sole color authority —
+          values absent from the design system are deliberately not appended."*
+          设计系统里没有的值<b>不要自己造</b>；语义上最接近的令牌胜出。
+        </div>
+        <div class="callout warn">
+          <b>真实翻车记录</b>：<code>bundles/fdep-api-request/lib/client.js</code> 早期用了<b>不存在的</b>
+          <code>--dsh-*</code> 名字当颜色。结果每个值都回落成硬编码深灰，浅色模式下整个面板"脱节"。
+        </div>
+      </div>
+    </div>
+  </figure>
+
+  <figure class="figure">
+    <figcaption><b>图 7b</b> · 主题注册与令牌覆盖层（<code>ctx.theme</code>）。</figcaption>
+    <div class="row wrap" style="gap:14px;min-width:940px">
+      <div class="box grow">
+        <span class="lb">① 注册一个具体主题</span>
+        <pre style="margin:6px 0 0;font-family:var(--mono);font-size:11px;white-space:pre-wrap">ctx.effect(() =&gt; ctx.theme.register({
+  id: 'feg-ink',
+  colorScheme: 'dark',              // presenter 用它切 data-ds-dark-theme（不是 id）
+  tokens: {                         // ← 单值！按 colorScheme 生效
+    '--dsw-alias-brand-primary': '#7c3aed',
+    '--dsw-alias-bg-base':       '#0b0f19',
+    '--dsw-alias-label-primary': '#e5e7eb',
+  },
+}), 'feg-ink: theme');</pre>
+      </div>
+      <div class="box grow">
+        <span class="lb">② 或叠一层覆盖（推荐给"跟随用户明暗选择"的皮肤）</span>
+        <pre style="margin:6px 0 0;font-family:var(--mono);font-size:11px;white-space:pre-wrap">ctx.effect(() =&gt; ctx.theme.overrideTokens('feg-skin', {
+  '--dsw-alias-brand-primary': { light:'#2563eb', dark:'#60a5fa' },
+  '--dsw-alias-border-l1':     { light:'#e2e8f0', dark:'#1e293b' },
+}), 'feg-skin: token layer');   // ← 两种模式都必须给值</pre>
+      </div>
+      <div class="box grow" style="border-left:3px solid var(--dsw-alias-state-business-primary)">
+        <span class="lb">层叠规则（精确）</span>
+        · 每个 <code>source</code> <b>一层</b>；同一 source 再调用 = <b>替换整层并重叠到最上面</b><br>
+        · 多层按 <code>seq</code> 顺序折叠，<b>后者逐令牌胜出</b><br>
+        · 每层按<b>当前配色模式</b>取值；presenter 拿到的合成快照<b>不需要知道覆盖层存在</b><br>
+        · 移除一层 → 它盖住的东西自动恢复<br>
+        · 重复 id 抛错（内建 light/dark 也占 id；<code>system</code> 是偏好值，不是可注册 id）<br>
+        · dispose 掉"当前生效偏好"背后的主题 → 偏好重置为默认<br>
+        · <code>register.tokens</code> 是 <code>Record&lt;string,string&gt;</code>（单值）；
+          <code>overrideTokens</code> 是 <code>Record&lt;string,{light,dark}&gt;</code> —— 形状不同是刻意的
+      </div>
+    </div>
+  </figure>
+</section>
+
+<!-- ===================================================================== -->
+<!-- VIEW 8 · 几何 -->
+<!-- ===================================================================== -->
+<section class="view" id="view-geo">
+  <h2>8 · 几何、约束与断点</h2>
+  <p class="hint">这些数字来自 <code>dsh-client-ui-layout/README.md</code> 与各包的 CSS 变量。布局状态是<b>瞬时的</b>：重载会恢复侧栏默认、右栏隐藏。</p>
+
+  <figure class="figure">
+    <figcaption><b>图 8a</b> · 宽度解算顺序（右栏先让位，中央最后被压）。</figcaption>
+    <div class="stack" style="min-width:900px">
+      <div class="box"><span class="lb">① 右栏首次打开</span>占视口 <b>45%</b>；之后保留用户的像素偏好，<b>上限 70%</b></div>
+      <div class="box"><span class="lb">② 保护中央 400px</span>先把右栏压到 <b>300px</b>；还不行 → 报告空间不足，occupant <b>确定性关闭</b>右栏</div>
+      <div class="box"><span class="lb">③ 然后才压缩中央</span>中央可能仍然低于 400px；左侧 <b>56px rail 始终保留</b></div>
+      <div class="box"><span class="lb">④ 不自动重开</span>变宽<b>不会</b>把已关闭的右栏重新打开。<code>canShow</code> 由 occupant 判定</div>
+      <div class="box" style="border-left:3px solid var(--dsw-alias-state-warn-primary)">
+        <span class="lb">拖拽动画的一致性约束</span>
+        帧的轨道过渡与 occupant 的滑动<b>必须读同一组 duration/easing 变量</b>；
+        用自己那套会让面板边缘在挤压时脱离会话的边缘。全屏呈现会抑制 grid 与 handle 的过渡。
+      </div>
+    </div>
+  </figure>
+
+  <figure class="figure">
+    <figcaption><b>图 8b</b> · 关键尺寸与断点速查。</figcaption>
+    <div class="row wrap" style="gap:10px;min-width:900px">
+      <div class="box grow"><span class="lb">侧栏宽度</span>264–420px，默认 <b>280px</b>；折叠保留 <b>56px rail</b></div>
+      <div class="box grow"><span class="lb">&lt; 1024px</span>侧栏<b>自动折叠</b></div>
+      <div class="box grow"><span class="lb">右栏</span>首次 45% 视口 · 上限 70% · 空间不足时先压到 <b>300px</b>，
+        再由 occupant 确定性关闭（保中央 400px）</div>
+      <div class="box grow"><span class="lb">&lt; 768px</span>右栏打开时<b>自动全屏</b>；窄视口退出全屏 = 关闭；变宽不重开</div>
+      <div class="box grow"><span class="lb">右栏双分栏</span>最多两个水平 pane，初始等宽，分隔比例限 <b>20%–80%</b>；宽度不足则禁止新分割</div>
+      <div class="box grow"><span class="lb">内容字号</span>整数 <b>12–17px</b>，默认 <b>14</b>；次级档 = ≤14 时 −1、&gt;14 时 −2</div>
+      <div class="box grow"><span class="lb">输入卡</span>宽 = <code>min(stack − 2×side-clearance, card-max-width)</code>；
+        <code>card-max-width = chat-content-width + 32px</code>；<code>side-clearance = 16px</code></div>
+      <div class="box grow"><span class="lb">composerStack gap</span><code>--dsh-composer-stack-gap</code> = <b>6px</b>；
+        浮起提示卡的 <code>dock-inset</code> = <b>8px</b>（平级面板用不到）</div>
+    </div>
+  </figure>
+
+  <figure class="figure">
+    <figcaption><b>图 8c</b> · <code>hero</code> 的判定式（这一个式子决定了很多"东西不见了"）。</figcaption>
+    <div class="box" style="font-family:var(--mono);font-size:12px;white-space:pre-wrap">hero = sessionId === undefined
+       || (shellPhase === 'blank' &amp;&amp; (openState === 'open' || summaryBlank === true))</div>
+    <div class="row wrap" style="gap:10px;margin-top:10px;min-width:900px">
+      <div class="box grow"><span class="lb">hero = true 时</span>
+        · <code>conversation.composer.dock</code> <b>不渲染</b><br>
+        · 渲染 HeroShell + heroWorkspaceRow<br>
+        · 三个 <code>conversation.hero.*</code> 座位出现<br>
+        · composer.bar 的 placeholder = <code>t('placeholder.hero')</code></div>
+      <div class="box grow"><span class="lb">hero = false 时</span>
+        · 两个 dock 都在<br>
+        · HeroShell / heroWorkspaceRow 不渲染<br>
+        · composer.bar 用底部布局（<code>variant: 'composer'</code>）</div>
+      <div class="box grow" style="border-left:3px solid var(--dsw-alias-state-success-primary)">
+        <span class="lb">两种布局都要有的正确做法</span>
+        注册<b>两个 entry</b>：一个进 <code>conversation.input.dock</code> 并给 <code>order: 2</code>
+        （flex 排序落到卡片之后），一个进 <code>conversation.composer.dock</code>；
+        各自在<b>不适用的那一边 return null</b>（不产生元素 → 不产生 flex item）。<br>
+        <span class="note">完整推理见 <code>cordis-plugins/scene-template/UI.md</code> §4.4。</span>
+      </div>
+    </div>
+  </figure>
+</section>
+
+</main>
+
+<aside class="detail" id="detail" hidden>
+  <button class="close" id="detail-close" title="关闭">×</button>
+  <h3 id="d-slot">—</h3>
+  <div class="meta" id="d-meta"></div>
+  <dl>
+    <dt>ownerProps</dt><dd id="d-owner">—</dd>
+    <dt>已占用者</dt><dd id="d-who">—</dd>
+    <dt>说明</dt><dd id="d-note">—</dd>
+    <dt>范例 / 证据</dt><dd id="d-example">—</dd>
+  </dl>
+  <div class="callout" id="d-tip">把鼠标移到任意方块上看它的契约。</div>
+</aside>
+
+<footer class="foot">
+  <p><b>怎么读这张图：</b>虚线方块 = 平台预留的座位，你能坐；实线灰 = shipped 已占用，替换要付代价；
+    点线紫 = 由别的包声明/占用，通常不动。带 <code>scope</code> 底色条的方块决定它"跟谁同生共死"。</p>
+  <p><b>权威在哪：</b>本图是投影，不是权威。权威是各包的
+    <code>&lt;PKGS&gt;/dsh-client-ui-*/lib/types/client/**/slots.d.ts</code> 里的
+    <code>declare module '@deepseek-ai/dsh-client-ui-slots'</code> 块。
+    配套文字版见 <code>CLIENT.md</code>。</p>
+</footer>
+
+<script>
+(function(){
+  'use strict';
+  var html = document.documentElement;
+
+  /* ---------- 主题 ---------- */
+  var tgTheme = document.getElementById('tg-theme');
+  tgTheme.addEventListener('change', function(){
+    html.dataset.theme = tgTheme.checked ? 'dark' : 'light';
+  });
+
+  /* ---------- 显示开关 ---------- */
+  function bindToggle(id, cls){
+    var el = document.getElementById(id);
+    el.addEventListener('change', function(){
+      document.body.classList.toggle(cls, el.checked);
+      el.closest('.ctl').classList.toggle('on', el.checked);
+    });
+  }
+  bindToggle('tg-kind','show-kind');
+  bindToggle('tg-scope','show-scope');
+  bindToggle('tg-who','show-who');
+
+  /* ---------- hero / composer ---------- */
+  var tgHero = document.getElementById('tg-hero');
+  function applyHero(){
+    document.body.classList.toggle('hero-mode', tgHero.checked);
+    tgHero.closest('.ctl').classList.toggle('on', tgHero.checked);
+    document.querySelectorAll('.heroonly').forEach(function(n){ n.style.display = tgHero.checked ? '' : 'none'; });
+    document.querySelectorAll('.composeronly').forEach(function(n){
+      n.style.display = tgHero.checked ? 'none' : '';
+    });
+  }
+  tgHero.addEventListener('change', applyHero);
+  applyHero();
+
+  /* ---------- 只看可注册 ---------- */
+  var tgOnly = document.getElementById('tg-onlyopen');
+  tgOnly.addEventListener('change', function(){
+    document.body.classList.toggle('only-open', tgOnly.checked);
+    tgOnly.closest('.ctl').classList.toggle('on', tgOnly.checked);
+  });
+
+  /* ---------- 视图切换 ---------- */
+  var tabs = document.querySelectorAll('.views button');
+  tabs.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      tabs.forEach(function(b){ b.setAttribute('aria-selected', String(b === btn)); });
+      document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+      var target = document.getElementById('view-' + btn.dataset.view);
+      if (target) target.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+
+  /* ---------- 详情面板 ---------- */
+  var detail = document.getElementById('detail');
+  var dSlot = document.getElementById('d-slot');
+  var dMeta = document.getElementById('d-meta');
+  var dOwner = document.getElementById('d-owner');
+  var dWho = document.getElementById('d-who');
+  var dNote = document.getElementById('d-note');
+  var dExample = document.getElementById('d-example');
+  var dTip = document.getElementById('d-tip');
+  var selected = null;
+
+  document.getElementById('detail-close').addEventListener('click', function(){
+    detail.hidden = true;
+    if (selected) selected.classList.remove('sel');
+    selected = null;
+  });
+
+  function fill(el){
+    var d = el.dataset;
+    var slot = d.slot || '(未命名)';
+    // 允许在 data-slot 里带中文说明：取第一个空格/分隔符前的标识
+    var heading = slot.split('（')[0].split(' · ')[0].trim();
+
+    dSlot.textContent = heading;
+    detail.querySelector('.meta').innerHTML = '';
+    var bits = [d.kind, d.scope].filter(function(x){ return x && x !== '—'; });
+    if (bits.length === 0) bits.push('容器 / 非座位');
+    bits.forEach(function(b){
+      var s = document.createElement('span');
+      s.textContent = b;
+      dMeta.appendChild(s);
+    });
+    dOwner.textContent = d.owner ? d.owner : '（无 owner props）';
+    dWho.textContent = d.who ? d.who : '（空座位 —— 还没人注册）';
+    dNote.textContent = d.note ? d.note : '—';
+    dExample.textContent = d.example ? d.example : '—';
+
+    // 一句"这格属于哪一类"的提示
+    if (/open/.test(el.className)) {
+      dTip.textContent = '这是可注册的空座位：用 ctx.slots.inject(key, () => ctx.slots.register({...}, Comp)) 坐进去，记得转发 props。';
+    } else if (/private/.test(el.className)) {
+      dTip.textContent = '这一格由别的包声明并占用。要改行为，优先注册它的子座位，而不是替换它本身。';
+    } else if (/taken/.test(el.className)) {
+      dTip.textContent = 'shipped 已占用。它是 single/keyed 时替换会顶掉原内容；是 list 时新 id 才是并排新增。';
+    } else {
+      dTip.textContent = '这是容器或骨架元素，不是座位 —— 说明"盒子"的层级关系。';
+    }
+  }
+
+  // 悬停 / 点击都用事件委托；最近的 [data-slot] 元素优先
+  var hovered = null;
+  document.addEventListener('mouseover', function(e){
+    var el = e.target.closest('[data-slot]');
+    if (!el || el === hovered) return;
+    hovered = el;
+    fill(el);
+    detail.hidden = false;
+  });
+  document.addEventListener('click', function(e){
+    var el = e.target.closest('[data-slot]');
+    if (!el) return;
+    if (selected && selected !== el) selected.classList.remove('sel');
+    selected = el;
+    el.classList.add('sel');
+    fill(el);
+    detail.hidden = false;
+  });
+  // 键盘可达性
+  document.querySelectorAll('[data-slot]').forEach(function(el){
+    el.setAttribute('tabindex','0');
+    el.addEventListener('focus', function(){ fill(el); detail.hidden = false; });
+  });
+})();
+</script>
+</body>
+</html>
