@@ -36,7 +36,7 @@ $nodeVersion = "node-v24.19.0-win-x64"
 
 $nodeUrl = "https://abc.feg.com.tw/share/ehr/pages/dev/node-v24.19.0-win-x64.zip"
 
-$dshVersion = "0.1.5-rc.2"
+$dshVersion = "0.1.7-rc.2"
 
 $dshBaseUrl = "https://abc.feg.com.tw/vx"
 
