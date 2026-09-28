@@ -32,9 +32,6 @@ const ARM_MAX = 12;
 /** An arm no session ever consumed is dropped, so it cannot leak into a much
  * later session. A bound session keeps its docs for that session's lifetime. */
 const ARM_TTL_MS = 30 * 60 * 1000;
-/** Tolerance when comparing a session's createdAt with the arm instant. Both are
- * `Date.now()` in this process, so this only absorbs rounding. */
-const ARM_SLACK_MS = 1000;
 /** The only accepted body shape is one small api brief. */
 const BODY_MAX = 256 * 1024;
 
@@ -251,58 +248,49 @@ module.exports = {
     //
     // The panel is a root-scoped `main` occupant: it never learns the new
     // session's id (uiWorkspace.startSession() returns void), so the binding is
-    // by TIME instead — the client POSTs the brief BEFORE opening the session,
-    // and the context provider claims the first session that assembles after
-    // that instant and whose createdAt is not older. From then on the docs stay
-    // attached to that one session. No session log and no file is written.
+    // by TIME and SCOPE instead — the client POSTs the brief BEFORE opening the
+    // session, and the context provider claims the first scope that assembles
+    // after that instant. From then on the docs stay attached to that one scope
+    // (a session's scope is stable for its lifetime). No session log and no file
+    // is written.
+    //
+    // NOTE: the assembly context is `{ scope?, signal? }` — there is NO `agent`
+    // and no session id on it. An earlier revision read `assembleContext.agent.id`
+    // and looked the session up in the sessions store, which meant the provider
+    // silently contributed nothing in the real runtime (the shape only existed in
+    // this plugin's own tests). `scope` is an opaque identity-compared key, so it
+    // is compared by reference and never stringified.
     // ---------------------------------------------------------------------
-    const arm = { text: '', at: 0, sessionId: null };
-
-    function sessionIdOf(assembleContext) {
-      const agent = assembleContext === undefined || assembleContext === null
-        ? undefined
-        : assembleContext.agent;
-      return agent !== undefined && agent !== null && typeof agent.id === 'string' ? agent.id : '';
-    }
-
-    function createdAfterArm(sessionId) {
-      const store = typeof ctx.get === 'function' ? ctx.get('sessions') : undefined;
-      if (store === undefined || store === null || typeof store.get !== 'function') {
-        // Cannot tell (a composition without the session store): the arm is an
-        // explicit user action, so the first assembling session gets the docs.
-        return true;
-      }
-      try {
-        const session = store.get(sessionId);
-        const header = session === undefined || session === null ? undefined : session.header;
-        const createdAt = header === undefined || header === null ? undefined : header.createdAt;
-        if (typeof createdAt !== 'number') return true;
-        return createdAt >= arm.at - ARM_SLACK_MS;
-      } catch (_) {
-        return true;
-      }
-    }
+    const arm = { text: '', at: 0, scope: null };
+    /** Set once the provider is actually registered; surfaced in the arm reply. */
+    let hooked = false;
 
     /**
      * The prompt-context provider: called once per assembly. An empty string
      * means "no contribution" — the assembler drops empty contexts, so a session
      * that was never armed adds nothing at all.
-     * @param assembleContext - the assembly context (`{ agent, scope, signal? }`).
+     * @param assembleContext - the assembly context (`{ scope?, signal? }`).
      * @returns the runtime-context text.
      */
     function docsContextText(assembleContext) {
       if (arm.text === '') return '';
-      if (arm.sessionId === null && Date.now() - arm.at > ARM_TTL_MS) {
+      const scope = assembleContext === undefined || assembleContext === null
+        ? undefined
+        : assembleContext.scope;
+      if (arm.scope !== null) {
+        // Bound: only that scope keeps receiving the docs, for as long as it lives.
+        return scope === arm.scope ? arm.text : '';
+      }
+      // Unclaimed: the first scope to assemble wins, and only while the arm is
+      // fresh. The panel arms immediately before opening the session, so this
+      // window is normally milliseconds wide.
+      if (Date.now() - arm.at > ARM_TTL_MS) {
         arm.text = '';
         return '';
       }
-      const sessionId = sessionIdOf(assembleContext);
-      if (sessionId === '') return '';
-      if (arm.sessionId === null) {
-        if (!createdAfterArm(sessionId)) return '';
-        arm.sessionId = sessionId;
-      }
-      return sessionId === arm.sessionId ? arm.text : '';
+      if (scope === undefined || scope === null) return '';
+      arm.scope = scope;
+      return arm.text;
     }
 
     /**
@@ -341,25 +329,30 @@ module.exports = {
         // brief the user has moved on from.
         arm.text = '';
         arm.at = 0;
-        arm.sessionId = null;
-        send(200, { ok: true, armed: false });
+        arm.scope = null;
+        send(200, { ok: true, armed: false, hooked: hooked });
         return;
       }
       const text = renderDocsContext(apis).slice(0, CONTEXT_MAX);
       arm.text = text;
       arm.at = Date.now();
-      arm.sessionId = null;
+      arm.scope = null;
       send(200, {
         ok: true,
         armed: true,
+        // `hooked: false` means the arm was stored but nothing will ever read it
+        // (no `systemPrompt` in this composition) — the panel tells the user to
+        // rely on the clipboard brief instead of pretending the context worked.
+        hooked: hooked,
         api_ids: apis.map((entry) => entry.apiId),
         chars: text.length,
-        binds: 'the next session assembled after this request',
+        binds: 'the first scope assembled after this request',
       });
     }
 
     /** `systemPrompt` is optional: without it the panel's clipboard path still works. */
     function registerDocsContext(systemPrompt) {
+      hooked = true;
       return systemPrompt.context({
         name: CONTEXT_NAME,
         order: CONTEXT_ORDER,

@@ -166,26 +166,26 @@ async function main() {
   // Runtime context: the docs armed for the session the panel opens next.
   //
   // The panel cannot know the new session's id (uiWorkspace.startSession()
-  // returns void), so the host binds by TIME: the client POSTs the brief before
-  // opening the session, and the provider claims the first session that
-  // assembles after that instant and whose createdAt is not older.
+  // returns void), so the host binds by TIME and SCOPE: the client POSTs the
+  // brief before opening the session, and the provider claims the first scope
+  // that assembles after that instant.
+  //
+  // `AssembleContext` is `{ scope?, signal? }` — there is no `agent` and no
+  // session id on it (see @deepseek-ai/dsh-system-prompt/lib/types/index.d.ts).
+  // An earlier revision read `assembleContext.agent.id`, which the real runtime
+  // never provides, so nothing was ever injected; these checks pin the real
+  // shape: the scope objects below stand in for two different sessions.
   // ---------------------------------------------------------------------
   console.log('\n-- runtime context (systemPrompt + arm route, faked) --');
 
   const contexts = [];
   const routes = [];
-  const created = {};
   const fakeServices = {
     systemPrompt: {
       context(spec) { contexts.push(spec); return () => {}; },
     },
     webServer: {
       register(def) { routes.push(def); return () => {}; },
-    },
-    sessions: {
-      get(id) {
-        return created[id] === undefined ? undefined : { header: { createdAt: created[id] } };
-      },
     },
   };
   const registry2 = {};
@@ -253,39 +253,43 @@ async function main() {
   assert.ok(armReply.json.chars > 0);
   assert.deepEqual(armReply.json.api_ids, ['twseMops.todayMaterial', 'twseMops.companyProfile']);
 
-  // A session that already existed is never touched.
-  created['session-old'] = armAt - 60 * 60 * 1000;
-  created['session-new'] = armAt + 5;
-  created['session-later'] = armAt + 10;
-  assert.equal(spec.text({ agent: { id: 'session-old' } }), '',
-    'a pre-existing session must not receive the armed docs');
+  // Two scopes stand in for two sessions: the one the panel just opened, and
+  // some other session that happens to assemble too.
+  const scopeNew = {};
+  const scopeOther = {};
 
-  const injected = spec.text({ agent: { id: 'session-new' } });
+  // An assembly with no scope at all (a global pass) must not consume the arm.
+  assert.equal(spec.text({}), '', 'a scope-less assembly must not claim the arm');
+
+  // The first scope to assemble after the arm is the one that gets it.
+  const injected = spec.text({ scope: scopeNew });
   assert.match(injected, /2 個 FDEP api/, 'the set size is missing from the header');
   assert.match(injected, /api: twseMops\.todayMaterial/, 'the first api id is missing');
   assert.match(injected, /api: twseMops\.companyProfile/, 'the second api id is missing');
+  assert.match(injected, /desc: 公司基本資料/, 'the api description is missing from the context');
   assert.match(injected, /an_code: string — "M26"/, 'the parameter line is missing its type/example');
   assert.match(injected, /watchlist: array<string> — \["1402","4904"\]/, 'array types must be named');
   assert.match(injected, /這個 api 的 inbound（面板目前的值/, 'that api\'s inbound is missing');
   assert.match(injected, /stockNo: string — "2330"/, 'the second api lost its parameter line');
   assert.match(injected, /\{ \{not a variable\}\}/, 'the {{ }} guard did not run');
 
-  // Bound to that one session, and it stays for the whole session.
-  assert.equal(spec.text({ agent: { id: 'session-later' } }), '',
+  // Bound to that one scope, and it stays for that scope's whole life.
+  assert.equal(spec.text({ scope: scopeOther }), '',
     'the docs must not leak into another session');
-  assert.equal(spec.text({ agent: { id: 'session-new' } }), injected,
-    'the bound session must keep its context');
+  assert.equal(spec.text({ scope: scopeNew }), injected,
+    'the bound scope must keep its context');
 
   // Disarm: a later arm without docs clears whatever was pending.
   const cleared = await post({ apis: [] });
   assert.equal(cleared.json.armed, false);
-  assert.equal(spec.text({ agent: { id: 'session-new' } }), '', 'disarm did not clear the context');
+  assert.equal(spec.text({ scope: scopeNew }), '', 'disarm did not clear the context');
 
   // The legacy single-api body still arms — nothing else had to change for it.
   const legacy = await post({ apiId: 'test.demo', raw: { desc: 'x', name: 'aaa' }, inbound: {} });
   assert.equal(legacy.json.armed, true);
+  assert.equal(legacy.json.hooked, true, 'the arm reply must report whether a provider is registered');
   assert.deepEqual(legacy.json.api_ids, ['test.demo']);
-  assert.match(spec.text({ agent: { id: 'session-new' } }), /api: test\.demo/);
+  assert.match(spec.text({ scope: scopeNew }), /api: test\.demo/);
   await post({ apis: [] });
 
   // An arm nobody claimed expires instead of leaking into a much later session.
@@ -293,7 +297,7 @@ async function main() {
   const realNow = Date.now;
   Date.now = () => realNow() + 31 * 60 * 1000;
   try {
-    assert.equal(spec.text({ agent: { id: 'session-much-later' } }), '',
+    assert.equal(spec.text({ scope: scopeOther }), '',
       'a stale unclaimed arm must expire');
   } finally {
     Date.now = realNow;
@@ -306,8 +310,9 @@ async function main() {
 
   console.log('OK — runtime context checks held.');
   console.log('  • arm route: POST /plugins/fdep-api-request/context');
-  console.log('  • binds to the first session assembled after the arm (createdAt >= arm)');
-  console.log('  • keeps the docs for that session, never leaks to another');
+  console.log('  • binds to the first SCOPE assembled after the arm (AssembleContext = { scope?, signal? })');
+  console.log('  • keeps the docs for that scope, never leaks to another');
+  console.log('  • a scope-less assembly does not consume the arm');
   console.log('  • disarm + 30-minute expiry for unclaimed arms');
   console.log('  • {{ }} neutralised before the text becomes prompt context');
 

@@ -270,19 +270,35 @@ async function main() {
 
   console.log('\n=== 9. runtime context: the armed docs reach the real assembler ===');
   // The panel is a root-scoped `main` occupant: it never learns the new
-  // session's id, so the host binds the brief by TIME — the client arms before
-  // opening the session, and the provider claims the first session that
-  // assembles afterwards whose createdAt is not older.
+  // session's id, so the host binds the brief by TIME and SCOPE — the client arms
+  // before opening the session, and the provider claims the first scope that
+  // assembles afterwards.
   const systemPrompt = ctx.get('systemPrompt');
   const routes = [];
-  const created = {};
+
+  // Contract guard. This plugin reads exactly one field off the assembly context
+  // (`scope`), because `AssembleContext` is `{ scope?, signal? }`. An earlier
+  // revision bound on `assembleContext.agent.id` — a field the real runtime never
+  // provides — so it silently contributed nothing while its own (self-written)
+  // tests passed. Pinning the shape here means a DSH upgrade that changes it fails
+  // loudly instead of quietly breaking the injection.
+  {
+    const typesFile = path.join(DSH_SYSTEM_PROMPT, 'lib', 'types', 'index.d.ts');
+    const types = fs.readFileSync(typesFile, 'utf8');
+    const body = types.slice(
+      types.indexOf('export interface AssembleContext'),
+      types.indexOf('export interface AssembleContext') + 400,
+    );
+    check('the real AssembleContext still carries the scope this plugin binds on', () => {
+      assert.match(body, /scope\?: ScopeKey/, 'AssembleContext lost its scope field');
+      assert.ok(!/\bagent\b/.test(body), 'AssembleContext grew an agent field — binding may need revisiting');
+    });
+  }
+
   // Provided AFTER the plugin mounted on purpose: the plugin resolves these two
   // optional services through ctx.inject(), so they may appear at any time.
   ctx.provide('webServer', {
     register(def) { routes.push(def); return () => {}; },
-  });
-  ctx.provide('sessions', {
-    get(id) { return created[id] === undefined ? undefined : { header: { createdAt: created[id] } }; },
   });
   await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -330,22 +346,25 @@ async function main() {
     assert.deepEqual(armReply.json.api_ids, ['twseMops.todayMaterial', 'twseMops.companyProfile']);
   });
 
-  created['session-before'] = armedAt - 60 * 60 * 1000;
-  created['session-after'] = armedAt + 5;
+  // The real `AssembleContext` is `{ scope?, signal? }` — no `agent`, no session
+  // id — so the two "sessions" here are scope objects.
+  const sessionAfter = {};
+  const sessionBefore = {};
 
-  const after = await systemPrompt.assemble({ agent: { id: 'session-after' } });
+  const after = await systemPrompt.assemble({ scope: sessionAfter });
   const injected = after.contexts.filter((c) => c.name === 'fdep-api-request/docs');
-  check('the real assembler carries every api for the session created after the arm', () => {
+  check('the real assembler carries every api for the session assembled after the arm', () => {
     assert.equal(injected.length, 1, 'saw contexts: ' + after.contexts.map((c) => c.name).join(','));
     assert.match(injected[0].text, /2 個 FDEP api/);
     assert.match(injected[0].text, /api: twseMops\.todayMaterial/);
     assert.match(injected[0].text, /api: twseMops\.companyProfile/);
+    assert.match(injected[0].text, /desc: 公司基本資料/);
     assert.match(injected[0].text, /watchlist: array<string>/);
     assert.match(injected[0].text, /這個 api 的 inbound（面板目前的值/);
   });
 
-  const before = await systemPrompt.assemble({ agent: { id: 'session-before' } });
-  check('a session that predates the arm gets nothing', () => {
+  const before = await systemPrompt.assemble({ scope: sessionBefore });
+  check('another session gets nothing', () => {
     // `assemble()` lists every registered context; the empty ones are dropped
     // later by the render pass (`renderContextSections` keeps text.length > 0),
     // so the meaningful assertion here is that the text is empty.
@@ -353,11 +372,11 @@ async function main() {
     assert.equal(
       mine.filter((c) => c.text !== '').length,
       0,
-      'injected into a pre-existing session: ' + JSON.stringify(mine),
+      'injected into another session: ' + JSON.stringify(mine),
     );
   });
 
-  const again = await systemPrompt.assemble({ agent: { id: 'session-after' } });
+  const again = await systemPrompt.assemble({ scope: sessionAfter });
   check('the docs stay for that session on later steps', () => {
     assert.equal(again.contexts.filter((c) => c.name === 'fdep-api-request/docs').length, 1);
   });

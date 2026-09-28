@@ -525,17 +525,29 @@ window.__ModuleLoader__.load({
     };
     var BRAND_CSS = [
       // Sidebar logo row: hide fish mark / wordmark; show the icon + text brand via
-      // ::before. The text is sized to fit the row: the brand name is long, and at
-      // 18px it was clipped to "…@AIF".
-      ".hHd-Xa_logoRow{justify-content:space-between;padding-left:12px}",
+      // ::before, centred in the sidebar. The brand box spans the whole row and
+      // centres its own text; the collapse/expand button is lifted out of the flow
+      // into the right corner so it cannot pull the text off-centre. (Keeping it in
+      // the flow is what made the banner sit left of centre: the text was centred in
+      // "row minus button", not in the row.)
+      ".hHd-Xa_logoRow{position:relative;justify-content:center;padding-left:0}",
       ".hHd-Xa_brandMark{display:none!important}",
       ".hHd-Xa_brandName{display:none!important}",
-      ".hHd-Xa_brand::before{content:\"" + BRAND_ICON + " " + BRAND_NAME + "\";font-size:14px;font-weight:600;letter-spacing:0;color:var(--dsw-alias-label-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}",
-      // Collapsed rail (56px): DSH's own mark lives *inside* the collapse/expand
-      // button, which is what the rail shows when the sidebar is folded. The fish
-      // is dropped and the icon takes its slot, so the mark sits where the brand
-      // mark belongs and the button keeps working (it is still the same element,
-      // just without its fish).
+      ".hHd-Xa_brand{flex:1 1 auto;min-width:0;justify-content:center}",
+      // -20px: the banner is optically off to the right (the row is inset by DSH's own
+      // padding and the collapse button sits in the corner), so the text is nudged
+      // left of the geometric centre. `transform` keeps the flex centring intact.
+      // Banner colour: 宝石蓝 (sapphire). The theme has exactly one blue token, and its
+      // value (#4176e6) is a bright "business" blue, so it is deepened with the theme's
+      // own label colour: near-black in the light theme (→ a real sapphire), near-white
+      // in the dark one (→ lifted, as a dark UI needs). The plain token stays as the
+      // fallback for engines without `color-mix`.
+      ".hHd-Xa_brand::before{display:block;content:\"" + BRAND_ICON + " " + BRAND_NAME + "\";text-align:center;font-size:14px;font-weight:600;letter-spacing:0;color:var(--dsw-alias-state-business-primary, #0f52ba);color:color-mix(in srgb, var(--dsw-alias-state-business-primary, #0f52ba) 75%, var(--dsw-alias-label-primary, #0f1115));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform:translateX(-20px)}",
+      ".hHd-Xa_logoRow .hHd-Xa_toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%)}",
+      // Collapsed rail (56px): the button must keep its own layout there — the brand
+      // mark lives *inside* it, so taking it out of the flow would move the icon off
+      // the rail's centre line. The fish is swapped for the icon instead.
+      ".hHd-Xa_collapsed .hHd-Xa_toggle{position:static;right:auto;top:auto;transform:none}",
       ".hHd-Xa_railMark svg{display:none!important}",
       ".hHd-Xa_railMark::before{content:\"" + BRAND_ICON + "\";font-size:20px;line-height:1}",
       // Hero headline: hide fish and preview badge, center the title.

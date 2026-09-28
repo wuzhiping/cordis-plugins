@@ -124,28 +124,31 @@ async function main() {
   await post(body);
 
   console.log('\n=== the real assembler carries it, once, for the right session ===');
-  created['session-after'] = armedAt + 5;
-  created['session-before'] = armedAt - 60 * 1000;
+  // The real `AssembleContext` is `{ scope?, signal? }`: two scope objects stand in
+  // for the session the panel opened and for another one.
+  const sessionAfter = {};
+  const sessionBefore = {};
   const systemPrompt = ctx.get('systemPrompt');
 
-  const after = await systemPrompt.assemble({ agent: { id: 'session-after' } });
+  const after = await systemPrompt.assemble({ scope: sessionAfter });
   const mine = after.contexts.filter((c) => c.name === 'fdep-api-request/docs');
-  check('the session created after the arm gets exactly one context with every api', () => {
+  check('the session assembled first after the arm gets exactly one context with every api', () => {
     assert.equal(mine.length, 1, 'saw: ' + after.contexts.map((c) => c.name).join(','));
     assert.match(mine[0].text, /2 個 FDEP api/);
     assert.match(mine[0].text, /api: twseMops\.todayMaterial/);
     assert.match(mine[0].text, /api: twseMops\.companyProfile/);
+    assert.match(mine[0].text, /desc: 公司基本資料/);
     assert.match(mine[0].text, /watchlist: array<string>/);
     assert.match(mine[0].text, /stockNo: string/);
   });
 
-  const before = await systemPrompt.assemble({ agent: { id: 'session-before' } });
-  check('a session that predates the arm gets nothing', () => {
+  const before = await systemPrompt.assemble({ scope: sessionBefore });
+  check('another session gets nothing', () => {
     const leaked = before.contexts.filter((c) => c.name === 'fdep-api-request/docs' && c.text !== '');
     assert.equal(leaked.length, 0, 'leaked: ' + JSON.stringify(leaked));
   });
 
-  const again = await systemPrompt.assemble({ agent: { id: 'session-after' } });
+  const again = await systemPrompt.assemble({ scope: sessionAfter });
   check('later steps of that session keep it', () => {
     const kept = again.contexts.filter((c) => c.name === 'fdep-api-request/docs' && c.text !== '');
     assert.equal(kept.length, 1);

@@ -1123,11 +1123,20 @@ function makeMainPanel(e, React, services) {
       const briefSet = injectionSet();
       // 1. Arm the docs as the new session's runtime context. This has to reach
       //    the host BEFORE the session exists: the host binds the brief to the
-      //    first session that assembles after this request.
+      //    first scope that assembles after this request.
       let armed = false;
+      let hooked = true;
+      let staleHost = false;
       try {
         const reply = await armHostContext(briefSet);
         armed = !!(reply && reply.armed);
+        // The host reports whether its prompt-context provider is registered at
+        // all: an arm that nothing will ever read is worse than a failed one,
+        // because it looks like it worked. A *missing* flag means the host half
+        // predates this field — i.e. the running process still has the version
+        // whose provider never fired, so say so instead of claiming success.
+        hooked = !reply || reply.hooked !== false;
+        staleHost = !!(reply && reply.armed && reply.hooked === undefined);
       } catch (err) {
         armed = false;
         console.warn('[fdep-api-request] could not arm the host context:', err && err.message ? err.message : err);
@@ -1147,13 +1156,17 @@ function makeMainPanel(e, React, services) {
         uiWorkspace.startSession();
         const count = briefSet.length;
         const subject = count > 1 ? count + ' 個 api 的文件' : '這個 api 的文件';
-        const context = armed
+        const context = armed && hooked && !staleHost
           ? subject + '已注入它的上下文。'
-          : '宿主端上下文不可用 —— 提示本身就帶著文件。';
+          : (staleHost
+              ? '宿主端外掛是較舊的版本（請重啟 dsh web 讓注入生效）—— 提示本身帶著文件。'
+              : (armed
+                  ? '宿主端沒有掛載 systemPrompt，文件不會進入上下文 —— 提示本身帶著它們。'
+                  : '宿主端上下文不可用 —— 提示本身就帶著文件。'));
         const paste = copied
           ? '提示也已在剪貼簿 —— 貼上（Ctrl/Cmd+V）就能說明要做什麼。'
           : '剪貼簿不可用 —— 請展開「預先組好的 skill 提示」手動複製。';
-        setStatus({ kind: armed ? 'info' : 'warn', title: '已開啟新工作階段', detail: context + ' ' + paste });
+        setStatus({ kind: armed && hooked && !staleHost ? 'info' : 'warn', title: '已開啟新工作階段', detail: context + ' ' + paste });
       } catch (err) {
         setStatus({ kind: 'err', title: '無法開啟工作階段', detail: (err && err.message) || String(err) });
       }

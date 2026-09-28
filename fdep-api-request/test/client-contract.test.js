@@ -273,6 +273,9 @@ let fetchBehaviour = 'ok';
 // session creation happened (`seq` also gets 'start' from the fake uiWorkspace).
 let armCalls = [];
 let armBehaviour = 'ok';
+// The host half replies with `hooked` (is a systemPrompt provider registered?).
+// 'stale' models the older host build that predates the field.
+let armReplyShape = 'hooked';
 let seq = [];
 globalThis.fetch = async function (url, init) {
   fetchCalls.push({ url, init });
@@ -282,10 +285,13 @@ globalThis.fetch = async function (url, init) {
     armCalls.push({ url, body: sent, afterStart: seq.indexOf('start') !== -1 });
     seq.push('arm');
     if (armBehaviour === 'fail') throw new TypeError('Failed to fetch');
+    const reply = { ok: true, armed: true, api_ids: (sent.apis || []).map((a) => a.apiId), chars: 100 };
+    if (armReplyShape === 'hooked') reply.hooked = true;
+    if (armReplyShape === 'unhooked') reply.hooked = false;
     return {
       ok: true, status: 200,
-      async json() { return { ok: true, armed: true, api_id: sent.apiId, chars: 100 }; },
-      async text() { return JSON.stringify({ ok: true, armed: true }); },
+      async json() { return reply; },
+      async text() { return JSON.stringify(reply); },
     };
   }
   if (fetchBehaviour === 'cors') throw new TypeError('Failed to fetch');
@@ -788,6 +794,33 @@ async function main() {
     assert.match(textOf(strip), /剪貼簿/);
   });
   armBehaviour = 'ok';
+
+  // The two ways an arm can be reported without being useful: the host stores the
+  // text but has no systemPrompt to read it, or the host half is the older build
+  // that does not even report `hooked`. Both must say so instead of claiming the
+  // docs were injected (that silent lie is what hid the real bug).
+  armReplyShape = 'unhooked';
+  setClipboard(true);
+  await findButton(tree, '開新工作階段').props.onClick();
+  tree = render();
+  check('an arm with no prompt provider says the docs will not reach the context', () => {
+    const strip = findStatus(tree, 'fdep__status--warn');
+    assert.ok(strip, 'expected a warning');
+    assert.match(textOf(strip), /沒有掛載 systemPrompt/);
+    assert.ok(textOf(strip).indexOf('已注入') === -1, 'must not claim a successful injection');
+  });
+
+  armReplyShape = 'stale';
+  setClipboard(true);
+  await findButton(tree, '開新工作階段').props.onClick();
+  tree = render();
+  check('an arm answered without `hooked` is reported as an out-of-date host half', () => {
+    const strip = findStatus(tree, 'fdep__status--warn');
+    assert.ok(strip, 'expected a warning');
+    assert.match(textOf(strip), /較舊的版本/);
+    assert.match(textOf(strip), /重啟 dsh web/);
+  });
+  armReplyShape = 'hooked';
 
   console.log('\n=== 9. presentation contract (theme tokens, not hard-coded colours) ===');
   check('every CSS custom property is a real shipped token or fdep-local', () => {
