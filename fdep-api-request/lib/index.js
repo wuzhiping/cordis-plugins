@@ -87,16 +87,16 @@ function readBody(req) {
 function renderDocsContext(apiId, rawDocs, inbound) {
   const split = splitDocs(rawDocs);
   const lines = [];
-  lines.push('The GUI panel "MCP Gateway" fetched the docs below for this FDEP api and armed them as context for this session.');
-  lines.push('Treat them as the authority on field names and types; do not fetch the docs again.');
+  lines.push('GUI 的「MCP Gateway」面板剛取得了下列 FDEP api 的文件，並把它注入為本工作階段的背景上下文。');
+  lines.push('請把它當作欄位名稱與型別的唯一依據，不要再呼叫 docs。');
   lines.push('');
   lines.push('api: ' + apiId);
-  lines.push('desc: ' + (split.desc || '(none)'));
+  lines.push('desc: ' + (split.desc || '(無)'));
   lines.push('');
-  lines.push('parameters (name: type — example value; a blank field is omitted from inbound):');
+  lines.push('參數（名稱: 型別 — 範例值；留空的欄位不送）：');
   const names = Object.keys(split.params);
   if (names.length === 0) {
-    lines.push('  (this api takes no inbound fields)');
+    lines.push('  （這個 api 不需要 inbound 欄位）');
   } else {
     for (const name of names) {
       let example;
@@ -109,21 +109,21 @@ function renderDocsContext(apiId, rawDocs, inbound) {
     }
   }
   lines.push('');
-  lines.push('raw docs payload (exactly what fdep_call mode:"docs" returns under data.docs):');
+  lines.push('原始 docs 內容（與 fdep_call mode:"docs" 回傳的 data.docs 完全相同）：');
   try {
     lines.push(JSON.stringify(rawDocs || {}, null, 2));
   } catch (_) {
-    lines.push('(unserialisable)');
+    lines.push('(無法序列化)');
   }
   lines.push('');
-  lines.push("inbound the panel holds right now (the user's own words override it):");
+  lines.push('面板目前持有的 inbound（使用者另有指示時以使用者為準）：');
   try {
     lines.push(JSON.stringify(inbound || {}, null, 2));
   } catch (_) {
     lines.push('{}');
   }
   lines.push('');
-  lines.push('To run it, call fdep_call with mode:"execute" and that inbound (mode:"docs" re-fetches if you must double-check).');
+  lines.push('要執行時，用 fdep_call 工具（mode:"execute"）帶上面的 inbound；需要再確認欄位時才用 mode:"docs"。');
   return promptSafe(lines.join('\n'));
 }
 

@@ -253,7 +253,7 @@ async function main() {
   assert.match(injected, /twseMops\.todayMaterial/, 'the api id is missing');
   assert.match(injected, /an_code: string — "M26"/, 'the parameter line is missing its type/example');
   assert.match(injected, /watchlist: array<string> — \["1402","4904"\]/, 'array types must be named');
-  assert.match(injected, /inbound the panel holds right now/, 'the typed inbound is missing');
+  assert.match(injected, /面板目前持有的 inbound/, 'the typed inbound is missing');
   assert.match(injected, /\{ \{not a variable\}\}/, 'the {{ }} guard did not run');
 
   // Bound to that one session, and it stays for the whole session.

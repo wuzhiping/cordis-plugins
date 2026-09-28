@@ -329,7 +329,7 @@ async function main() {
     assert.equal(injected.length, 1, 'saw contexts: ' + after.contexts.map((c) => c.name).join(','));
     assert.match(injected[0].text, /twseMops\.todayMaterial/);
     assert.match(injected[0].text, /watchlist: array<string>/);
-    assert.match(injected[0].text, /inbound the panel holds right now/);
+    assert.match(injected[0].text, /面板目前持有的 inbound/);
   });
 
   const before = await systemPrompt.assemble({ agent: { id: 'session-before' } });

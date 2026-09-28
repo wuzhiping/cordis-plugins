@@ -66,7 +66,7 @@ function placeholderFor(spec) {
   if (spec.kind === 'array') {
     return Array.isArray(spec.example) && spec.example.length
       ? spec.example.join(', ')
-      : 'one, two, three';
+      : '項目一, 項目二';
   }
   if (spec.kind === 'boolean') return 'true / false';
   if (spec.kind === 'object') return '{ "key": "value" }';
@@ -89,7 +89,7 @@ function parseFieldValue(spec, text) {
     const first = Array.isArray(spec.example) ? spec.example[0] : undefined;
     if (typeof first === 'number') {
       const nums = parts.map(Number);
-      if (nums.some(Number.isNaN)) return { error: 'expected numbers, e.g. ' + placeholderFor(spec) };
+      if (nums.some(Number.isNaN)) return { error: '需要數字，例如 ' + placeholderFor(spec) };
       return { value: nums };
     }
     if (typeof first === 'boolean') {
@@ -100,19 +100,19 @@ function parseFieldValue(spec, text) {
 
   if (spec.kind === 'number') {
     const n = Number(t);
-    if (Number.isNaN(n)) return { error: 'expected a number' };
+    if (Number.isNaN(n)) return { error: '需要一個數字' };
     return { value: n };
   }
 
   if (spec.kind === 'boolean') {
     if (/^(true|1|yes|y|是)$/i.test(t)) return { value: true };
     if (/^(false|0|no|n|否)$/i.test(t)) return { value: false };
-    return { error: 'expected true or false' };
+    return { error: '需要 true 或 false' };
   }
 
   if (spec.kind === 'object' || spec.kind === 'null') {
     try { return { value: JSON.parse(t) }; }
-    catch (_) { return { error: 'expected valid JSON' }; }
+    catch (_) { return { error: '需要合法的 JSON' }; }
   }
 
   return { value: t };
@@ -150,20 +150,23 @@ function docsPayload(docs) {
 // value), and the exact payload shape `mode:"docs"` returns. Carrying it in the
 // message means the model neither re-fetches the docs nor guesses field names,
 // and the pasted message is a self-contained brief for this api id.
+//
+// The wording is zh-TW like the rest of the panel; the api id, field names and
+// JSON stay verbatim because those are the wire contract.
 function docsBlock(docs) {
   if (!docs) return [];
   const specs = docs && docs.specs ? docs.specs : [];
-  const lines = ['', 'Docs for this api (already fetched — do NOT call the docs endpoint again):'];
+  const lines = ['', '這個 api 的文件（已取得 —— 請不要再呼叫 docs 端點）：'];
   if (docs.desc) lines.push('desc: ' + docs.desc);
   if (specs.length) {
-    lines.push('parameters (name: type — example value; a blank field is omitted from inbound):');
+    lines.push('參數（名稱: 型別 — 範例值；留空的欄位不送）：');
     for (const spec of specs) {
       lines.push('  ' + spec.name + ': ' + spec.kind + ' — ' + exampleText(spec));
     }
   } else {
-    lines.push('parameters: none (this api takes no inbound fields)');
+    lines.push('參數：無（這個 api 不需要 inbound 欄位）');
   }
-  lines.push('raw docs payload (exactly what mode:"docs" returns under data.docs):');
+  lines.push('原始 docs 內容（與 fdep_call mode:"docs" 回傳的 data.docs 完全相同）：');
   lines.push(JSON.stringify(docsPayload(docs), null, 2));
   return lines;
 }
@@ -171,7 +174,7 @@ function docsBlock(docs) {
 function buildPrompt(apiId, inbound, docs) {
   const inboundJson = JSON.stringify(inbound || {}, null, 2);
   return [
-    'Use the fdep-api-request skill to call the following FDEP API.',
+    '請使用 fdep-api-request skill 呼叫下列 FDEP API。',
     '',
     'api: ' + (apiId || '<api_id>'),
   ].concat(docsBlock(docs)).concat([
@@ -179,10 +182,10 @@ function buildPrompt(apiId, inbound, docs) {
     'inbound:',
     inboundJson,
     '',
-    'Steps:',
-    '1. Do not fetch the docs again — the docs above are the authority on field names and types.',
-    '2. Keep the inbound object exactly as written above; blank filters are already omitted.',
-    '3. Execute with the fdep_call tool (mode: "execute") and report the result.',
+    '步驟：',
+    '1. 不要再取得文件 —— 上面的文件就是欄位名稱與型別的唯一依據。',
+    '2. inbound 照上面送即可，空白的篩選條件已經省略。',
+    '3. 用 fdep_call 工具（mode: "execute"）執行，並回報結果。',
   ]).join('\n');
 }
 
@@ -350,6 +353,10 @@ const PANEL_CSS = [
 
   /* buttons */
   '.fdep__actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }',
+  // Inside a step card the card already supplies the padding, so the row must not
+  // add its own vertical margins.
+  '.fdep__card .fdep__actions { margin: 0; }',
+  '.fdep__note { margin: 10px 0 0; font-size: 11px; line-height: 16px; color: var(--fdep-text-2); }',
   '.fdep__btn {',
   '  display: inline-flex; align-items: center; justify-content: center; gap: 6px;',
   '  height: 34px; padding: 0 14px;',
@@ -623,11 +630,11 @@ function makeMainPanel(e, React, services) {
     async function onFetchDocs() {
       const id = apiId.trim();
       if (!id) {
-        setStatus({ kind: 'warn', title: 'API ID required', detail: 'Enter an api_id such as test.demo.' });
+        setStatus({ kind: 'warn', title: '需要 API ID', detail: '請先輸入 api_id，例如 test.demo。' });
         return;
       }
       setBusy('docs');
-      setStatus({ kind: 'busy', title: 'Fetching docs', detail: 'POST ' + FDEP_HOST + FDEP_PATH + ' with do: false' });
+      setStatus({ kind: 'busy', title: '取得文件中', detail: 'POST ' + FDEP_HOST + FDEP_PATH + '（do: false）' });
       const r = await tryBrowserCall(id, 'docs', {});
       setBusy(null);
       if (!r.ok) {
@@ -638,14 +645,14 @@ function makeMainPanel(e, React, services) {
           r.cors
             ? {
                 kind: 'warn',
-                title: 'Browser fetch blocked',
+                title: '瀏覽器請求被擋下',
                 detail:
-                  'This looks like a network or CORS refusal (' + r.error + ').\n' +
-                  'The host-side fdep_call tool has no such limit — use "Copy prompt" and run it in a session.',
+                  '看起來是網路或 CORS 被拒（' + r.error + '）。\n' +
+                  '宿主端的 fdep_call 工具沒有這個限制 —— 請用「複製提示」帶到工作階段裡執行。',
               }
             : {
                 kind: 'err',
-                title: 'Docs request failed',
+                title: '取得文件失敗',
                 detail: r.error + '\n' + JSON.stringify(r.body, null, 2),
               },
         );
@@ -661,34 +668,34 @@ function makeMainPanel(e, React, services) {
       const hasArray = kinds.indexOf('array') !== -1;
       setStatus({
         kind: 'ok',
-        title: count + (count === 1 ? ' parameter' : ' parameters') + ' discovered',
-        detail: (split.desc || 'Fill the fields below, then run the call.')
-          + (hasArray ? '\nList fields take several values separated by commas.' : ''),
+        title: '已取得文件，共 ' + count + ' 個參數',
+        detail: (split.desc || '填好下面的欄位後執行。')
+          + (hasArray ? '\n列表欄位可用逗號分隔多個值。' : ''),
       });
     }
 
     async function onRun() {
       const id = apiId.trim();
       if (!id) {
-        setStatus({ kind: 'warn', title: 'API ID required', detail: 'Enter an api_id first.' });
+        setStatus({ kind: 'warn', title: '需要 API ID', detail: '請先輸入 api_id。' });
         return;
       }
       if (!docs) {
-        setStatus({ kind: 'warn', title: 'Docs not loaded', detail: 'Fetch the docs first so the inbound fields are known.' });
+        setStatus({ kind: 'warn', title: '尚未取得文件', detail: '請先取得文件，才知道 inbound 有哪些欄位。' });
         return;
       }
       const assembled = assembleInbound(docs, params);
       if (assembled.errors.length) {
         setStatus({
           kind: 'err',
-          title: 'Check the field values',
+          title: '請檢查欄位值',
           detail: assembled.errors.join('\n'),
         });
         return;
       }
       const inbound = assembled.inbound;
       setBusy('execute');
-      setStatus({ kind: 'busy', title: 'Executing ' + id, detail: 'POST with do: true' });
+      setStatus({ kind: 'busy', title: '執行 ' + id, detail: 'POST（do: true）' });
       const r = await tryBrowserCall(id, 'execute', inbound);
       setBusy(null);
       if (!r.ok) {
@@ -697,17 +704,17 @@ function makeMainPanel(e, React, services) {
           r.cors
             ? {
                 kind: 'warn',
-                title: 'Browser fetch blocked',
+                title: '瀏覽器請求被擋下',
                 detail:
-                  'This looks like a network or CORS refusal (' + r.error + ').\n' +
-                  'Run it through the host fdep_call tool instead — copy the prompt below.',
+                  '看起來是網路或 CORS 被拒（' + r.error + '）。\n' +
+                  '請改用宿主端 fdep_call 工具 —— 複製下面的提示帶到工作階段執行。',
               }
-            : { kind: 'err', title: 'Execute failed', detail: r.error },
+            : { kind: 'err', title: '執行失敗', detail: r.error },
         );
         return;
       }
       setResult(r.body);
-      setStatus({ kind: 'ok', title: 'Completed', detail: 'The response is shown below.' });
+      setStatus({ kind: 'ok', title: '完成', detail: '回應顯示在下方。' });
     }
 
     async function onCopyPrompt() {
@@ -720,8 +727,8 @@ function makeMainPanel(e, React, services) {
       } catch (_) {
         setStatus({
           kind: 'warn',
-          title: 'Clipboard unavailable',
-          detail: 'Select the prompt in the collapsed section at the bottom and copy it manually.',
+          title: '無法使用剪貼簿',
+          detail: '請展開下方「預先組好的 skill 提示」手動複製。',
         });
       }
     }
@@ -731,7 +738,7 @@ function makeMainPanel(e, React, services) {
         await copyText(JSON.stringify(result, null, 2));
         flashCopied('result');
       } catch (_) {
-        setStatus({ kind: 'warn', title: 'Clipboard unavailable', detail: 'Select the response text and copy it manually.' });
+        setStatus({ kind: 'warn', title: '無法使用剪貼簿', detail: '請手動選取回應文字複製。' });
       }
     }
 
@@ -740,8 +747,8 @@ function makeMainPanel(e, React, services) {
       if (!uiWorkspace || typeof uiWorkspace.startSession !== 'function') {
         setStatus({
           kind: 'err',
-          title: 'Service unavailable',
-          detail: 'uiWorkspace is not mounted in this composition.',
+          title: '服務不可用',
+          detail: '這個組合裡沒有掛載 uiWorkspace。',
         });
         return;
       }
@@ -774,14 +781,14 @@ function makeMainPanel(e, React, services) {
       try {
         uiWorkspace.startSession();
         const context = armed
-          ? "This api's docs are injected into its context."
-          : 'Host context unavailable — the brief carries the docs instead.';
+          ? '這個 api 的文件已注入它的上下文。'
+          : '宿主端上下文不可用 —— 提示本身就帶著文件。';
         const paste = copied
-          ? 'The brief is also on your clipboard — paste it (Ctrl/Cmd+V) to say what to do.'
-          : 'Clipboard unavailable — open "Pre-built skill prompt" below and copy it.';
-        setStatus({ kind: armed ? 'info' : 'warn', title: 'New session opened', detail: context + ' ' + paste });
+          ? '提示也已在剪貼簿 —— 貼上（Ctrl/Cmd+V）就能說明要做什麼。'
+          : '剪貼簿不可用 —— 請展開「預先組好的 skill 提示」手動複製。';
+        setStatus({ kind: armed ? 'info' : 'warn', title: '已開啟新工作階段', detail: context + ' ' + paste });
       } catch (err) {
-        setStatus({ kind: 'err', title: 'Could not open a session', detail: (err && err.message) || String(err) });
+        setStatus({ kind: 'err', title: '無法開啟工作階段', detail: (err && err.message) || String(err) });
       }
     }
 
@@ -831,8 +838,8 @@ function makeMainPanel(e, React, services) {
         e(
           'div',
           { className: 'fdep__fielddesc' },
-          isList ? 'Comma or newline separated. ' : '',
-          'example: ',
+          isList ? '以逗號或換行分隔。' : '',
+          '範例：',
           e('code', null, exampleText(spec)),
         ),
       );
@@ -869,7 +876,7 @@ function makeMainPanel(e, React, services) {
             'div',
             { className: 'fdep__step' },
             e('span', { className: 'fdep__stepnum' }, '1'),
-            e('span', { className: 'fdep__steptitle' }, 'Choose the API'),
+            e('span', { className: 'fdep__steptitle' }, '選擇 API'),
           ),
           e('label', { className: 'fdep__label', htmlFor: 'fdep-api-id' }, 'API ID'),
           e(
@@ -878,7 +885,7 @@ function makeMainPanel(e, React, services) {
             e(TextField, {
               id: 'fdep-api-id',
               value: apiId,
-              placeholder: 'e.g. test.demo',
+              placeholder: '例：test.demo',
               mono: true,
               ariaLabel: 'API ID',
               onChange: function (ev) { setApiId(ev.target.value); },
@@ -888,7 +895,7 @@ function makeMainPanel(e, React, services) {
               Button,
               { onClick: onFetchDocs, disabled: !!busy },
               busy === 'docs' ? e(Spinner, null) : null,
-              busy === 'docs' ? 'Loading…' : 'Fetch docs',
+              busy === 'docs' ? '載入中…' : '取得文件',
             ),
           ),
         ),
@@ -901,41 +908,59 @@ function makeMainPanel(e, React, services) {
             'div',
             { className: 'fdep__step' },
             e('span', { className: 'fdep__stepnum' }, '2'),
-            e('span', { className: 'fdep__steptitle' }, 'Parameters'),
+            e('span', { className: 'fdep__steptitle' }, '參數'),
             e(
               'span',
               { className: 'fdep__stepsuffix' },
-              docs
-                ? specs.length + (specs.length === 1 ? ' field' : ' fields')
-                : 'from docs',
+              docs ? specs.length + ' 個欄位' : '來自文件',
             ),
           ),
           docs
             ? specs.length
               ? e('div', { className: 'fdep__fields' }, specs.map(field))
-              : e('p', { className: 'fdep__empty' }, 'This API takes no parameters — run it directly.')
-            : e('p', { className: 'fdep__empty' }, 'Fetch the docs to discover which fields this API needs.'),
+              : e('p', { className: 'fdep__empty' }, '這個 API 沒有參數，直接執行即可。')
+            : e('p', { className: 'fdep__empty' }, '先取得文件，才知道這個 API 需要哪些欄位。'),
         ),
 
-        // ---- actions ----
+        // ---- step 3 ----
         e(
-          'div',
-          { className: 'fdep__actions' },
+          'section',
+          { className: 'fdep__card' },
           e(
-            Button,
-            { variant: 'primary', onClick: onRun, disabled: !ready },
-            busy === 'execute' ? e(Spinner, null) : null,
-            busy === 'execute' ? 'Running…' : 'Run',
+            'div',
+            { className: 'fdep__step' },
+            e('span', { className: 'fdep__stepnum' }, '3'),
+            e('span', { className: 'fdep__steptitle' }, '執行'),
+            e(
+              'span',
+              { className: 'fdep__stepsuffix' },
+              busy === 'execute' ? '執行中…' : (docs ? '已取得文件' : '尚未取得文件'),
+            ),
           ),
           e(
-            Button,
-            { onClick: onCopyPrompt, disabled: !ready },
-            copied === 'prompt' ? 'Copied' : 'Copy prompt',
+            'div',
+            { className: 'fdep__actions' },
+            e(
+              Button,
+              { variant: 'primary', onClick: onRun, disabled: !ready },
+              busy === 'execute' ? e(Spinner, null) : null,
+              busy === 'execute' ? '執行中…' : '執行',
+            ),
+            e(
+              Button,
+              { onClick: onCopyPrompt, disabled: !ready },
+              copied === 'prompt' ? '已複製' : '複製提示',
+            ),
+            // Both fallbacks need the docs: the brief only becomes a complete
+            // context once the api's fields are known, so the buttons stay inert
+            // until Fetch docs succeeds.
+            e(Button, { onClick: onNewSession, disabled: !ready }, '開新工作階段'),
           ),
-          // Both fallbacks need the docs: the brief only becomes a complete
-          // context once the api's fields are known, so the buttons stay inert
-          // until Fetch docs succeeds.
-          e(Button, { onClick: onNewSession, disabled: !ready }, 'New session'),
+          e(
+            'p',
+            { className: 'fdep__note' },
+            '「開新工作階段」會把這份 api 文件注入新工作階段的上下文，並把完整提示複製到剪貼簿。',
+          ),
         ),
 
         // ---- result ----
@@ -946,14 +971,14 @@ function makeMainPanel(e, React, services) {
               e(
                 'div',
                 { className: 'fdep__bar' },
-                e('span', { className: 'fdep__barlabel' }, 'Response'),
+                e('span', { className: 'fdep__barlabel' }, '回應'),
                 result && result.trace_id
                   ? e('span', { className: 'fdep__barmeta' }, 'trace ' + result.trace_id)
                   : null,
                 e(
                   Button,
-                  { variant: 'ghost', size: 'sm', onClick: onCopyResult, ariaLabel: 'Copy response' },
-                  copied === 'result' ? 'Copied' : 'Copy',
+                  { variant: 'ghost', size: 'sm', onClick: onCopyResult, ariaLabel: '複製回應' },
+                  copied === 'result' ? '已複製' : '複製',
                 ),
               ),
               e('pre', { className: 'fdep__pre' }, JSON.stringify(result, null, 2)),
@@ -964,7 +989,7 @@ function makeMainPanel(e, React, services) {
         e(
           'details',
           { className: 'fdep__details' },
-          e('summary', { className: 'fdep__summary' }, 'Pre-built skill prompt (paste into a new session)'),
+          e('summary', { className: 'fdep__summary' }, '預先組好的 skill 提示（貼到新工作階段）'),
           e('pre', { className: 'fdep__pre' }, prompt),
         ),
       ),

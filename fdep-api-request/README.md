@@ -25,22 +25,27 @@ The tool posts to `https://abc.feg.com.tw/oauth2/fdep` with `Content-Type: appli
 ### Client side
 
 A sidebar entry labelled **MCP Gateway**, marked with a green hexagon glyph, that opens a panel
-titled **MCP Gateway**. The panel is a three-step flow:
+titled **MCP Gateway**. The panel is a three-step flow — three numbered cards in order (1 → 2 → 3),
+followed by the response and the fallback prompt:
 
-1. **Choose the API** — an API ID input (monospace) with **Fetch docs**. Enter submits. The field
-   starts prefilled with **`twseMops.todayMaterial`** (TWSE + TPEX 當日重大訊息), so the common case
-   is one click; it stays editable for any other `api_id`.
-2. **Parameters** — one control per non-`desc` field in the fetched docs, each labelled with the
-   **type inferred from its example value** plus that example. Before the first fetch the card
+1. **選擇 API** (Choose the API) — an API ID input (monospace) with **取得文件** (Fetch docs). Enter
+   submits. The field starts prefilled with **`twseMops.todayMaterial`** (TWSE + TPEX 當日重大訊息),
+   so the common case is one click; it stays editable for any other `api_id`.
+2. **參數** (Parameters) — one control per non-`desc` field in the fetched docs, each labelled with
+   the **type inferred from its example value** plus that example. Before the first fetch the card
    carries an empty-state hint; an API with no parameters says so instead of rendering an empty box.
-3. **Run** — primary action, plus **Copy prompt** and **New session**. A response gets its own
-   flush card with the `trace_id` and a copy button.
-   **Copy prompt** and **New session** stay **disabled until Fetch docs succeeds** — everything
-   they hand over *is* the docs.
-   **New session** opens a blank session (the same action as the sidebar's 新工作階段) whose
+3. **執行** (Run) — the primary action, plus **複製提示** (Copy prompt) and **開新工作階段**
+   (New session). A response gets its own flush card with the `trace_id` and a copy button.
+   Both fallbacks stay **disabled until 取得文件 succeeds** — everything they hand over *is* the
+   docs. **開新工作階段** opens a blank session (the same action as the sidebar's 新工作階段) whose
    runtime context carries the api's docs — the host injects them, see *What the new session
    receives* — and it also puts the same **api brief** on the clipboard so the first message can
    say what to do (the brief is the fallback when the host route is unreachable).
+
+**Language.** The panel's UI is **Traditional Chinese (zh-TW idiom)**, matching this profile's
+`locale.preference: zh-TW` and the sibling `scene-template` bundle; the api ids, field names, types
+and JSON stay verbatim because those are the wire contract. The same applies to the two pieces of
+text the model receives: the clipboard brief and the injected runtime context.
 
 ### Field types come from the docs examples
 
@@ -62,13 +67,13 @@ example too: an example of `["1402"]` sends strings, `[1, 2]` sends numbers. A f
 **omitted** rather than sent as `""`, because these APIs document their filters as optional and an
 empty string is not the same as "no filter".
 
-The **Copy prompt** fallback carries the same assembled, typed object *and the docs*, so the
-paste-into-a-session path cannot reintroduce a shape the form has already fixed — and the new
+The **複製提示** (Copy prompt) fallback carries the same assembled, typed object *and the docs*, so
+the paste-into-a-session path cannot reintroduce a shape the form has already fixed — and the new
 session starts with the api's schema in context instead of re-deriving it.
 
 ### What the new session receives (and what it does not)
 
-**New session** feeds the api into the session twice, on purpose:
+**開新工作階段** (New session) feeds the api into the session twice, on purpose:
 
 1. **As runtime context (the host half).** The client POSTs the brief to
    `/plugins/fdep-api-request/context` *before* opening the session; the host stores it armed and a
@@ -89,29 +94,52 @@ session that already existed never receives it, another session cannot steal it,
 claims expires after 30 minutes, and a later arm (or one without docs) replaces or clears it
 entirely. Nothing is written to the session log or the filesystem.
 
-The brief pasted into the new session looks like this:
+Both texts are zh-TW (see *Language*). The **injected context** reads:
 
 ```
-Use the fdep-api-request skill to call the following FDEP API.
+GUI 的「MCP Gateway」面板剛取得了下列 FDEP api 的文件，並把它注入為本工作階段的背景上下文。
+請把它當作欄位名稱與型別的唯一依據，不要再呼叫 docs。
+
+api: twseMops.todayMaterial
+desc: 抓取 TWSE(上市) + TPEX(上櫃) 當日全市場重大訊息…
+
+參數（名稱: 型別 — 範例值；留空的欄位不送）：
+  an_code: string — "M26"
+  keyword: string — "資安"
+  watchlist: array<string> — ["1402","4904"]
+
+原始 docs 內容（與 fdep_call mode:"docs" 回傳的 data.docs 完全相同）：
+{ … }
+
+面板目前持有的 inbound（使用者另有指示時以使用者為準）：
+{ … }
+
+要執行時，用 fdep_call 工具（mode:"execute"）帶上面的 inbound；需要再確認欄位時才用 mode:"docs"。
+```
+
+…and the clipboard **brief** (also visible in the collapsed block at the bottom of the panel):
+
+```
+請使用 fdep-api-request skill 呼叫下列 FDEP API。
 
 api: twseMops.todayMaterial
 
-Docs for this api (already fetched — do NOT call the docs endpoint again):
+這個 api 的文件（已取得 —— 請不要再呼叫 docs 端點）：
 desc: 抓取 TWSE(上市) + TPEX(上櫃) 當日全市場重大訊息…
-parameters (name: type — example value; a blank field is omitted from inbound):
+參數（名稱: 型別 — 範例值；留空的欄位不送）：
   an_code: string — "M26"
   keyword: string — "資安"
   watchlist: array — ["1402","4904"]
-raw docs payload (exactly what mode:"docs" returns under data.docs):
+原始 docs 內容（與 fdep_call mode:"docs" 回傳的 data.docs 完全相同）：
 { … }
 
 inbound:
 { … }
 
-Steps:
-1. Do not fetch the docs again — the docs above are the authority on field names and types.
-2. Keep the inbound object exactly as written above; blank filters are already omitted.
-3. Execute with the fdep_call tool (mode: "execute") and report the result.
+步驟：
+1. 不要再取得文件 —— 上面的文件就是欄位名稱與型別的唯一依據。
+2. inbound 照上面送即可，空白的篩選條件已經省略。
+3. 用 fdep_call 工具（mode: "execute"）執行，並回報結果。
 ```
 
 **Still not** done, and why — removing the paste step as well:
@@ -145,8 +173,8 @@ a bright green on dark) without the component knowing a colour exists.
 
 The panel tries `fetch()` directly from the browser first. Because FDEP is an internal-looking
 endpoint, browser CORS will likely block the call. When that happens the status strip explains the
-fallback: click **New session** (it copies the api brief — api id + docs + inbound — and opens a
-blank session) or **Copy prompt** to grab the same text, then paste it into a session so the
+fallback: click **開新工作階段** (it copies the api brief — api id + docs + inbound — and opens a
+blank session) or **複製提示** to grab the same text, then paste it into a session so the
 host-side `fdep_call` tool does the actual HTTP work (no CORS in the Node host). Both buttons are
 disabled until the docs are loaded, because that brief is the docs.
 
@@ -195,10 +223,11 @@ dsh plugin --profile web remove fdep-api-request-bundle
 
 1. Restart `dsh web`.
 2. The sidebar should show a green hexagon glyph labelled **MCP Gateway** in the global panels list.
-3. Click it — the main column should render the form panel, with `twseMops.todayMaterial` already in
-   the API ID box and **Copy prompt** / **New session** greyed out until **Fetch docs** succeeds.
+3. Click it — the main column should render the three numbered cards (1 選擇 API → 2 參數 → 3 執行),
+   with `twseMops.todayMaterial` already in the API ID box and **複製提示** / **開新工作階段**
+   greyed out until **取得文件** succeeds.
 4. The host-side tool appears in the active model toolset. Send any prompt that exercises it (`call fdep_call on test.demo with mode docs`); the model receives a normalised schema object.
-5. **Runtime context:** click **Fetch docs**, then **New session**. In the new session, ask what the
+5. **Runtime context:** click **取得文件**, then **開新工作階段**. In the new session, ask what the
    current api's parameters are — it answers from the injected docs (they arrive as a plugin-source
    runtime-context message, so they are visible in the transcript too). A session you had already
    opened before clicking never receives them.

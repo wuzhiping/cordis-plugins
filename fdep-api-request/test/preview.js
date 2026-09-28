@@ -246,13 +246,13 @@ async function stateDocs() {
   findInput(tree).props.onChange({ target: { value: 'test.demo' } });
   tree = render();
   behaviour = 'ok';
-  await findButton(tree, 'Fetch docs').props.onClick();
+  await findButton(tree, '取得文件').props.onClick();
   return render();
 }
 
 async function stateRunning() {
   const tree = await stateDocs();
-  findButton(tree, 'Run').props.onClick(); // not awaited: capture the busy frame
+  findButton(tree, '執行').props.onClick(); // not awaited: capture the busy frame
   const busy = render();
   await new Promise((r) => setTimeout(r, 0));
   return busy;
@@ -264,14 +264,14 @@ async function stateResult() {
   findInput(tree).props.onChange({ target: { value: 'test.demo' } });
   tree = render();
   behaviour = 'ok';
-  await findButton(tree, 'Fetch docs').props.onClick();
+  await findButton(tree, '取得文件').props.onClick();
   tree = render();
   findFieldById(tree, 'fdep-field-an_code').props.onChange({ target: { value: 'M26' } });
   findFieldById(tree, 'fdep-field-keyword').props.onChange({ target: { value: '資安' } });
   // The list field: comma or newline separated, assembled into a real array.
   findFieldById(tree, 'fdep-field-watchlist').props.onChange({ target: { value: '1402, 4904\n2330' } });
   tree = render();
-  await findButton(tree, 'Run').props.onClick();
+  await findButton(tree, '執行').props.onClick();
   return render();
 }
 
@@ -281,7 +281,7 @@ async function stateCors() {
   findInput(tree).props.onChange({ target: { value: 'test.demo' } });
   tree = render();
   behaviour = 'cors';
-  await findButton(tree, 'Fetch docs').props.onClick();
+  await findButton(tree, '取得文件').props.onClick();
   behaviour = 'ok';
   return render();
 }
@@ -292,7 +292,7 @@ async function stateError() {
   findInput(tree).props.onChange({ target: { value: 'test.demo' } });
   tree = render();
   behaviour = 'http500';
-  await findButton(tree, 'Fetch docs').props.onClick();
+  await findButton(tree, '取得文件').props.onClick();
   behaviour = 'ok';
   return render();
 }
@@ -316,8 +316,9 @@ function findButton(tree, label) {
   return found;
 }
 function findInput(tree) {
+  // By id, not by placeholder: the placeholder is localized UI text (zh-TW).
   let found;
-  walk(tree, (n) => { if (n.type === 'input' && n.props.placeholder === 'e.g. test.demo') found = n; });
+  walk(tree, (n) => { if (n.type === 'input' && n.props.id === 'fdep-api-id') found = n; });
   return found;
 }
 // Find a field control by id — works for both <input> and <textarea>.

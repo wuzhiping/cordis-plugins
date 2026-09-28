@@ -166,10 +166,13 @@ function findButton(tree, label) {
   return found;
 }
 
-function findInputByPlaceholder(tree, placeholder) {
+// The API-ID box is found by its id, never by its placeholder: the placeholder is
+// localized UI text (zh-TW), so matching on it would turn the test into a
+// translation canary instead of a contract check.
+function findApiIdInput(tree) {
   let found = null;
   walk(tree, (n) => {
-    if (n.type === 'input' && n.props.placeholder === placeholder) found = n;
+    if (n.type === 'input' && n.props.id === 'fdep-api-id') found = n;
   });
   return found;
 }
@@ -442,7 +445,7 @@ async function main() {
   let tree = render();
   check('API ID starts prefilled with the default api', () => {
     assert.equal(
-      findInputByPlaceholder(tree, 'e.g. test.demo').props.value,
+      findApiIdInput(tree).props.value,
       'twseMops.todayMaterial',
     );
   });
@@ -454,34 +457,34 @@ async function main() {
     assert.equal(panelEntry.options.label(), 'MCP Gateway');
   });
   check('panel renders with an API ID input', () => {
-    assert.ok(findInputByPlaceholder(tree, 'e.g. test.demo'), 'api id input missing');
+    assert.ok(findApiIdInput(tree), 'api id input missing');
   });
   check('panel renders the four action buttons', () => {
-    for (const label of ['Fetch docs', 'Run', 'Copy prompt', 'New session']) {
+    for (const label of ['取得文件', '執行', '複製提示', '開新工作階段']) {
       assert.ok(findButton(tree, label), 'missing button: ' + label);
     }
   });
   check('Run is disabled until docs are fetched', () => {
-    assert.equal(findButton(tree, 'Run').props.disabled, true);
+    assert.equal(findButton(tree, '執行').props.disabled, true);
   });
   check('the session fallbacks are disabled until docs are fetched', () => {
     // Fixing this was a user report: "New session" used to be clickable with no
     // docs loaded, and the brief it produced then had no context at all.
-    assert.equal(findButton(tree, 'Copy prompt').props.disabled, true);
-    assert.equal(findButton(tree, 'New session').props.disabled, true);
+    assert.equal(findButton(tree, '複製提示').props.disabled, true);
+    assert.equal(findButton(tree, '開新工作階段').props.disabled, true);
   });
 
   // --- type an api id ---
-  const apiInput = findInputByPlaceholder(tree, 'e.g. test.demo');
+  const apiInput = findApiIdInput(tree);
   apiInput.props.onChange({ target: { value: 'test.demo' } });
   tree = render();
   check('typing updates the controlled input value', () => {
-    assert.equal(findInputByPlaceholder(tree, 'e.g. test.demo').props.value, 'test.demo');
+    assert.equal(findApiIdInput(tree).props.value, 'test.demo');
   });
 
   // --- click Fetch docs ---
   fetchCalls = [];
-  await findButton(tree, 'Fetch docs').props.onClick();
+  await findButton(tree, '取得文件').props.onClick();
   tree = render();
   check('fetch docs hit the FDEP endpoint with do:false', () => {
     assert.equal(fetchCalls.length, 1);
@@ -522,9 +525,10 @@ async function main() {
   check('status strip reports the docs result', () => {
     const strip = findStatus(tree, 'fdep__status--ok');
     assert.ok(strip, 'no ok status strip rendered');
-    assert.match(textOf(strip), /3 parameters discovered/);
+    // The count and the docs desc are data; the frame around them is zh-TW UI text.
+    assert.match(textOf(strip), /共 3 個參數/);
     assert.match(textOf(strip), /simplest example/);
-    assert.match(textOf(strip), /separated by commas/);
+    assert.match(textOf(strip), /列表欄位可用逗號分隔多個值/);
   });
   check('status strip is an announced live region', () => {
     const strip = findStatus(tree, 'fdep__status--ok');
@@ -532,13 +536,13 @@ async function main() {
     assert.equal(strip.props['aria-live'], 'polite');
   });
   check('Run is enabled after docs arrive', () => {
-    assert.equal(findButton(tree, 'Run').props.disabled, false);
+    assert.equal(findButton(tree, '執行').props.disabled, false);
   });
   check('the session fallbacks enable after docs arrive too', () => {
     // The brief they produce is only a complete context once the api's fields
     // are known, so both stay inert until Fetch docs succeeded.
-    assert.equal(findButton(tree, 'Copy prompt').props.disabled, false);
-    assert.equal(findButton(tree, 'New session').props.disabled, false);
+    assert.equal(findButton(tree, '複製提示').props.disabled, false);
+    assert.equal(findButton(tree, '開新工作階段').props.disabled, false);
   });
 
   // --- fill the fields and run ---
@@ -551,7 +555,7 @@ async function main() {
   listBox.props.onChange({ target: { value: '1402, 4904\n2330' } });
   tree = render();
   fetchCalls = [];
-  await findButton(tree, 'Run').props.onClick();
+  await findButton(tree, '執行').props.onClick();
   tree = render();
   check('run sends the array field AS AN ARRAY', () => {
     assert.equal(fetchCalls.length, 1);
@@ -597,18 +601,18 @@ async function main() {
   // fresh render state
   hookStates = [];
   tree = render();
-  const apiInput2 = findInputByPlaceholder(tree, 'e.g. test.demo');
+  const apiInput2 = findApiIdInput(tree);
   apiInput2.props.onChange({ target: { value: 'test.demo' } });
   tree = render();
   fetchBehaviour = 'cors';
-  await findButton(tree, 'Fetch docs').props.onClick();
+  await findButton(tree, '取得文件').props.onClick();
   fetchBehaviour = 'ok';
   tree = render();
   check('CORS failure is explained in a warning strip', () => {
     const strip = findStatus(tree, 'fdep__status--warn');
     assert.ok(strip, 'no warn status strip rendered');
-    assert.match(textOf(strip), /blocked/i);
-    assert.match(textOf(strip), /fdep_call|Copy prompt/i);
+    assert.match(textOf(strip), /被擋下/);
+    assert.match(textOf(strip), /fdep_call|複製提示/);
   });
   check('the pre-built prompt is always available as a fallback', () => {
     let sawPrompt = false;
@@ -623,10 +627,10 @@ async function main() {
   // fallbacks are docs-gated now — so fetch again, exactly as a user would.
   fetchBehaviour = 'ok';
   fetchCalls = [];
-  await findButton(tree, 'Fetch docs').props.onClick();
+  await findButton(tree, '取得文件').props.onClick();
   tree = render();
   check('docs are back, so the fallbacks are live again', () => {
-    assert.equal(findButton(tree, 'New session').props.disabled, false);
+    assert.equal(findButton(tree, '開新工作階段').props.disabled, false);
   });
   // Fill two boxes: the re-fetch above reset them, and the brief's inbound is
   // what makes the arm worth asserting on.
@@ -642,8 +646,8 @@ async function main() {
   armCalls = [];
   seq = [];
   armBehaviour = 'ok';
-  const apiIdAtNewSession = findInputByPlaceholder(tree, 'e.g. test.demo').props.value;
-  await findButton(tree, 'New session').props.onClick();
+  const apiIdAtNewSession = findApiIdInput(tree).props.value;
+  await findButton(tree, '開新工作階段').props.onClick();
   check('uiWorkspace.startSession was called', () => {
     assert.equal(fakeCtx.startedSession, true);
   });
@@ -669,7 +673,7 @@ async function main() {
   });
   check('the api brief reached the clipboard before navigating away', () => {
     assert.equal(clipboardWrites.length, 1, 'expected exactly one clipboard write');
-    assert.match(clipboardWrites[0], /Use the fdep-api-request skill to call the following FDEP API/);
+    assert.match(clipboardWrites[0], /請使用 fdep-api-request skill 呼叫下列 FDEP API/);
     assert.ok(
       clipboardWrites[0].indexOf('api: ' + apiIdAtNewSession) !== -1,
       'the clipboard brief does not name the current api id (' + apiIdAtNewSession + ')',
@@ -679,20 +683,20 @@ async function main() {
     // This is the point of the button: the new session's first message must
     // already know the api's fields, their types and the example values.
     const brief = clipboardWrites[0];
-    assert.match(brief, /Docs for this api \(already fetched/);
+    assert.match(brief, /這個 api 的文件（已取得/);
     assert.match(brief, /desc: simplest example/);
-    assert.match(brief, /parameters \(name: type/);
+    assert.match(brief, /參數（名稱: 型別/);
     assert.match(brief, /name: string — "aaa"/);
     assert.match(brief, /watchlist: array — \["1402","4904"\]/);
-    assert.match(brief, /raw docs payload/);
-    assert.match(brief, /do NOT call the docs endpoint again|Do not fetch the docs again/);
+    assert.match(brief, /原始 docs 內容/);
+    assert.match(brief, /請不要再呼叫 docs 端點|不要再取得文件/);
   });
   check('the status strip tells the user the brief is on the clipboard', () => {
     tree = render();
     const strip = findStatus(tree, 'fdep__status--info');
     assert.ok(strip, 'no info status strip after New session');
-    assert.match(textOf(strip), /clipboard/i);
-    assert.match(textOf(strip), /docs are injected/i);
+    assert.match(textOf(strip), /剪貼簿/);
+    assert.match(textOf(strip), /文件已注入/);
   });
 
   console.log('\n=== 8b. an unreachable host degrades to the clipboard path ===');
@@ -703,7 +707,7 @@ async function main() {
   seq = [];
   fakeCtx.startedSession = false;
   setClipboard(true);
-  await findButton(tree, 'New session').props.onClick();
+  await findButton(tree, '開新工作階段').props.onClick();
   tree = render();
   check('the session still opens and the brief is still copied', () => {
     assert.equal(fakeCtx.startedSession, true);
@@ -713,8 +717,8 @@ async function main() {
   check('the status strip says the host context was unavailable', () => {
     const strip = findStatus(tree, 'fdep__status--warn');
     assert.ok(strip, 'a failed arm should surface as a warning, not an error');
-    assert.match(textOf(strip), /Host context unavailable/i);
-    assert.match(textOf(strip), /clipboard/i);
+    assert.match(textOf(strip), /宿主端上下文不可用/);
+    assert.match(textOf(strip), /剪貼簿/);
   });
   armBehaviour = 'ok';
 
@@ -765,7 +769,7 @@ async function main() {
   check('empty state explains what to do before docs are fetched', () => {
     const empty = [];
     walk(tree, (n) => { if (n.props && n.props.className === 'fdep__empty') empty.push(textOf(n)); });
-    assert.ok(empty.some((t) => /Fetch the docs/i.test(t)), 'no empty-state hint: ' + JSON.stringify(empty));
+    assert.ok(empty.some((t) => /先取得文件/.test(t)), 'no empty-state hint: ' + JSON.stringify(empty));
   });
   check('no status strip is rendered before any action', () => {
     assert.equal(findStatus(tree), undefined, 'a status strip rendered in the initial state');
@@ -777,11 +781,11 @@ async function main() {
   });
 
   // Enter in the API ID field should trigger the docs fetch.
-  const apiInput3 = findInputByPlaceholder(tree, 'e.g. test.demo');
+  const apiInput3 = findApiIdInput(tree);
   apiInput3.props.onChange({ target: { value: 'test.demo' } });
   tree = render();
   fetchCalls = [];
-  const apiInput4 = findInputByPlaceholder(tree, 'e.g. test.demo');
+  const apiInput4 = findApiIdInput(tree);
   await apiInput4.props.onKeyDown({ key: 'Enter' });
   check('Enter in the API ID field fetches the docs', () => {
     assert.equal(fetchCalls.length, 1, 'Enter did not trigger a fetch');
@@ -789,7 +793,7 @@ async function main() {
   });
   check('the docs field renders as a monospace input', () => {
     tree = render();
-    const cls = findInputByPlaceholder(tree, 'e.g. test.demo').props.className;
+    const cls = findApiIdInput(tree).props.className;
     assert.match(cls, /fdep__input--mono/);
   });
 
@@ -858,23 +862,23 @@ async function main() {
   let lateTree = renderLate();
   setClipboard(true);
   check('without docs the two fallbacks are inert in this instance too', () => {
-    assert.equal(findButton(lateTree, 'New session').props.disabled, true);
+    assert.equal(findButton(lateTree, '開新工作階段').props.disabled, true);
   });
   // The button is docs-gated now, so this instance has to fetch docs first —
   // which is also the order a user follows.
   fetchBehaviour = 'ok';
   fetchCalls = [];
-  await findButton(lateTree, 'Fetch docs').props.onClick();
+  await findButton(lateTree, '取得文件').props.onClick();
   lateTree = renderLate();
   check('docs arrived, so New session is live even though uiWorkspace is not', () => {
-    assert.equal(findButton(lateTree, 'New session').props.disabled, false);
+    assert.equal(findButton(lateTree, '開新工作階段').props.disabled, false);
   });
-  await findButton(lateTree, 'New session').props.onClick();
+  await findButton(lateTree, '開新工作階段').props.onClick();
   lateTree = renderLate();
   check('clicking New session before the service appears reports it, and opens nothing', () => {
     const strip = findStatus(lateTree, 'fdep__status--err');
     assert.ok(strip, 'no error status strip');
-    assert.match(textOf(strip), /Service unavailable/);
+    assert.match(textOf(strip), /服務不可用/);
     assert.equal(lateStarted, false, 'a session was opened without the service');
     assert.equal(clipboardWrites.length, 0, 'the clipboard was written before the service was known');
   });
@@ -883,12 +887,12 @@ async function main() {
     assert.equal(typeof fireLateInject, 'function', 'nothing was registered with ctx.inject');
     fireLateInject();
   });
-  await findButton(lateTree, 'New session').props.onClick();
+  await findButton(lateTree, '開新工作階段').props.onClick();
   lateTree = renderLate();
   check('once the service appears, New session opens a session and copies the prompt', () => {
     assert.equal(lateStarted, true, 'startSession was not called after the service arrived');
     assert.equal(clipboardWrites.length, 1, 'the prompt was not copied');
-    assert.match(clipboardWrites[0], /Use the fdep-api-request skill/);
+    assert.match(clipboardWrites[0], /請使用 fdep-api-request skill/);
   });
 
   console.log('\nAll ' + pass + ' client-contract checks passed.');
