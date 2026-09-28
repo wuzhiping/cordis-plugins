@@ -1,0 +1,29 @@
+# aife-provider — Host-only bundle layer.
+#
+# Two effects, both deliberate:
+#
+# 1. It inserts the plugin row.
+# 2. It carries the AIFE route's non-secret configuration as this layer's own
+#    `llm-pi-ai` config. That placement is what hides the Models page's Delete
+#    button: the page renders that button only while the profile layer alone
+#    carries the route (`hasPath(user) && !hasPath(base)`), so a route this
+#    layer already provides is not removable from the UI — no refusal, no error.
+#
+# The configuration stays a normal settings value, so the API key remains
+# editable: the key is stored through the credentials service under
+# `AIFE_API_KEY`, and a key edit writes only that reference into the profile
+# layer while this layer keeps supplying the rest.
+- insert:
+    - id: aife-provider
+      name: '@local/aife-provider'
+- id: llm-pi-ai
+  config:
+    providers:
+      aife:
+        displayName: AIFE
+        api: openai-completions
+        baseURL: https://routellm.feg.cn/v1
+        apiKeyEnv: AIFE_API_KEY
+        models:
+          - id: MiniMax-M3
+            name: MiniMax-M3

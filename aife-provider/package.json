@@ -1,0 +1,24 @@
+{
+  "name": "@local/aife-provider",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ships the AIFE pi-ai provider route as plugin-owned configuration and refuses its removal.",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "icon.svg",
+    "locale/*.json"
+  ],
+  "icon": "./icon.svg",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

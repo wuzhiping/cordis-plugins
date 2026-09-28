@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "AIFE Provider",
+    "description": "Ships the AIFE model route as plugin-owned configuration; its endpoint, protocol and models cannot be deleted from settings."
+  }
+}
