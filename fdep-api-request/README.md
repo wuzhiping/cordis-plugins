@@ -37,8 +37,9 @@ followed by the response and the fallback prompt:
    carries an empty-state hint; an API with no parameters says so instead of rendering an empty box.
 3. **執行** (Run) — the primary action, plus **複製提示** (Copy prompt) and **開新工作階段**
    (New session). A response gets its own flush card with the `trace_id` and a copy button.
-   Both fallbacks stay **disabled until 取得文件 succeeds** — everything they hand over *is* the
-   docs. **開新工作階段** opens a blank session (the same action as the sidebar's 新工作階段) whose
+   Both fallbacks need an **injection set**, not necessarily this api's docs: they are enabled once
+   取得文件 succeeds *or* the collected list has an entry (see below). **執行** still needs this api's
+   own docs, because it is the thing that calls it. **開新工作階段** opens a blank session (the same action as the sidebar's 新工作階段) whose
    runtime context carries the collected apis — the host injects them, see *What the new session
    receives* — and it also puts the same **api brief** on the clipboard so the first message can
    say what to do (the brief is the fallback when the host route is unreachable).

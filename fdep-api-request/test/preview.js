@@ -294,6 +294,25 @@ async function stateCollected() {
   return render();
 }
 
+async function stateNoDocs() {
+  // The list is the injection set: with one api collected, a failed fetch for the
+  // id in the box must leave 複製提示 / 開新工作階段 usable while 執行 stays inert.
+  resetStorage();
+  hookStates = [];
+  let tree = render();
+  behaviour = 'ok';
+  await findButton(tree, '取得文件').props.onClick();
+  tree = render();
+  findButton(tree, '加入').props.onClick();
+  tree = render();
+  findInput(tree).props.onChange({ target: { value: 'nope.broken' } });
+  tree = render();
+  behaviour = 'http500';
+  await findButton(tree, '取得文件').props.onClick();
+  behaviour = 'ok';
+  return render();
+}
+
 async function stateRunning() {
   const tree = await stateDocs();
   findButton(tree, '執行').props.onClick(); // not awaited: capture the busy frame
@@ -486,6 +505,7 @@ async function main() {
     ['collected', 'Collected set', 'One scenario usually spans several apis: 加入 pushes each fetched api into the right-hand list, and the whole set is what a session receives.', await stateCollected()],
     ['docs', 'Docs loaded', 'Fields are discovered from the response; each carries its own description.', await stateDocs()],
     ['running', 'In flight', 'The trigger button swaps to a spinner and the status strip reports the request.', await stateRunning()],
+    ['nodocs', 'Collected set, box docs missing', 'The collected list keeps 複製提示 / 開新工作階段 alive; 執行 stays gated on the box api.', await stateNoDocs()],
     ['result', 'Completed', 'The response gets its own flush card with a trace id and a copy action.', await stateResult()],
     ['cors', 'Warning (CORS)', 'A blocked browser fetch explains the fallback instead of failing silently.', await stateCors()],
     ['history', 'History dropdown', 'Every api_id whose docs were fetched successfully is kept (localStorage, most recent first).', await stateHistory()],
