@@ -233,14 +233,25 @@ async function main() {
   }
 
   const armAt = Date.now();
+  // The multi-api form is the primary one: one scenario spans several apis.
   const armReply = await post({
-    apiId: 'twseMops.todayMaterial',
-    raw: { desc: '當日重大訊息 {{not a variable}}', an_code: 'M26', watchlist: ['1402', '4904'] },
-    inbound: { an_code: 'M26', watchlist: ['1402', '4904'] },
+    apis: [
+      {
+        apiId: 'twseMops.todayMaterial',
+        raw: { desc: '當日重大訊息 {{not a variable}}', an_code: 'M26', watchlist: ['1402', '4904'] },
+        inbound: { an_code: 'M26', watchlist: ['1402', '4904'] },
+      },
+      {
+        apiId: 'twseMops.companyProfile',
+        raw: { desc: '公司基本資料', stockNo: '2330' },
+        inbound: { stockNo: '2330' },
+      },
+    ],
   });
   assert.equal(armReply.status, 200);
   assert.equal(armReply.json.armed, true);
   assert.ok(armReply.json.chars > 0);
+  assert.deepEqual(armReply.json.api_ids, ['twseMops.todayMaterial', 'twseMops.companyProfile']);
 
   // A session that already existed is never touched.
   created['session-old'] = armAt - 60 * 60 * 1000;
@@ -250,10 +261,13 @@ async function main() {
     'a pre-existing session must not receive the armed docs');
 
   const injected = spec.text({ agent: { id: 'session-new' } });
-  assert.match(injected, /twseMops\.todayMaterial/, 'the api id is missing');
+  assert.match(injected, /2 個 FDEP api/, 'the set size is missing from the header');
+  assert.match(injected, /api: twseMops\.todayMaterial/, 'the first api id is missing');
+  assert.match(injected, /api: twseMops\.companyProfile/, 'the second api id is missing');
   assert.match(injected, /an_code: string — "M26"/, 'the parameter line is missing its type/example');
   assert.match(injected, /watchlist: array<string> — \["1402","4904"\]/, 'array types must be named');
-  assert.match(injected, /面板目前持有的 inbound/, 'the typed inbound is missing');
+  assert.match(injected, /這個 api 的 inbound（面板目前的值/, 'that api\'s inbound is missing');
+  assert.match(injected, /stockNo: string — "2330"/, 'the second api lost its parameter line');
   assert.match(injected, /\{ \{not a variable\}\}/, 'the {{ }} guard did not run');
 
   // Bound to that one session, and it stays for the whole session.
@@ -263,12 +277,19 @@ async function main() {
     'the bound session must keep its context');
 
   // Disarm: a later arm without docs clears whatever was pending.
-  const cleared = await post({ apiId: '', raw: null });
+  const cleared = await post({ apis: [] });
   assert.equal(cleared.json.armed, false);
   assert.equal(spec.text({ agent: { id: 'session-new' } }), '', 'disarm did not clear the context');
 
+  // The legacy single-api body still arms — nothing else had to change for it.
+  const legacy = await post({ apiId: 'test.demo', raw: { desc: 'x', name: 'aaa' }, inbound: {} });
+  assert.equal(legacy.json.armed, true);
+  assert.deepEqual(legacy.json.api_ids, ['test.demo']);
+  assert.match(spec.text({ agent: { id: 'session-new' } }), /api: test\.demo/);
+  await post({ apis: [] });
+
   // An arm nobody claimed expires instead of leaking into a much later session.
-  await post({ apiId: 'test.demo', raw: { desc: 'x', name: 'aaa' }, inbound: {} });
+  await post({ apis: [{ apiId: 'test.demo', raw: { desc: 'x', name: 'aaa' }, inbound: {} }] });
   const realNow = Date.now;
   Date.now = () => realNow() + 31 * 60 * 1000;
   try {

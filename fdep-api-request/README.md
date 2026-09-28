@@ -28,9 +28,10 @@ A sidebar entry labelled **MCP Gateway**, marked with a green hexagon glyph, tha
 titled **MCP Gateway**. The panel is a three-step flow — three numbered cards in order (1 → 2 → 3),
 followed by the response and the fallback prompt:
 
-1. **選擇 API** (Choose the API) — an API ID input (monospace) with **取得文件** (Fetch docs). Enter
-   submits. The field starts prefilled with **`twseMops.todayMaterial`** (TWSE + TPEX 當日重大訊息),
-   so the common case is one click; it stays editable for any other `api_id`.
+1. **選擇 API** (Choose the API) — an API ID input (monospace) with **歷史 ▾** (history) and
+   **取得文件** (Fetch docs). Enter submits; Escape closes the history menu. The field starts
+   prefilled with **`twseMops.todayMaterial`** (TWSE + TPEX 當日重大訊息), so the common case is one
+   click; it stays editable for any other `api_id`.
 2. **參數** (Parameters) — one control per non-`desc` field in the fetched docs, each labelled with
    the **type inferred from its example value** plus that example. Before the first fetch the card
    carries an empty-state hint; an API with no parameters says so instead of rendering an empty box.
@@ -38,9 +39,61 @@ followed by the response and the fallback prompt:
    (New session). A response gets its own flush card with the `trace_id` and a copy button.
    Both fallbacks stay **disabled until 取得文件 succeeds** — everything they hand over *is* the
    docs. **開新工作階段** opens a blank session (the same action as the sidebar's 新工作階段) whose
-   runtime context carries the api's docs — the host injects them, see *What the new session
+   runtime context carries the collected apis — the host injects them, see *What the new session
    receives* — and it also puts the same **api brief** on the clipboard so the first message can
    say what to do (the brief is the fallback when the host route is unreachable).
+
+### Visual language (how the hierarchy is built)
+
+This theme is deliberately **flat**: every layer token (`--dsw-alias-bg-layer-1/2/3`) resolves to the
+same `#fff` as the page, so "white card on white background" is what the tokens give you by default
+and nothing separates a card's title from its content. The panel therefore expresses depth with the
+three tools the theme *does* provide:
+
+- **A tinted header band** on every card (and on the api list), using
+  `--dsw-alias-interactive-bg-hover` — the same overlay colour the theme uses for hovered surfaces —
+  plus a 1px `--dsw-alias-border-l1` seam. That band is what makes `1 選擇 API` read as a heading
+  rather than as another line of content.
+- **Borders and a 1px shadow** (`--fdep-elev`) instead of background layers, so cards stay visible
+  against the page.
+- **Text colours in three steps**: `label-primary` for titles and values, `label-secondary` for
+  hints, `label-tertiary` for the quietest meta (step suffixes, placeholders).
+
+Type scale: panel title 21px/650 with a divider under the header, card band titles 13.5px/650,
+uppercase 11px field labels, 13px inputs, 11.5px hint text. Inputs are filled with the same tint and
+go white with a brand-coloured border on focus. Nothing here hard-codes a colour, so both themes get
+the same treatment — `node test/shoot.js` renders the preview in light and dark and checks both.
+
+### The collected api set (right-hand list)
+
+One scenario usually spans **several** FDEP apis, so the panel keeps a set beside the form:
+
+- **加入 ＋** (in the list's header) pushes the api that is currently in the box — with the docs just
+  fetched **and the inbound the form holds** — into the list. It is disabled until a fetch succeeded.
+  Adding an id that is already there replaces its entry, so the stored inbound is always the one the
+  user last prepared, and the button reads **更新 ＋** for that case.
+- Each entry shows the api id, its `desc` (clamped to three lines) and a `N 個參數 · 已填 M` meta
+  line, with **✕** to remove it and **清空** to empty the list.
+- The set is persisted in `localStorage` under **`fdep-api-request/collector`** (newest first,
+  de-duplicated, capped at 12) and cleaned on read, exactly like the history list.
+- **What gets injected:** when the list is non-empty it *is* the set — every collected api travels
+  into the new session and into the clipboard brief, each with its own docs and its own inbound.
+  When the list is empty the panel falls back to the single api in the box, so the old one-api flow
+  needs no extra click.
+
+### Remembering api ids (the 歷史 dropdown)
+
+Every `api_id` whose **docs were fetched successfully** is remembered and offered in the history
+dropdown next to the box; picking one fills the box (it does not fire a request, so the id can be
+edited first). A failed fetch is never remembered — the whole point is that everything in the list
+is known to answer.
+
+- Stored in `localStorage` under **`fdep-api-request/api-ids`**, most recent first, de-duplicated,
+  capped at **12**. It is per browser profile, not per session, and survives a reload.
+- The stored value is cleaned on read as well (trimmed, non-strings and duplicates dropped, cap
+  reapplied), because it is a user-editable key.
+- With storage unavailable (private mode, blocked storage) the panel still works — the dropdown is
+  simply empty and the button stays disabled with a `還沒有成功取得文件的 api_id` tooltip.
 
 **Language.** The panel's UI is **Traditional Chinese (zh-TW idiom)**, matching this profile's
 `locale.preference: zh-TW` and the sibling `scene-template` bundle; the api ids, field names, types
@@ -67,24 +120,26 @@ example too: an example of `["1402"]` sends strings, `[1, 2]` sends numbers. A f
 **omitted** rather than sent as `""`, because these APIs document their filters as optional and an
 empty string is not the same as "no filter".
 
-The **複製提示** (Copy prompt) fallback carries the same assembled, typed object *and the docs*, so
-the paste-into-a-session path cannot reintroduce a shape the form has already fixed — and the new
-session starts with the api's schema in context instead of re-deriving it.
+The **複製提示** (Copy prompt) fallback carries the same set — every collected api, its docs and its
+typed inbound — so the paste-into-a-session path cannot reintroduce a shape the form has already
+fixed, and the new session starts with each api's schema in context instead of re-deriving it.
 
 ### What the new session receives (and what it does not)
 
-**開新工作階段** (New session) feeds the api into the session twice, on purpose:
+**開新工作階段** (New session) feeds the api set into the session twice, on purpose:
 
-1. **As runtime context (the host half).** The client POSTs the brief to
+1. **As runtime context (the host half).** The client POSTs the set to
    `/plugins/fdep-api-request/context` *before* opening the session; the host stores it armed and a
    `systemPrompt.context` provider contributes it to the new session's model steps. This is what
-   makes the model *know* the api without being told: no paste, no re-fetch, no guessed field
-   names. The text is capped (8 kB) and `{{` is neutralised — the prompt interpolates `{{name}}`
-   groups and throws on unknown variables, so injected prose must never carry that shape.
-2. **As a clipboard brief (the client half).** The same content, pasted by the user as the
-   session's first message, which is also what *says what to do* ("execute with fdep_call and
-   report the result"). It is the fallback when the host route is unavailable (a composition
-   without `webServer`, or a plugin that has not been restarted yet).
+   makes the model *know* every api without being told: no paste, no re-fetch, no guessed field
+   names. The body is `{apis: [{apiId, raw, inbound}]}` (the older single-api `{apiId, raw,
+   inbound}` body still arms, and the reply carries `api_ids`). The text is capped (8 kB, at most 12
+   apis) and `{{` is neutralised — the prompt interpolates `{{name}}` groups and throws on unknown
+   variables, so injected prose must never carry that shape.
+2. **As a clipboard brief (the client half).** The same set, rendered for a human reader, pasted by
+   the user as the session's first message — which is also what *says what to do* ("call the api the
+   user names, with fdep_call, and report"). It is the fallback when the host route is unavailable
+   (a composition without `webServer`, or a plugin that has not been restarted yet).
 
 **How the host picks the session** — the panel is a root-scoped `main` occupant and never learns
 the new session's id (`uiWorkspace.startSession()` returns `void`), so the binding is by **time**:
@@ -94,53 +149,48 @@ session that already existed never receives it, another session cannot steal it,
 claims expires after 30 minutes, and a later arm (or one without docs) replaces or clears it
 entirely. Nothing is written to the session log or the filesystem.
 
-Both texts are zh-TW (see *Language*). The **injected context** reads:
+Both texts are zh-TW (see *Language*). With two collected apis the **injected context** reads:
 
 ```
-GUI 的「MCP Gateway」面板剛取得了下列 FDEP api 的文件，並把它注入為本工作階段的背景上下文。
-請把它當作欄位名稱與型別的唯一依據，不要再呼叫 docs。
+GUI 的「MCP Gateway」面板把下列 2 個 FDEP api 的文件注入為本工作階段的背景上下文。
+請把它們當作欄位名稱與型別的唯一依據，不要再呼叫 docs；每個 api 各自帶著自己的 inbound。
 
+============================================================
 api: twseMops.todayMaterial
 desc: 抓取 TWSE(上市) + TPEX(上櫃) 當日全市場重大訊息…
 
 參數（名稱: 型別 — 範例值；留空的欄位不送）：
   an_code: string — "M26"
   keyword: string — "資安"
-  watchlist: array<string> — ["1402","4904"]
 
 原始 docs 內容（與 fdep_call mode:"docs" 回傳的 data.docs 完全相同）：
 { … }
 
-面板目前持有的 inbound（使用者另有指示時以使用者為準）：
+這個 api 的 inbound（面板目前的值；使用者另有指示時以使用者為準）：
 { … }
 
-要執行時，用 fdep_call 工具（mode:"execute"）帶上面的 inbound；需要再確認欄位時才用 mode:"docs"。
+============================================================
+api: twseMops.companyProfile
+…
+
+============================================================
+要執行時，用 fdep_call 工具（mode:"execute"）帶對應 api 的 inbound；需要再確認欄位時才用 mode:"docs"。
+使用者指定哪個 api 就呼叫哪個；沒指定就先問。
 ```
 
-…and the clipboard **brief** (also visible in the collapsed block at the bottom of the panel):
+…and the clipboard **brief** (also visible in the collapsed block at the bottom of the panel) is the
+same set in a slightly more verbose shape — one `====` section per api, then:
 
 ```
-請使用 fdep-api-request skill 呼叫下列 FDEP API。
-
-api: twseMops.todayMaterial
-
-這個 api 的文件（已取得 —— 請不要再呼叫 docs 端點）：
-desc: 抓取 TWSE(上市) + TPEX(上櫃) 當日全市場重大訊息…
-參數（名稱: 型別 — 範例值；留空的欄位不送）：
-  an_code: string — "M26"
-  keyword: string — "資安"
-  watchlist: array — ["1402","4904"]
-原始 docs 內容（與 fdep_call mode:"docs" 回傳的 data.docs 完全相同）：
-{ … }
-
-inbound:
-{ … }
-
 步驟：
 1. 不要再取得文件 —— 上面的文件就是欄位名稱與型別的唯一依據。
-2. inbound 照上面送即可，空白的篩選條件已經省略。
-3. 用 fdep_call 工具（mode: "execute"）執行，並回報結果。
+2. 只呼叫使用者指定的那個 api；沒指定就先問要呼叫哪一個（或哪幾個）。
+3. inbound 照對應 api 那一段送，空白的篩選條件已經省略。
+4. 每個 api 都用 fdep_call 工具（mode: "execute"）執行，並回報各自的結果。
 ```
+
+With a single api (nothing collected, or one entry) both texts collapse to the one-api form:
+`api: <id>`, that api's docs, `inbound: {…}`, then three steps.
 
 **Still not** done, and why — removing the paste step as well:
 
@@ -231,6 +281,11 @@ dsh plugin --profile web remove fdep-api-request-bundle
    current api's parameters are — it answers from the injected docs (they arrive as a plugin-source
    runtime-context message, so they are visible in the transcript too). A session you had already
    opened before clicking never receives them.
+6. **History:** after that 取得文件 succeeded, the **歷史 ▾** button next to the box is enabled —
+   open it and the id is there. Reload the page: it is still there (localStorage).
+7. **Collected set:** with the docs loaded, **加入 ＋** puts the api in the right-hand list; type a
+   second api id, 取得文件, 加入 again → the list holds both. **開新工作階段** then injects both (the
+   status strip says `2 個 api 的文件已注入它的上下文`), and **✕** / **清空** remove them.
 
 ### Test suite (no dsh web, no profile writes)
 
@@ -247,7 +302,7 @@ Six suites, each a separate process:
 | `host-http.test.js` | Mounts the **real** `dsh-host-webserver` on a loopback port and POSTs the arm route over real HTTP — proving the registered exact route wins over the `/plugins` fallback (which is what makes the client's POST work in the GUI), that a non-POST is refused, and that disarming works. Set `DSH_TEST_PORT` if 41337 is taken (a busy port = skip, not fail). | yes (exit 2 = skipped) |
 | `host-shape.test.js` | Pins the host-plugin shape contract: a direct `{name, inject, apply}` mounts, the factory form fails **silently**, and an undeclared service access throws `... without inject`. | yes (exit 2 = skipped) |
 | `host-localhost.test.js` | Dependency-free unit checks against a mocked ctx: plugin shape, schema, argument parsing, inbound normalisation, and the arm/bind/expire rules of the runtime context. | no |
-| `client-contract.test.js` | The static-bundle wrapper, the `require("react")` dependency, the `slots.inject`/`slots.register` contract, a real render of the panel with its buttons clicked (including "the arm must reach the host before the session exists", and the degrade-to-clipboard path), and the presentation contract (every CSS variable is a real token, no hard-coded light/dark fork). | no |
+| `client-contract.test.js` | The static-bundle wrapper, the `require("react")` dependency, the `slots.inject`/`slots.register` contract, a real render of the panel with its buttons clicked (including the api-id history, the collected api set with add/remove/清空, "the arm must reach the host before the session exists", and the degrade-to-clipboard path), and the presentation contract (every CSS variable is a real token, no hard-coded light/dark fork). | no |
 | `preview.js` | Regenerates `preview.html` and validates its own markup before writing it. | no |
 
 A companion design guide for this kind of work lives at [`../../FDEP-API.md`](../../FDEP-API.md).
@@ -287,7 +342,18 @@ The revision is a pure content hash, which is checkable: edit the file, note the
 ```sh
 node test/dev-boot.js       # print this bundle's served URL + rev from the running host
 node test/dev-events.js 10  # watch /plugins/events for 10s
+node test/dev-diff.js       # byte-compare the served bundle against lib/client.js
 ```
+
+### When a save does not show up
+
+Tier 2 depends on the host's watch still being armed. Observed (0.1.7, after a mid-session restart):
+the watch can stop firing while the SSE channel still accepts connections — a save then leaves the
+served bundle untouched, and **no `rebuilt` frame arrives** even though the file clearly changed.
+`node test/dev-events.js 10` while saving is the discriminator: no frame = the watch is dead;
+`node test/dev-diff.js` prints `DRIFTED` for the same situation. The fix is a `dsh web` restart
+(the row is recomposed and the watch is re-armed). A plain page refresh is not enough — the server
+itself is the one serving the stale bytes.
 
 ### The three tiers
 

@@ -311,13 +311,23 @@ async function main() {
 
   const armedAt = Date.now();
   const armReply = await postArm({
-    apiId: 'twseMops.todayMaterial',
-    raw: { desc: 'simplest example', name: 'aaa', watchlist: ['1402', '4904'] },
-    inbound: { name: 'aaa' },
+    apis: [
+      {
+        apiId: 'twseMops.todayMaterial',
+        raw: { desc: 'simplest example', name: 'aaa', watchlist: ['1402', '4904'] },
+        inbound: { name: 'aaa' },
+      },
+      {
+        apiId: 'twseMops.companyProfile',
+        raw: { desc: '公司基本資料', stockNo: '2330' },
+        inbound: { stockNo: '2330' },
+      },
+    ],
   });
-  check('the arm route answered and armed', () => {
+  check('the arm route answered and armed the whole set', () => {
     assert.equal(armReply.status, 200);
     assert.equal(armReply.json.armed, true);
+    assert.deepEqual(armReply.json.api_ids, ['twseMops.todayMaterial', 'twseMops.companyProfile']);
   });
 
   created['session-before'] = armedAt - 60 * 60 * 1000;
@@ -325,11 +335,13 @@ async function main() {
 
   const after = await systemPrompt.assemble({ agent: { id: 'session-after' } });
   const injected = after.contexts.filter((c) => c.name === 'fdep-api-request/docs');
-  check('the real assembler carries the docs for the session created after the arm', () => {
+  check('the real assembler carries every api for the session created after the arm', () => {
     assert.equal(injected.length, 1, 'saw contexts: ' + after.contexts.map((c) => c.name).join(','));
-    assert.match(injected[0].text, /twseMops\.todayMaterial/);
+    assert.match(injected[0].text, /2 個 FDEP api/);
+    assert.match(injected[0].text, /api: twseMops\.todayMaterial/);
+    assert.match(injected[0].text, /api: twseMops\.companyProfile/);
     assert.match(injected[0].text, /watchlist: array<string>/);
-    assert.match(injected[0].text, /面板目前持有的 inbound/);
+    assert.match(injected[0].text, /這個 api 的 inbound（面板目前的值/);
   });
 
   const before = await systemPrompt.assemble({ agent: { id: 'session-before' } });

@@ -88,16 +88,27 @@ async function main() {
 
   console.log('=== arm route over real HTTP (' + url + ') ===');
   const armedAt = Date.now();
-  const res = await post({
-    apiId: 'twseMops.todayMaterial',
-    raw: { desc: '當日重大訊息', an_code: 'M26', watchlist: ['1402', '4904'] },
-    inbound: { an_code: 'M26' },
-  });
+  // The multi-api form: one scenario spans several apis, and they arm together.
+  const body = {
+    apis: [
+      {
+        apiId: 'twseMops.todayMaterial',
+        raw: { desc: '當日重大訊息', an_code: 'M26', watchlist: ['1402', '4904'] },
+        inbound: { an_code: 'M26' },
+      },
+      {
+        apiId: 'twseMops.companyProfile',
+        raw: { desc: '公司基本資料', stockNo: '2330' },
+        inbound: { stockNo: '2330' },
+      },
+    ],
+  };
+  const res = await post(body);
   const reply = await res.json();
-  check('POST answers 200 and arms', () => {
+  check('POST answers 200 and arms the whole set', () => {
     assert.equal(res.status, 200);
     assert.equal(reply.armed, true);
-    assert.equal(reply.api_id, 'twseMops.todayMaterial');
+    assert.deepEqual(reply.api_ids, ['twseMops.todayMaterial', 'twseMops.companyProfile']);
     assert.ok(reply.chars > 0, 'no context text was rendered');
   });
 
@@ -106,15 +117,11 @@ async function main() {
     assert.equal(wrongMethod.status, 405);
   });
 
-  const disarm = await (await post({ apiId: '', raw: null })).json();
+  const disarm = await (await post({ apis: [] })).json();
   check('an arm without docs disarms instead of keeping an old brief', () => {
     assert.equal(disarm.armed, false);
   });
-  await post({
-    apiId: 'twseMops.todayMaterial',
-    raw: { desc: '當日重大訊息', an_code: 'M26', watchlist: ['1402', '4904'] },
-    inbound: { an_code: 'M26' },
-  });
+  await post(body);
 
   console.log('\n=== the real assembler carries it, once, for the right session ===');
   created['session-after'] = armedAt + 5;
@@ -123,10 +130,13 @@ async function main() {
 
   const after = await systemPrompt.assemble({ agent: { id: 'session-after' } });
   const mine = after.contexts.filter((c) => c.name === 'fdep-api-request/docs');
-  check('the session created after the arm gets exactly one docs context', () => {
+  check('the session created after the arm gets exactly one context with every api', () => {
     assert.equal(mine.length, 1, 'saw: ' + after.contexts.map((c) => c.name).join(','));
-    assert.match(mine[0].text, /twseMops\.todayMaterial/);
+    assert.match(mine[0].text, /2 個 FDEP api/);
+    assert.match(mine[0].text, /api: twseMops\.todayMaterial/);
+    assert.match(mine[0].text, /api: twseMops\.companyProfile/);
     assert.match(mine[0].text, /watchlist: array<string>/);
+    assert.match(mine[0].text, /stockNo: string/);
   });
 
   const before = await systemPrompt.assemble({ agent: { id: 'session-before' } });

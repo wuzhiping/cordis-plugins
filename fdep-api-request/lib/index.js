@@ -27,6 +27,8 @@ const CONTEXT_NAME = 'fdep-api-request/docs';
 const CONTEXT_ORDER = 140;
 /** The armed brief is a hint, not a document: cap what enters the prompt. */
 const CONTEXT_MAX = 8000;
+/** One scenario's api set is a handful, not a catalogue. */
+const ARM_MAX = 12;
 /** An arm no session ever consumed is dropped, so it cannot leak into a much
  * later session. A bound session keeps its docs for that session's lifetime. */
 const ARM_TTL_MS = 30 * 60 * 1000;
@@ -76,20 +78,16 @@ function readBody(req) {
 }
 
 /**
- * Render the brief the panel armed: the api id, the docs it just fetched, and
- * the inbound the form currently holds. This is the text that becomes the new
- * session's runtime context.
+ * One api's section: its id, the docs it was fetched with, and the inbound the
+ * panel held for it.
  * @param apiId - the FDEP api identifier.
  * @param rawDocs - the raw `data.docs` payload (every key but `desc` is a field).
  * @param inbound - the typed inbound the panel would send.
- * @returns the prompt-context text.
+ * @returns the section's lines.
  */
-function renderDocsContext(apiId, rawDocs, inbound) {
+function renderOneApi(apiId, rawDocs, inbound) {
   const split = splitDocs(rawDocs);
   const lines = [];
-  lines.push('GUI 的「MCP Gateway」面板剛取得了下列 FDEP api 的文件，並把它注入為本工作階段的背景上下文。');
-  lines.push('請把它當作欄位名稱與型別的唯一依據，不要再呼叫 docs。');
-  lines.push('');
   lines.push('api: ' + apiId);
   lines.push('desc: ' + (split.desc || '(無)'));
   lines.push('');
@@ -116,15 +114,71 @@ function renderDocsContext(apiId, rawDocs, inbound) {
     lines.push('(無法序列化)');
   }
   lines.push('');
-  lines.push('面板目前持有的 inbound（使用者另有指示時以使用者為準）：');
+  lines.push('這個 api 的 inbound（面板目前的值；使用者另有指示時以使用者為準）：');
   try {
     lines.push(JSON.stringify(inbound || {}, null, 2));
   } catch (_) {
     lines.push('{}');
   }
+  return lines;
+}
+
+/**
+ * Render the brief the panel armed: one section per collected api. One scenario
+ * regularly spans several FDEP apis, so the context carries the whole set — each
+ * with its own docs and its own inbound — instead of a single call.
+ * @param apis - `[{apiId, rawDocs, inbound}]`.
+ * @returns the prompt-context text.
+ */
+function renderDocsContext(apis) {
+  const set = Array.isArray(apis) ? apis.filter((entry) => entry && typeof entry.apiId === 'string' && entry.apiId !== '') : [];
+  if (set.length === 0) return '';
+  const lines = [];
+  lines.push('GUI 的「MCP Gateway」面板把下列 ' + set.length + ' 個 FDEP api 的文件注入為本工作階段的背景上下文。');
+  lines.push('請把它們當作欄位名稱與型別的唯一依據，不要再呼叫 docs；每個 api 各自帶著自己的 inbound。');
+  for (const entry of set) {
+    lines.push('');
+    lines.push('============================================================');
+    for (const line of renderOneApi(entry.apiId, entry.rawDocs, entry.inbound)) lines.push(line);
+  }
   lines.push('');
-  lines.push('要執行時，用 fdep_call 工具（mode:"execute"）帶上面的 inbound；需要再確認欄位時才用 mode:"docs"。');
+  lines.push('============================================================');
+  lines.push('要執行時，用 fdep_call 工具（mode:"execute"）帶對應 api 的 inbound；需要再確認欄位時才用 mode:"docs"。');
+  lines.push('使用者指定哪個 api 就呼叫哪個；沒指定就先問。');
   return promptSafe(lines.join('\n'));
+}
+
+/**
+ * Normalize a request body into the api set, accepting both the multi-api form
+ * (`{apis: [...]}`) and the single-api form (`{apiId, raw, inbound}`).
+ * @param payload - the parsed request body.
+ * @returns `[{apiId, rawDocs, inbound}]` (empty when nothing usable was sent).
+ */
+function readArmedApis(payload) {
+  const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+  const out = [];
+  if (payload !== null && payload !== undefined && Array.isArray(payload.apis)) {
+    for (const entry of payload.apis) {
+      if (!isObject(entry)) continue;
+      const apiId = str(entry.apiId).trim();
+      if (apiId === '' || !isObject(entry.raw)) continue;
+      out.push({
+        apiId,
+        rawDocs: entry.raw,
+        inbound: isObject(entry.inbound) ? entry.inbound : {},
+      });
+      if (out.length >= ARM_MAX) break;
+    }
+    return out;
+  }
+  const apiId = str(payload && payload.apiId).trim();
+  if (apiId === '' || !isObject(payload && payload.raw)) return [];
+  out.push({
+    apiId,
+    rawDocs: payload.raw,
+    inbound: isObject(payload.inbound) ? payload.inbound : {},
+  });
+  return out;
 }
 
 function parseInbound(value) {
@@ -281,11 +335,8 @@ module.exports = {
         send(400, { ok: false, reason: 'invalid json' });
         return;
       }
-      const apiId = str(payload && payload.apiId).trim();
-      const raw = payload && payload.raw !== null && typeof payload.raw === 'object' && !Array.isArray(payload.raw)
-        ? payload.raw
-        : null;
-      if (apiId === '' || raw === null) {
+      const apis = readArmedApis(payload);
+      if (apis.length === 0) {
         // No docs to inject: clear the arm, so a later session cannot inherit a
         // brief the user has moved on from.
         arm.text = '';
@@ -294,17 +345,14 @@ module.exports = {
         send(200, { ok: true, armed: false });
         return;
       }
-      const inbound = payload && payload.inbound !== null && typeof payload.inbound === 'object' && !Array.isArray(payload.inbound)
-        ? payload.inbound
-        : {};
-      const text = renderDocsContext(apiId, raw, inbound).slice(0, CONTEXT_MAX);
+      const text = renderDocsContext(apis).slice(0, CONTEXT_MAX);
       arm.text = text;
       arm.at = Date.now();
       arm.sessionId = null;
       send(200, {
         ok: true,
         armed: true,
-        api_id: apiId,
+        api_ids: apis.map((entry) => entry.apiId),
         chars: text.length,
         binds: 'the next session assembled after this request',
       });

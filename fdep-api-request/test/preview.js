@@ -70,6 +70,20 @@ globalThis.document = {
 let captured = null;
 globalThis.window = { __ModuleLoader__: { load(spec) { captured = spec; } } };
 
+// ---- fake localStorage -----------------------------------------------------
+// The api-id history lives in localStorage (Node has none), so the preview
+// needs a store of its own to render the dropdown with entries.
+const lsStore = new Map();
+Object.defineProperty(globalThis, 'localStorage', {
+  value: {
+    getItem(key) { return lsStore.has(key) ? lsStore.get(key) : null; },
+    setItem(key, value) { lsStore.set(key, String(value)); },
+    removeItem(key) { lsStore.delete(key); },
+  },
+  configurable: true,
+  writable: true,
+});
+
 // ---- stub fetch ------------------------------------------------------------
 let behaviour = 'ok';
 globalThis.fetch = async function (url, init) {
@@ -235,18 +249,48 @@ function render(props) {
   return renderNode(Panel(props || {}));
 }
 
+// Each state starts from the same clean storage: the history and the collected
+// set both persist in localStorage, and a state that left entries behind would
+// leak them into every later card.
+function resetStorage() {
+  lsStore.clear();
+}
+
 async function stateEmpty() {
+  resetStorage();
   hookStates = [];
   return render();
 }
 
 async function stateDocs() {
+  resetStorage();
   hookStates = [];
   let tree = render();
   findInput(tree).props.onChange({ target: { value: 'test.demo' } });
   tree = render();
   behaviour = 'ok';
   await findButton(tree, '取得文件').props.onClick();
+  return render();
+}
+
+async function stateCollected() {
+  // Two apis collected into the right-hand list: the shape a real scenario has,
+  // and what a new session then receives as one context.
+  resetStorage();
+  hookStates = [];
+  let tree = render();
+  behaviour = 'ok';
+  await findButton(tree, '取得文件').props.onClick();        // the prefilled twseMops.* id
+  tree = render();
+  findButton(tree, '加入').props.onClick();
+  tree = render();
+  findInput(tree).props.onChange({ target: { value: 'scn.analysis' } });
+  tree = render();
+  await findButton(tree, '取得文件').props.onClick();
+  tree = render();
+  findFieldById(tree, 'fdep-field-an_code').props.onChange({ target: { value: 'M26' } });
+  tree = render();
+  findButton(tree, '加入').props.onClick();
   return render();
 }
 
@@ -259,6 +303,7 @@ async function stateRunning() {
 }
 
 async function stateResult() {
+  resetStorage();
   hookStates = [];
   let tree = render();
   findInput(tree).props.onChange({ target: { value: 'test.demo' } });
@@ -276,6 +321,7 @@ async function stateResult() {
 }
 
 async function stateCors() {
+  resetStorage();
   hookStates = [];
   let tree = render();
   findInput(tree).props.onChange({ target: { value: 'test.demo' } });
@@ -287,6 +333,7 @@ async function stateCors() {
 }
 
 async function stateError() {
+  resetStorage();
   hookStates = [];
   let tree = render();
   findInput(tree).props.onChange({ target: { value: 'test.demo' } });
@@ -294,6 +341,20 @@ async function stateError() {
   behaviour = 'http500';
   await findButton(tree, '取得文件').props.onClick();
   behaviour = 'ok';
+  return render();
+}
+
+async function stateHistory() {
+  resetStorage();
+  // A plausible history, then one more successful fetch (which is what puts an
+  // id in the list in the first place) and the dropdown opened.
+  lsStore.set('fdep-api-request/api-ids', JSON.stringify(['scn.analysis', 'test.demo']));
+  hookStates = [];
+  let tree = render();
+  behaviour = 'ok';
+  await findButton(tree, '取得文件').props.onClick();   // the prefilled twseMops.* id
+  tree = render();
+  findButton(tree, '歷史').props.onClick();
   return render();
 }
 
@@ -422,10 +483,12 @@ function esc(s) { return escapeHtml(s); }
 async function main() {
   const states = [
     ['empty', 'Initial', 'Nothing loaded yet — the empty state tells the user what the first action is.', await stateEmpty()],
+    ['collected', 'Collected set', 'One scenario usually spans several apis: 加入 pushes each fetched api into the right-hand list, and the whole set is what a session receives.', await stateCollected()],
     ['docs', 'Docs loaded', 'Fields are discovered from the response; each carries its own description.', await stateDocs()],
     ['running', 'In flight', 'The trigger button swaps to a spinner and the status strip reports the request.', await stateRunning()],
     ['result', 'Completed', 'The response gets its own flush card with a trace id and a copy action.', await stateResult()],
     ['cors', 'Warning (CORS)', 'A blocked browser fetch explains the fallback instead of failing silently.', await stateCors()],
+    ['history', 'History dropdown', 'Every api_id whose docs were fetched successfully is kept (localStorage, most recent first).', await stateHistory()],
     ['error', 'Failure', 'A real upstream error is reported as a failed state.', await stateError()],
   ];
 

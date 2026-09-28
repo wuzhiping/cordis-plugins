@@ -177,6 +177,67 @@ function findApiIdInput(tree) {
   return found;
 }
 
+/** The history dropdown's open menu, or undefined when it is closed. */
+function findHistoryMenu(tree) {
+  let found;
+  walk(tree, (n) => {
+    if (n.type === 'ul' && typeof n.props.className === 'string'
+      && n.props.className.indexOf('fdep__menu') !== -1) found = n;
+  });
+  return found;
+}
+
+/** The history menu's options, in render order. */
+function historyOptions(tree) {
+  const menu = findHistoryMenu(tree);
+  if (menu === undefined) return [];
+  const out = [];
+  walk(menu, (n) => {
+    if (n.type === 'button' && n.props.role === 'option') out.push(n);
+  });
+  return out;
+}
+
+/** A form control (input or textarea) by id. */
+function findFieldById(tree, id) {
+  let found;
+  walk(tree, (n) => {
+    if ((n.type === 'input' || n.type === 'textarea') && n.props.id === id) found = n;
+  });
+  return found;
+}
+
+/** The collected api ids in the right-hand list, in render order. */
+function collectedIds(tree) {
+  const out = [];
+  walk(tree, (n) => {
+    if (n.type === 'code' && typeof n.props.className === 'string'
+      && n.props.className.indexOf('fdep__listId') !== -1) out.push(textOf(n));
+  });
+  return out;
+}
+
+/** The collected list items (the <li> wrappers), in render order. */
+function findCollectedItems(tree) {
+  const out = [];
+  walk(tree, (n) => {
+    if (n.type === 'li' && typeof n.props.className === 'string'
+      && n.props.className.indexOf('fdep__listItem') !== -1) out.push(n);
+  });
+  return out;
+}
+
+/** The ✕ button that removes one collected api. */
+function findCollectedDelete(tree, id) {
+  let found;
+  walk(tree, (n) => {
+    if (n.type === 'button' && typeof n.props.className === 'string'
+      && n.props.className.indexOf('fdep__listDel') !== -1
+      && typeof n.props.ariaLabel === 'string' && n.props.ariaLabel.indexOf(id) !== -1) found = n;
+  });
+  return found;
+}
+
 function findAllInputs(tree) {
   const out = [];
   walk(tree, (n) => { if (n.type === 'input') out.push(n); });
@@ -228,6 +289,12 @@ globalThis.fetch = async function (url, init) {
     };
   }
   if (fetchBehaviour === 'cors') throw new TypeError('Failed to fetch');
+  if (fetchBehaviour === 'http500') {
+    return {
+      ok: false, status: 500,
+      async text() { return JSON.stringify({ error: 'boom' }); },
+    };
+  }
   let body = {};
   try { body = JSON.parse(init.body); } catch (_) {}
   if (body.do === false) {
@@ -653,13 +720,13 @@ async function main() {
   });
   check('New session armed the host runtime context, before the session existed', () => {
     assert.equal(armCalls.length, 1, 'expected exactly one context arm, saw ' + armCalls.length);
-    assert.equal(armCalls[0].body.apiId, apiIdAtNewSession);
+    assert.deepEqual(armCalls[0].body.apis.map((a) => a.apiId), [apiIdAtNewSession]);
     assert.equal(armCalls[0].afterStart, false, 'the arm must reach the host BEFORE startSession()');
     assert.ok(seq.indexOf('arm') !== -1 && seq.indexOf('arm') < seq.indexOf('start'),
       'arm/start order was ' + JSON.stringify(seq));
   });
   check('the armed payload is the raw docs shape plus the TYPED inbound', () => {
-    const raw = armCalls[0].body.raw;
+    const raw = armCalls[0].body.apis[0].raw;
     assert.equal(raw.desc, 'simplest example');
     assert.equal(raw.name, 'aaa');
     assert.deepEqual(raw.watchlist, ['1402', '4904']);
@@ -667,9 +734,9 @@ async function main() {
     // The fields the test filled earlier must arrive with their JSON shapes — an
     // array as an array, a number as a number (the arm must not downgrade them
     // to the raw text the boxes hold).
-    assert.deepEqual(armCalls[0].body.inbound.watchlist, ['1402', '4904']);
-    assert.equal(armCalls[0].body.inbound.limit, 25);
-    assert.equal(armCalls[0].body.inbound.name, 'aaa');
+    assert.deepEqual(armCalls[0].body.apis[0].inbound.watchlist, ['1402', '4904']);
+    assert.equal(armCalls[0].body.apis[0].inbound.limit, 25);
+    assert.equal(armCalls[0].body.apis[0].inbound.name, 'aaa');
   });
   check('the api brief reached the clipboard before navigating away', () => {
     assert.equal(clipboardWrites.length, 1, 'expected exactly one clipboard write');
@@ -893,6 +960,260 @@ async function main() {
     assert.equal(lateStarted, true, 'startSession was not called after the service arrived');
     assert.equal(clipboardWrites.length, 1, 'the prompt was not copied');
     assert.match(clipboardWrites[0], /請使用 fdep-api-request skill/);
+  });
+
+  console.log('\n=== 13. api-id history dropdown ===');
+  // Node has no localStorage, so the bundle must work without one; this stub is
+  // what proves it also works WITH one. (Section 13's first render happens while
+  // the stub is still absent → see the guard check below.)
+  const stored = new Map();
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: {
+      getItem(key) { return stored.has(key) ? stored.get(key) : null; },
+      setItem(key, value) { stored.set(key, String(value)); },
+      removeItem(key) { stored.delete(key); },
+    },
+    configurable: true,
+    writable: true,
+  });
+  const HISTORY_KEY = 'fdep-api-request/api-ids';
+  const HISTORY_MAX = 12;
+
+  stored.clear();
+  hookStates = [];
+  let histTree = render();
+  check('an empty history leaves the dropdown inert', () => {
+    const button = findButton(histTree, '歷史');
+    assert.ok(button, 'no history button next to the api-id box');
+    assert.equal(button.props.disabled, true, 'the dropdown should be disabled with no history');
+    assert.equal(findHistoryMenu(histTree), undefined, 'a menu rendered with empty history');
+  });
+
+  // A successful docs fetch is what earns a place in the list.
+  findApiIdInput(histTree).props.onChange({ target: { value: 'twseMops.todayMaterial' } });
+  histTree = render();
+  fetchBehaviour = 'ok';
+  await findButton(histTree, '取得文件').props.onClick();
+  histTree = render();
+  check('a successful docs fetch is remembered', () => {
+    assert.equal(stored.get(HISTORY_KEY), JSON.stringify(['twseMops.todayMaterial']));
+    assert.equal(findButton(histTree, '歷史').props.disabled, false);
+  });
+
+  check('the remembered id becomes an option in the menu', () => {
+    findButton(histTree, '歷史').props.onClick();
+    histTree = render();
+    assert.deepEqual(historyOptions(histTree).map(textOf), ['twseMops.todayMaterial']);
+    assert.equal(historyOptions(histTree)[0].props['aria-selected'], 'true',
+      'the id already in the box should read as the current option');
+  });
+
+  check('clicking an option fills the box and closes the menu', () => {
+    findApiIdInput(histTree).props.onChange({ target: { value: '' } });
+    histTree = render();
+    // Re-open (the previous render already had it open; reopening is idempotent).
+    if (findHistoryMenu(histTree) === undefined) findButton(histTree, '歷史').props.onClick();
+    histTree = render();
+    historyOptions(histTree)[0].props.onClick();
+    histTree = render();
+    assert.equal(findApiIdInput(histTree).props.value, 'twseMops.todayMaterial');
+    assert.equal(findHistoryMenu(histTree), undefined, 'the menu stayed open after a pick');
+  });
+
+  // A typo that fails must not pollute the list.
+  findApiIdInput(histTree).props.onChange({ target: { value: 'nope.broken' } });
+  histTree = render();
+  fetchBehaviour = 'http500';
+  await findButton(histTree, '取得文件').props.onClick();
+  histTree = render();
+  check('a failed docs fetch is not remembered', () => {
+    assert.equal(stored.get(HISTORY_KEY), JSON.stringify(['twseMops.todayMaterial']));
+    findButton(histTree, '歷史').props.onClick();
+    const options = historyOptions(render());
+    assert.deepEqual(options.map(textOf), ['twseMops.todayMaterial']);
+  });
+  fetchBehaviour = 'ok';
+
+  // A second successful fetch moves that id to the front, de-duplicated.
+  findApiIdInput(histTree).props.onChange({ target: { value: 'scn.analysis' } });
+  histTree = render();
+  await findButton(histTree, '取得文件').props.onClick();
+  histTree = render();
+  check('the list stays most-recent-first and de-duplicated', () => {
+    assert.equal(stored.get(HISTORY_KEY), JSON.stringify(['scn.analysis', 'twseMops.todayMaterial']));
+  });
+
+  check('a fresh mount reads the same list back', () => {
+    hookStates = [];   // a new panel instance, same storage
+    const fresh = render();
+    findButton(fresh, '歷史').props.onClick();
+    assert.deepEqual(historyOptions(render()).map(textOf), ['scn.analysis', 'twseMops.todayMaterial']);
+  });
+
+  check('stored history is cleaned and capped on read', () => {
+    const dirty = ['  spaced.id  ', 'spaced.id', '', 42, null, 'a']
+      .concat(Array.from({ length: 20 }, (_, i) => 'id-' + i));
+    stored.set(HISTORY_KEY, JSON.stringify(dirty));
+    hookStates = [];
+    const tree2 = render();
+    findButton(tree2, '歷史').props.onClick();
+    const options = historyOptions(render()).map(textOf);
+    assert.equal(options.length, HISTORY_MAX, 'cap not applied: ' + options.length);
+    assert.equal(options[0], 'spaced.id', 'first entry should be trimmed: ' + options[0]);
+    assert.equal(options.filter((v) => v === 'spaced.id').length, 1, 'duplicates survived: ' + options.join(','));
+    assert.ok(options.indexOf('42') === -1 && options.indexOf('a') !== -1, 'non-strings survived: ' + options.join(','));
+  });
+
+  console.log('\n=== 14. the collected api set (right-hand list) ===');
+  // One scenario spans several apis, so the panel keeps a set on the right and
+  // injects the whole set into the session (context + clipboard brief).
+  const COLLECTOR_KEY = 'fdep-api-request/collector';
+  stored.clear();
+  hookStates = [];
+  let colTree = render();
+  check('with nothing collected the list shows its empty hint', () => {
+    assert.equal(findCollectedItems(colTree).length, 0);
+    assert.ok(findButton(colTree, '加入'), 'no 加入 button');
+    assert.equal(findButton(colTree, '加入').props.disabled, true,
+      '加入 must be inert until docs exist');
+  });
+
+  // Fetch api #1 and collect it.
+  fetchBehaviour = 'ok';
+  findApiIdInput(colTree).props.onChange({ target: { value: 'twseMops.todayMaterial' } });
+  colTree = render();
+  await findButton(colTree, '取得文件').props.onClick();
+  colTree = render();
+  findButton(colTree, '加入').props.onClick();
+  colTree = render();
+  check('a fetched api can be pushed into the list', () => {
+    assert.deepEqual(collectedIds(colTree), ['twseMops.todayMaterial']);
+    const storedSet = JSON.parse(stored.get(COLLECTOR_KEY));
+    assert.equal(storedSet.length, 1);
+    assert.equal(storedSet[0].apiId, 'twseMops.todayMaterial');
+    assert.match(textOf(colTree), /3 個參數/);
+  });
+
+  // Fetch api #2 and collect it too: the list keeps both, newest first.
+  findApiIdInput(colTree).props.onChange({ target: { value: 'twseMops.companyProfile' } });
+  colTree = render();
+  await findButton(colTree, '取得文件').props.onClick();
+  colTree = render();
+  // Fill one of its fields so the stored inbound is worth asserting on.
+  findFieldById(colTree, 'fdep-field-name').props.onChange({ target: { value: 'bbb' } });
+  colTree = render();
+  findButton(colTree, '加入').props.onClick();
+  colTree = render();
+  check('the list accumulates apis, newest first', () => {
+    assert.deepEqual(collectedIds(colTree), ['twseMops.companyProfile', 'twseMops.todayMaterial']);
+  });
+
+  // The whole set is what a session receives.
+  setClipboard(true);
+  armCalls = [];
+  seq = [];
+  fetchCalls = [];
+  await findButton(colTree, '開新工作階段').props.onClick();
+  check('New session arms every collected api, each with its own inbound', () => {
+    assert.equal(armCalls.length, 1);
+    const armed = armCalls[0].body.apis;
+    assert.deepEqual(armed.map((a) => a.apiId), ['twseMops.companyProfile', 'twseMops.todayMaterial']);
+    assert.equal(armed[0].inbound.name, 'bbb');
+    assert.equal(armed[0].raw.desc, 'simplest example');
+    assert.ok(armed[1].raw.watchlist !== undefined, 'the second api lost its docs');
+  });
+  check('the clipboard brief carries the same set', () => {
+    const brief = clipboardWrites[0];
+    assert.match(brief, /這次工作階段有 2 個 api 可用/);
+    assert.match(brief, /api: twseMops\.companyProfile/);
+    assert.match(brief, /api: twseMops\.todayMaterial/);
+    assert.match(brief, /只呼叫使用者指定的那個 api/);
+  });
+
+  check('one api can be removed from the list', () => {
+    findCollectedDelete(colTree, 'twseMops.todayMaterial').props.onClick();
+    colTree = render();
+    assert.deepEqual(collectedIds(colTree), ['twseMops.companyProfile']);
+    assert.equal(JSON.parse(stored.get(COLLECTOR_KEY)).length, 1, 'the removal was not persisted');
+  });
+
+  check('the list survives a remount', () => {
+    hookStates = [];
+    const fresh = render();
+    assert.deepEqual(collectedIds(fresh), ['twseMops.companyProfile']);
+  });
+
+  check('清空 empties the list and the storage', () => {
+    findButton(colTree, '清空').props.onClick();
+    colTree = render();
+    assert.deepEqual(collectedIds(colTree), []);
+    assert.equal(stored.get(COLLECTOR_KEY), '[]');
+  });
+
+  // An empty set falls back to the api in the box, so the single-api flow needs
+  // no 加入 at all.
+  findApiIdInput(colTree).props.onChange({ target: { value: 'twseMops.todayMaterial' } });
+  colTree = render();
+  await findButton(colTree, '取得文件').props.onClick();
+  colTree = render();
+  setClipboard(true);
+  armCalls = [];
+  await findButton(colTree, '開新工作階段').props.onClick();
+  check('an empty set falls back to the api in the box (single-api flow)', () => {
+    assert.deepEqual(armCalls[0].body.apis.map((a) => a.apiId), ['twseMops.todayMaterial']);
+    assert.match(clipboardWrites[0], /^請使用 fdep-api-request skill 呼叫下列 FDEP API。\n\napi: twseMops\.todayMaterial/);
+  });
+
+  console.log('\n=== 15. a collected set keeps the two fallbacks usable without docs ===');
+  // The list is the injection set, so it must carry the fallbacks even when the box
+  // has no docs — a failed fetch clears `docs`, and the user's collected apis are
+  // still perfectly injectable. 執行 stays gated on the box's own docs.
+  stored.clear();
+  hookStates = [];
+  let keepTree = render();
+  fetchBehaviour = 'ok';
+  await findButton(keepTree, '取得文件').props.onClick();
+  keepTree = render();
+  findButton(keepTree, '加入').props.onClick();
+  keepTree = render();
+  check('the api is collected, so its docs can never be lost', () => {
+    assert.deepEqual(collectedIds(keepTree), ['twseMops.todayMaterial']);
+    assert.equal(findButton(keepTree, '開新工作階段').props.disabled, false);
+  });
+
+  // A failed fetch for another id clears the box's docs.
+  findApiIdInput(keepTree).props.onChange({ target: { value: 'nope.broken' } });
+  keepTree = render();
+  fetchBehaviour = 'http500';
+  await findButton(keepTree, '取得文件').props.onClick();
+  keepTree = render();
+  fetchBehaviour = 'ok';
+  check('the two fallbacks stay enabled while 執行 stays gated on the box docs', () => {
+    assert.equal(findButton(keepTree, '開新工作階段').props.disabled, false,
+      '開新工作階段 must stay usable: the collected list is the injection set');
+    assert.equal(findButton(keepTree, '複製提示').props.disabled, false,
+      '複製提示 must stay usable for the same reason');
+    assert.equal(findButton(keepTree, '執行').props.disabled, true,
+      '執行 runs the api in the box, which has no docs');
+  });
+  check('the step suffix reports the list, not the missing docs', () => {
+    assert.match(textOf(keepTree), /清單 1 個 api/);
+    assert.match(textOf(keepTree), /清單上這 1 個 api 的文件一起注入/);
+  });
+
+  setClipboard(true);
+  clipboardWrites = [];
+  await findButton(keepTree, '複製提示').props.onClick();
+  check('複製提示 copies the collected api, not the broken one in the box', () => {
+    assert.equal(clipboardWrites.length, 1);
+    assert.match(clipboardWrites[0], /api: twseMops\.todayMaterial/);
+    assert.ok(clipboardWrites[0].indexOf('nope.broken') === -1, 'the box id leaked into the brief');
+  });
+
+  armCalls = [];
+  await findButton(keepTree, '開新工作階段').props.onClick();
+  check('開新工作階段 arms the collected api', () => {
+    assert.deepEqual(armCalls[0].body.apis.map((a) => a.apiId), ['twseMops.todayMaterial']);
   });
 
   console.log('\nAll ' + pass + ' client-contract checks passed.');

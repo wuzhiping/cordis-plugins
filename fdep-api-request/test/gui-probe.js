@@ -298,6 +298,55 @@ async function main() {
     console.log('  our stylesheets:');
     tokens.styles.forEach((s) => console.log('    ' + JSON.stringify(s)));
 
+    // ---- 4b. optional: exercise the api-id history dropdown ----
+    // Opt-in because it clicks 取得文件, i.e. one real docs request to FDEP.
+    //   DSH_PROBE_HISTORY=1 node test/gui-probe.js
+    if (process.env.DSH_PROBE_HISTORY === '1') {
+      const clickedFetch = await cdp.eval(`(() => {
+        const btn = Array.from(document.querySelectorAll('button'))
+          .find((b) => (b.textContent || '').trim().indexOf('取得文件') !== -1);
+        if (!btn) return false;
+        btn.click();
+        return true;
+      })()`);
+      await sleep(3000);   // a real endpoint round trip
+      // 加入 pushes the fetched api into the right-hand list.
+      const added = await cdp.eval(`(() => {
+        const btn = Array.from(document.querySelectorAll('button'))
+          .find((b) => (b.textContent || '').trim().indexOf('加入') !== -1);
+        if (!btn || btn.disabled) return false;
+        btn.click();
+        return true;
+      })()`);
+      await sleep(300);
+      const listIds = await cdp.eval(`(() => Array.from(document.querySelectorAll('.fdep__listId'))
+        .map((el) => el.textContent.trim()))()`);
+      const openedMenu = await cdp.eval(`(() => {
+        const btn = Array.from(document.querySelectorAll('button'))
+          .find((b) => (b.textContent || '').trim().indexOf('歷史') !== -1);
+        if (!btn || btn.disabled) return false;
+        btn.click();
+        return true;
+      })()`);
+      await sleep(400);
+      const historyOptions = await cdp.eval(`(() => Array.from(document.querySelectorAll('.fdep__menuItem'))
+        .map((b) => b.textContent.trim()))()`);
+      console.log('');
+      console.log('=== api-id history + collected set (DSH_PROBE_HISTORY=1) ===');
+      console.log('  取得文件 clicked : ' + clickedFetch);
+      console.log('  加入 clicked     : ' + added);
+      console.log('  list ids         : ' + JSON.stringify(listIds));
+      console.log('  歷史 menu opened : ' + openedMenu);
+      console.log('  stored options   : ' + JSON.stringify(historyOptions));
+      console.log('  localStorage     : ' + await cdp.eval(`(() => {
+        try { return localStorage.getItem('fdep-api-request/api-ids'); } catch (e) { return 'n/a'; }
+      })()`));
+      console.log('  status strip     : ' + JSON.stringify(await cdp.eval(`(() => {
+        const el = document.querySelector('.fdep__status');
+        return el ? el.innerText.replace(/\\s+/g, ' ').trim().slice(0, 200) : null;
+      })()`)));
+    }
+
     // ---- 5. screenshot for the record ----
     const shot = await cdp.send('Page.captureScreenshot', { format: 'png' });
     const out = path.join(OUT_DIR, '_gui-live.png');

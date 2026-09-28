@@ -108,11 +108,17 @@ The `ctx.effect()` disposer restores the original methods on plugin stop.
 
 - Hardcoded English labels registered as plain string slot options stay
   English. They never go through `t()`.
-- The conversion is mechanical: a small set of ambiguous Simplified
-  characters (e.g. `发` → `發` in "发送" but `髮` in "头发") are mapped
-  to a single Traditional form. A wrong mapping can be overridden by
-  adding the context-specific phrase to `S2T_PHRASES` (longest match
-  wins).
+- Ambiguous Simplified characters are resolved by OpenCC's preferred reading
+  plus the phrase table (`发` → `發` in 发送, `髮` in 头发). Where a phrase is
+  still wrong for this product's register, add it to `OVERRIDES` in
+  `test/build-tables.js` and regenerate — longest match wins, and overrides are
+  applied before everything else.
+- **User content is never converted**, by design. Session titles, message text,
+  code and file paths are data, not UI copy: the conversion only runs on the
+  dictionaries DSH renders through `locale.lookup`. A title the model wrote in
+  Simplified Chinese therefore stays as it was written. Converting those too
+  would mean a DOM pass, which also risks rewriting code samples and paths —
+  ask before adding one.
 - `<html lang>` is not updated to `zh-TW` because the runtime's
   `DOCUMENT_LANGUAGE` table only has `zh-CN` and `en`. Screen readers
   that key off the attribute won't switch, but visual rendering is
@@ -121,25 +127,91 @@ The `ctx.effect()` disposer restores the original methods on plugin stop.
   preference can never be `zh-TW`. The bundle reasserts the active
   locale on every boot.
 
+## Table coverage
+
+The S→T tables in `lib/client.js` are **generated**, not hand-written, and they
+are checked against what DSH actually ships:
+
+| | entries | provenance |
+|---|---|---|
+| `S2T_CHARS` | ~2600 | OpenCC `STCharacters` (complete), composed with `TWVariants` |
+| `S2T_PHRASES` | ~360 | 181 hand-curated idioms (kept verbatim) + overrides + the OpenCC `TWPhrases`/`STPhrases` entries that DSH's corpus needs |
+
+An earlier revision was hand-written (317 characters, 181 phrases). Anything
+outside that set reached the screen unchanged — live examples were
+`收合侧边栏`, `搜尋工作階段名称`, `檢視選项`, `预設`. The tables are now complete for
+DSH's strings: every Simplified character used by the 5545 Chinese strings in the
+48 web client bundles has a mapping, verified against OpenCC's tables
+(`node test/run-all.js`).
+
+The phrase table stays small on purpose: an OpenCC phrase is only kept when it
+disagrees with what the character map alone would produce (that is where the
+Taiwan idiom lives — 全局→全域, 演示文稿→簡報, 四舍五入→四捨五入) and when DSH's
+corpus actually contains it.
+
+`convertS2T` is a **single left-to-right pass with longest-match** at each
+position. The earlier version applied every phrase as a global replacement in
+sequence, which let a phrase rewrite another phrase's output: `客户端` →
+`用戶端` → `使用者端`, because `用戶→使用者` fired on the finished result.
+
+## Branding
+
+The same bundle rebrands the shell for this deployment: `BRAND_NAME`
+(`企業數位員工@AIFE`) replaces the sidebar banner, the wordmark in
+`document.title` and the PWA manifest, and `BRAND_HEADLINE` (per locale)
+replaces the hero headline. The sidebar/hero overrides are CSS against
+`hHd-Xa_*` / `pXSMma_*` class hashes emitted by the DSH build — **they can go
+stale after a DSH upgrade** and need refreshing from the current DOM.
+
 ## Development
 
-The S→T tables live at the top of `lib/client.js`. To add or correct a
-mapping:
+Everything below runs offline; only the `audit-dom` tools touch a browser.
 
-1. Edit the `S2T_PHRASES` array (multi-character) **before** the
-   `S2T_CHARS` object (single-character). Phrase entries are applied
-   first, so they let you override the default single-char map for
-   common collocations.
-2. Rebuild or copy the file as-is — there is no build step. The
-   `dsh-client-modules` registry reads the file's content hash on every
-   request, so changes are picked up on the next page reload.
-3. Reinstall: `dsh plugin --profile web remove zhtw-traditional-chinese
-   && dsh plugin --profile web add file:./zhtw-traditional-chinese` (or
-   bump the version in `package.json` if installed from a registry).
+```sh
+# 1. regenerate the tables (needs the OpenCC .txt files, see test/opencc.js)
+node test/build-tables.js --dry     # show what would change
+node test/build-tables.js           # write lib/client.js
+
+# 2. check the result
+node test/run-all.js                # 45 checks: known pairs, curated table
+                                    # integrity, single-pass invariant, coverage
+
+# 3. look at what DSH ships, and at what the GUI shows
+node test/audit-corpus.js           # every string in the client bundles
+node test/audit-dom.js              # the RUNNING GUI
+node test/audit-dom.js --click 設定,外掛   # …with dialogs opened first
+```
+
+- `test/audit-corpus.js` splits characters the table does not know into
+  "OpenCC would convert these" (real misses — must be empty) and "already
+  Traditional" (leave alone).
+- `test/audit-dom.js` reports **path misses** (text containing a character the
+  table knows — i.e. text that never travelled through `lookup`) separately from
+  **table gaps**, and flags anything still Simplified on screen.
+- `test/curated-tables.json` holds the hand-curated half; `test/build-tables.js`
+  always starts from it, never from the generated output (otherwise a generated
+  entry would look hand-picked forever).
+- `test/s2t.js` mirrors the bundle's converter so the tools can never disagree
+  with the shipped code.
+- There is no build step: `lib/client.js` is served as-is. After editing it,
+  either restart `dsh web` or copy the file into
+  `~/.dsh/profiles/web/node_modules/zhtw-traditional-chinese/lib/` (the running
+  host re-reads the file when its watch is alive and the browser fetches the new
+  revision; a page reload picks it up).
+- A DSH upgrade should be followed by `node test/run-all.js` — new UI strings
+  may introduce characters the tables lack, and the audit names them.
 
 To test the patched `lookup` chain without leaving the host, run
 `dsh --profile web --dump-config` to inspect the composed tree; the
 zhtw bundle's patch shows up under the `zhtw-traditional-chinese` row.
+
+**OpenCC data** (Apache-2.0) is an *input*, never shipped: the bundle carries
+only the corpus-filtered result. Fetch it with:
+
+```sh
+curl -o "$TEMP/zhtw-opencc/STCharacters.txt" https://raw.githubusercontent.com/BYVoid/OpenCC/master/data/dictionary/STCharacters.txt
+# …and STPhrases.txt, TWPhrases.txt, TWVariants.txt
+```
 
 ## License
 
