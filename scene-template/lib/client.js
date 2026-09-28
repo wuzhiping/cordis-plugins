@@ -614,59 +614,9 @@ window.__ModuleLoader__.load({
       return tick;
     }
 
-    // conversation.composer.dock 只在 variant === 'composer' 時渲染,而 hero(新建空工作階段)
-    // 沒有它 —— 那時由 st-top-templates 這個 entry 頂上(見 HeroTemplateEntry)。
-    var dockState = { bottomMounted: false };
-    function useBottomDockFlag() {
-      var pair = React.useState(dockState.bottomMounted);
-      var on = pair[0];
-      var setOn = pair[1];
-      React.useEffect(function () {
-        return subscribe(function (evt) {
-          if (evt.type === "bottom-dock") setOn(evt.payload);
-        });
-      }, []);
-      return on;
-    }
-
     function selectDraft(state) {
       if (!state || typeof state.draft !== "string") return "";
       return state.draft;
-    }
-
-    /** The composer's contenteditable (Lexical), used only to read the current layout. */
-    function findComposerEl() {
-      var sels = [
-        '[data-composer] [contenteditable="true"]',
-        "[data-composer-textarea]",
-        "[data-composer] textarea",
-        '[contenteditable="true"]',
-        "textarea",
-      ];
-      for (var i = 0; i < sels.length; i += 1) {
-        var el = document.querySelector(sels[i]);
-        if (el) return el;
-      }
-      return null;
-    }
-
-    /**
-     * Whether the composer is in its hero (brand-new session) variant. The shipped
-     * conversation code marks the stack with
-     * `clsx(composerStack, hero && composerHero)`, and CSS-module hashing keeps the
-     * `composerHero` local suffix, so a substring match is stable enough.
-     */
-    function isHeroLayout() {
-      var el = findComposerEl();
-      if (!el) return false;
-      var node = el;
-      for (var i = 0; node && i < 12; i += 1, node = node.parentElement) {
-        var cls = node.getAttribute ? node.getAttribute("class") : null;
-        if (!cls) continue;
-        if (cls.indexOf("composerHero") >= 0) return true;
-        if (cls.indexOf("composerStack") >= 0) return false;
-      }
-      return false;
     }
 
     // 按住內容左右拖曳平移。pointerdown 不捕獲指針 —— 否則 mouseup/click 會被
@@ -1494,42 +1444,36 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The hero (brand-new session) template wall, registered as its own dock entry.
+     * The template wall, registered as its own entry in the TOP dock.
      *
      * SlotOutlet's anchor is `display: contents`, so a list slot's entries are laid
      * out by the PARENT — this entry's root element is a direct flex item of
      * `composerStack` (a flex column). `order: 2` therefore sorts it after the
-     * composer card (everything else there is order 0), which is exactly where
-     * `conversation.composer.dock` would have put it in a normal session.
+     * composer card (which is `order: 0`), i.e. visually BELOW the input — in a
+     * normal session and in a hero (brand-new) one alike.
      *
-     * In a normal session this entry renders `null` (no element, no flex item) and the
-     * composer-dock copy takes over.
+     * Why not `conversation.composer.dock` (the seat that *is* below the card)?
+     * Since 0.1.7 that seat's wrapper is `.uV2eYG_dock{display:flex;
+     * justify-content:center;align-items:center;gap:12px}` — a centred ROW that also
+     * holds the shipped `ContextMeter`. Our panel is a `flex: none` block ~ one card
+     * wide, so the two items share one line and squeeze/overflow each other. Nothing
+     * in that wrapper is addressable from a plugin (hashed class, no data attribute),
+     * and the top dock gives a *definite* width (the stack) instead of the dock's
+     * fit-content box — so one entry here replaces both old copies.
      */
-    function HeroTemplateEntry(props) {
-      var bottomMounted = useBottomDockFlag();
-      var heroLayout = isHeroLayout();
-      if (!heroLayout && bottomMounted) return null;
+    function TemplateDockEntry(props) {
+      // The panel's geometry is all in `S.panel` (see PANEL_WIDTH); only the flex
+      // order comes from here — `100%` of `composerStack` minus 2×clearance is
+      // exactly the input card's box, in hero and normal layouts both.
       return e(TemplatePanel, { ...props, order: 2 });
-    }
-
-    // 底部 dock 的包裝:標記它已掛載,讓 hero 回退副本收合。
-    function BottomTemplatePanel(props) {
-      React.useEffect(function () {
-        dockState.bottomMounted = true;
-        emit({ type: "bottom-dock", payload: true });
-        return function () {
-          dockState.bottomMounted = false;
-          emit({ type: "bottom-dock", payload: false });
-        };
-      }, []);
-      return e(TemplatePanel, props);
     }
 
     /** Services this client half needs: the slot registry. */
     var inject = ["slots"];
 
     /**
-     * Client plugin body: hide the scrollbars, then contribute the two docks.
+     * Client plugin body: hide the scrollbars, then contribute the two top-dock
+     * entries (scenario/branch panel, template wall).
      * @param ctx - client root context.
      */
     function apply(ctx) {
@@ -1540,17 +1484,13 @@ window.__ModuleLoader__.load({
           function (props) { return e(TopScenarioPanel, props); }
         );
       });
-      // hero 工作階段下的模板牆:獨立 entry,靠自身的 flex order 落到輸入卡片之後。
+      // 模板牆:同一個座位的第二格,靠自身 flex `order: 2` 落到輸入卡片之後。
+      // 普通會話與 hero(新建空工作階段)共用這一份 —— 不再往 conversation.composer.dock
+      // 註冊第二份(那個座位 0.1.7 起是"居中橫排",牆會被同排的 ContextMeter 擠壓)。
       ctx.slots.inject("conversation.input.dock", function () {
         return ctx.slots.register(
-          { name: "conversation.input.dock", id: "st-top-templates", order: 2 },
-          function (props) { return e(HeroTemplateEntry, props); }
-        );
-      });
-      ctx.slots.inject("conversation.composer.dock", function () {
-        return ctx.slots.register(
-          { name: "conversation.composer.dock", id: "st-bottom", order: 100 },
-          function (props) { return e(BottomTemplatePanel, props); }
+          { name: "conversation.input.dock", id: "st-wall", order: 2 },
+          function (props) { return e(TemplateDockEntry, props); }
         );
       });
     }

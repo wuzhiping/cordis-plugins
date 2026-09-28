@@ -1,0 +1,34 @@
+{
+  "name": "jeeflow-panel",
+  "version": "0.1.0",
+  "description": "在「对话 / 轨迹」tab 旁新增一个「工作流」tab，内嵌 https://abc.feg.cn/jeeflow/ui/ 的远传页面（iframe 常驻，切换 tab 不重新载入）。",
+  "private": true,
+  "type": "commonjs",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "cordis.patch.yml",
+    "test/smoke.js",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "test": "node test/smoke.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "license": "MIT"
+}

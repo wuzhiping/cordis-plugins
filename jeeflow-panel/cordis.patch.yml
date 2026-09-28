@@ -1,0 +1,15 @@
+# jeeflow-panel bundle patch.
+#
+# Adds a single host plugin row whose `name` is our own package name. The
+# @deepseek-ai/dsh-client-modules host half scans this entry, reads our
+# package.json `dsh.client.platform: "web"` declaration, and composes
+# window.__DSH_BOOT__ so the browser fetches /plugins/jeeflow-panel/client.js.
+#
+# The host half itself is an inert stub (lib/index.js): this bundle only
+# contributes a browser-side `conversation.view` tab.
+#
+# LOCAL FIX: dsh patch-loader semantics — a plain `- id:` row only patches an
+# EXISTING entry; new entries must be added with an `insert:` block.
+- insert:
+    - id: jeeflow-panel
+      name: jeeflow-panel

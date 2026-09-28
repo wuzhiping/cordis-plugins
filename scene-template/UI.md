@@ -67,7 +67,7 @@ return module.exports;      // factory 的返回值就是插件
 | **list 座位渲染** | 多个 occupant 用 `Fragment` 平铺，不额外包一层 | `…/client.js:869` |
 | **Hero 变体 / Composer 变体** | 新建空会话 vs 有内容的会话，输入区长得不一样 | `hero = sessionId === undefined \|\| (shellPhase === "blank" && (openState === "open" \|\| summaryBlank === true))`（`dsh-client-ui-conversation/lib/client.js:14868`） |
 | **composerStack** | 输入区所在的 flex column 容器 | `.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:…;flex-direction:column;display:flex}`（同文件 CSS 段） |
-| **两个 dock** | `conversation.input.dock` = 输入卡片**上方**；`conversation.composer.dock` = 卡片**下方** | 后者只在 `variant === "composer"` 时渲染（`…/client.js:16259`） |
+| **两个 dock** | `conversation.input.dock` = 输入卡片**上方**；`conversation.composer.dock` = 卡片**下方** | 后者只在 `variant === "composer"` 时渲染；**0.1.7 起它的外壳是"居中横排"**（`.uV2eYG_dock{display:flex;justify-content:center;align-items:center;gap:12px}`），和它同排的 `ContextMeter` 会把我们的面板挤到溢出 —— 所以模板墙**不用**这个座位，改挂在顶部座位 + flex `order: 2`（见 §4.4） |
 | **dock 几何变量** | `--dsh-composer-card-max-width` / `--dsh-composer-side-clearance` / `--dsh-composer-dock-inset` | 定义在会话根 `.wSkVaW_root` 上，向下继承 |
 | **Lexical editor** | 输入框是 **contenteditable + Lexical** 驱动，不是 `<textarea>` | "draft text … live in the shell's Lexical editor"（`contract/input.d.ts:1-7`）；`ComposerKeyboard.editor: LexicalEditor`（同文件:241） |
 | **inputActions** | 座位给组件的**官方输入动作**：`setDraft/addAttachments/removeAttachment/pruneAttachments/submit` | `contract/input.d.ts:210-221`；文档措辞 "Replace the whole draft" |
@@ -80,15 +80,15 @@ return module.exports;      // factory 的返回值就是插件
 
 ## 3. 组件结构
 
-### 3.1 注册关系（三个 entry，两个座位）
+### 3.1 注册关系（两个 entry，同一个座位）
 
 | entry id | 座位 | 组件 | 职责 |
 |---|---|---|---|
 | `awui-top` (order 1) | `conversation.input.dock` | `TopScenarioPanel` | 场景 chips（未选时）/ 选中后的标题栏 + 分支 chips；**无任何静态标签** |
-| `awui-top-templates` (order 2) | `conversation.input.dock` | `HeroTemplateEntry` | **hero 会话**下的模板墙（渲染时带 `order: 2`，视觉落到输入卡片下方）；普通会话返回 `null` |
-| `awui-bottom` (order 100) | `conversation.composer.dock` | `BottomTemplatePanel` | **普通会话**下的模板墙（座位本身就在卡片下方） |
+| `awui-top-templates` (order 2) | `conversation.input.dock` | `TemplateDockEntry` | 模板墙（渲染时给根元素 `order: 2`，视觉落到输入卡片下方）；**hero 与普通会话共用这一份** |
 
-> 静态 bundle 里这三个 id 改为 `st-top` / `st-top-templates` / `st-bottom`，避免和动态原型并存时互相顶掉。
+> 静态 bundle 里这两个 id 是 `st-top` / `st-wall`（0.1.7 之前是 `st-top-templates` + `composer.dock` 里的 `st-bottom`，已合并）。
+> 之所以不再往 `conversation.composer.dock` 注册第二份，见 §4.4 —— 那个座位在 0.1.7 变成了"居中横排"，会和同排的 `ContextMeter` 互相挤压。
 
 ### 3.2 组件职责与状态
 
@@ -97,20 +97,18 @@ return module.exports;      // factory 的返回值就是插件
 | `TopScenarioPanel` | `scenarios` / `active` | 场景目录 + 选中场景的详情（branches）；分支选中后调 `inputActions.setDraft(branch.preset)`；左上角挂 `ExpertPet` |
 | `ExpertPet` | `state` 由选择派生（`idle` / `scenario` / `branch`） | 专家宠物：**内联 SVG**（零外部资源）小机器人，透明正方形 44×44，绝对定位在面板**右上角**外挂；浮动 + 眨眼用注入的 CSS keyframes，状态一变就换 `key` 重挂载 → hop 动画重放；表情气泡 💭 → 💡 → ✨；可点击（`cursor: pointer` + tooltip），点一下在模块总线上发 `{type:'refresh'}` → 两个面板各自重拉清单与详情 |
 | `TemplatePanel` | `active` / `dynTemplates` / `batch` / `batchInfo` / `batchLoading` / `preview` | 模板墙本体：静态模板、动态模板、推荐批次、预览弹窗 |
-| `HeroTemplateEntry` | — | 判据：`heroLayout || !bottomMounted` → 渲染 `TemplatePanel`（`order: 2`），否则 `null` |
-| `BottomTemplatePanel` | — | 包装：挂载时置位 `dockState.bottomMounted` 并广播，卸载时复位 |
+| `TemplateDockEntry` | — | 只做一件事：把 `order: 2` 塞给 `TemplatePanel`（位置由 flex order 决定，几何全在 `S.panel`） |
 | `useDragPan` | `drag` ref | 按住内容平移（阈值 4px → 捕获指针 → 抑制尾随 click） |
 | `useSharedSelection` | — | 订阅模块内事件总线，拿"当前选择" |
-| `useBottomDockFlag` | — | 订阅总线上的 dock 挂载状态（判断"卡片下方是否已有模板墙"） |
 
 ### 3.3 数据流
 
 ```
    ┌──────────── 模块内事件总线 (Set<listener>, emit/subscribe) ─────────────┐
-   │  'set' / 'clear'  选中状态        'bottom-dock'  底部 dock 挂载标志      │
+   │  'set' / 'clear'  选中状态              'refresh'  手动刷新（点宠物）    │
    └───────▲──────────────────────▲──────────────────────▲──────────────────┘
            │                      │                      │
-   TopScenarioPanel        TemplatePanel          BottomTemplatePanel
+   TopScenarioPanel        TemplatePanel        （两个面板的 useRefreshTick）
      │      │                    │
      │      └─ api.getScenario ───┴─ api.getScenario / api.getDynamicTemplates
      │                              api.recommend / api.getPreview
@@ -158,9 +156,11 @@ return module.exports;      // factory 的返回值就是插件
     —— 两种布局下"减 2×clearance + `margin:auto`"都与卡片重合；
   - 变量定义在 `.wSkVaW_root`：`--dsh-composer-card-max-width: calc(--dsh-chat-content-width + 32px)`、
     `--dsh-composer-side-clearance: 16px`、`--dsh-composer-dock-inset: 8px`（**最后一个本面板用不到**）。
-- **顺手记下的边界**：`conversation.composer.dock`（卡片下方那个座位）里的 shipped 组件用的是
-  `._7yHdaG_dock`（`padding: 0 8px`，多减 2 个 inset）—— 同一个"上/下"两个 dock，基准公式并不一样，
-  因为它们的嵌套层数不同。**先看 DOM 层级，再决定抄哪一行。**
+- **顺手记下的边界**：`._7yHdaG_dock`（`padding: 0 8px`、负 `margin-bottom`）名字像"底部 dock 的外壳"，
+  其实是**队列面板** `QueueDock.module.css`，在 stack 里和卡片平级；而 0.1.7 真正的
+  `conversation.composer.dock` 外壳是 `.uV2eYG_dock{display:flex;justify-content:center;align-items:center;gap:12px}`
+  —— 一个**居中横排、没有内边距**的盒子。同一个"上/下"两个座位，基准公式并不一样。
+  **先看 DOM 层级和 `display`，再决定抄哪一行**；实在说不清就别用那个座位（§4.4）。
 
 ### 4.2 写输入框：**composer 是 Lexical，不能改 DOM**
 
@@ -187,21 +187,35 @@ return module.exports;      // factory 的返回值就是插件
   `InputState.draft` 就是编辑器文档的 clipboard-text 投影（`contract/input.d.ts:303-305`）。
 - 动态插件里配合 `inject: ['timer']` + `ctx.timeout()` 做 600ms 防抖（见 4.6）。
 
-### 4.4 新建会话第三部分缺位：**座位不存在时，用"第二个 entry + flex order"**
+### 4.4 卡片下方的内容：**别用 `composer.dock`，用"第二个 entry + flex order"**
 
-- **现象**：新建会话（hero）里场景/分支有、模板墙没有。
-- **根因**：`conversation.composer.dock` 只在 `variant === "composer"` 时渲染
-  （`dsh-client-ui-conversation/lib/client.js:16259`），而新建空会话 `hero === true`（同文件:14868）→
-  **卡片下方根本没有座位**。此时唯一存在的相关座位是卡片上方的 `conversation.input.dock`。
-- **正确做法**（不需要浮层、不需要测量）：
-  1. 把模板墙做成**独立的第二个 entry** 注册进 `conversation.input.dock`；
+- **现象（两轮）**：
+  1. 新建会话（hero）里场景/分支有、模板墙没有；
+  2. 升级到 **0.1.7** 后，普通会话里模板墙和**别的组件挤在同一行**（墙向右侧溢出、
+     旁边的 `ContextMeter` 被压扁）—— 这正是"0.1.5 还能用、0.1.7 坏了"的原因。
+- **根因（同一个座位的两个问题）**：模板墙当时注册在 `conversation.composer.dock`，而这个座位
+  1. 只在 `variant === "composer"` 时渲染，新建空会话 `hero === true`（`…/client.js:14868`）→
+     **卡片下方根本没有座位**；
+  2. **0.1.7 起它的外壳是居中横排**：
+     `.uV2eYG_dock{display:flex;justify-content:center;align-items:center;gap:12px;max-width:100%;padding-top:4px}`
+     （0.1.5 是直接挂在 `.uV2eYG_root` 这个 flex column 下的，所以那时是"竖排、独占一行"）——
+     墙（`flex: none`、约一张卡片宽）和同排的 `ContextMeter` 于是共处一行：溢出 + 挤扁。
+     外壳的 class 是哈希名、也没有 `data-*`，插件侧只能靠 `:has()` 之类的全局 CSS 去改宿主，
+     而它的宽度还是 fit-content —— `%` 宽度连"卡片那个盒子"这个基准都丢了。
+- **正确做法**（不需要浮层、不需要测量、不需要 `:has()`）：两个问题用同一个动作解决 ——
+  **把墙注册进卡片上方的 `conversation.input.dock`，靠 flex order 落到卡片下方**：
+  1. 墙做成**独立的第二个 entry**；
   2. 因为 SlotOutlet 锚点是 `display: contents`（`dsh-client-ui-renderer/lib/client.js:762-776`），
-     这个 entry 的根元素**直接就是 `composerStack`（flex column）的子项**；
+     这个 entry 的根元素**直接就是 `composerStack`（flex column，gap 6px）的子项**；
   3. 给它 `order: 2`（场景面板与输入卡片都是 `order: 0`）→ 在 flex 排序里落到**输入卡片之后**；
-  4. 普通会话里这个 entry 返回 `null`（不产生元素，也就没有 flex item），
-     仍由 `conversation.composer.dock` 那份挂在卡片下方 —— 两边不重复。
-  5. 未选场景时 `TemplatePanel` 自身也 `return null`，所以两份 entry 都不产生元素，
-     第三部分在两种布局里都是"干净地不存在"。
+  4. `100%` 因此是 **stack 宽度**（和卡片同一个基准），`calc(100% - 2×clearance)` + `margin: 0 auto`
+     在 hero 与普通会话里都与卡片**完全重合**（§4.1 的公式）；
+  5. **一份 entry 同时覆盖两种会话** —— 不再需要 `isHeroLayout()` 这类 DOM 嗅探、
+     也不需要"另一份是否已挂载"的总线标志；`TemplatePanel` 未选场景时自身 `return null`，
+     所以"第三部分干净地不存在"这条性质不变。
+- **代价（要知道）**：`ContextMeter` 留在宿主放它的位置（卡片正下方、composer 内部），
+  所以竖排顺序是 **卡片 → 电表 → 模板墙**。电表在上下文占用未知时**整个不渲染**，
+  所以新会话看起来就是"墙紧贴卡片"。
 
   ```
   普通会话 (variant='composer')                新建空会话 (hero)
@@ -209,11 +223,12 @@ return module.exports;      // factory 的返回值就是插件
   │ 对话内容 …                   │              │ HeroShell / 工作区选择        │
   │ [data-slot=input.dock] ←display:contents   │ [data-slot=input.dock]       │
   │   ├ 场景/分支面板  order 0    │              │   ├ 场景/分支面板  order 0    │
-  │   └ (shipped todo/goal/queue)│              │   └ 模板墙        order 2 ───┼─┐
-  │ [输入卡片]        order 0     │              │ [输入卡片]         order 0    │ │
-  │ [composer.dock]              │              └──────────────────────────────┘ │
-  │   └ 模板墙        order 100  │ ◄──────────── 模板墙在 flex 排序里落到卡片之后 ◄─┘
-  └──────────────────────────────┘
+  │   ├ 模板墙        order 2 ───┼─┐            │   ├ 模板墙        order 2 ───┼─┐
+  │   └ (shipped todo/goal/queue)│ │            │   └ (shipped …)              │ │
+  │ [输入卡片]        order 0     │ │            │ [输入卡片]         order 0    │ │
+  │   └ [composer.dock] 电表      │ │            └──────────────────────────────┘ │
+  └──────────────────────────────┘ │                                            │
+     模板墙在 flex 排序里落到卡片之后 ◄┴────────────────────────────────────────────┘
   ```
 
 ### 4.5 能拖不能点：**`setPointerCapture` 会重定向 click**
@@ -346,10 +361,11 @@ return module.exports;      // factory 的返回值就是插件
 | list 座位用 Fragment 平铺 occupant | 同上 `:869` |
 | `hero` 判定式 | `@deepseek-ai/dsh-client-ui-conversation/lib/client.js:14868` |
 | composerStack 子项顺序（Hero → 工作区 → input.dock → 输入条） | 同上 `:14919-14930` |
-| `conversation.composer.dock` 只在 `variant === "composer"` 渲染 | 同上 `:16259` |
+| `conversation.composer.dock` 只在 `variant === "composer"` 渲染 | 同上 `:16259`（0.1.7） |
+| `conversation.composer.dock` 的外壳在 0.1.7 变成**居中横排**（0.1.5 没有这层，是直接挂在 `.uV2eYG_root` 的 flex column 下） | 同上，InputBar CSS：`.uV2eYG_dock{display:flex;justify-content:center;align-items:center;gap:12px;max-width:100%;padding-top:4px}`；对照 `@deepseek-ai/dsh-client-ui-conversation@0.1.5-rc.3` 的同一段 |
 | `composerStack` 是 flex column；`composerHero` 宽度公式 | 同上 CSS 段（`.wSkVaW_composerStack` / `.wSkVaW_composerHero`） |
 | dock 宽度三件套变量 | 同上（`.wSkVaW_root`：`--dsh-composer-card-max-width` / `--dsh-composer-side-clearance` / `--dsh-composer-dock-inset`） |
-| dock 公式用法（Todo / Goal / Queue） | `.lXshSW_root`（同文件 CSS）、`@deepseek-ai/dsh-client-ui-goal/lib/client.js:127`、`._7yHdaG_dock`（conversation CSS 段） |
+| dock 公式用法（Todo / Goal / Queue） | `.lXshSW_root`（TodoPanel 段）、`@deepseek-ai/dsh-client-ui-goal/lib/client.js:127`、`._7yHdaG_dock`（**QueueDock 段**，不是 dock 外壳 —— 名字会骗人） |
 | 输入卡片标记 `data-composer-card` | `dsh-client-ui-conversation/lib/client.js:16068` |
 | `InputActions.setDraft` 契约 | `…/lib/types/client/contract/input.d.ts:210-221` |
 | `InputState.draft` 契约 | 同上 `:303-305` |
@@ -379,6 +395,7 @@ return module.exports;      // factory 的返回值就是插件
 | 注入的会话定位 | `systemPrompt.context` 的 provider 直接读 `context.agent.id`（`dsh-agent` 的 `assembleContextFor` 一定带上 `agent`），`agents.currentInitiator()` 只作退路；宠物 hover 上会写明是哪条路径（`已注入 N 字（context.agent）`）。**踩过的坑**：Inspect 给出的 `AssembleContext` 类型只声明了 `scope`/`signal`，照着它写就会去猜会话（第一版就是这么错的 —— 猜不到时静默注入空串） | 若哪天 `agent` 真的不在 assembly context 里了，退路还有 `agent/pre-step`（payload 直接带 `agent`） |
 | 模拟延迟 | 各接口有 `LATENCY`（520/420/760/640/300ms）—— 只为让 loading 过渡可见 | 接真接口时删掉 `LATENCY`/`delayed`（或置 0） |
 | 顶栏读数 | 调试期加的 `[diag3]` 已删除（`S.diag` 与那段读数不再存在） | 需要时按 §7.3 临时加回即可 |
+| 宿主版本耦合 | 模板墙只依赖两件事：**list 座位锚点 `display: contents`** + **根元素 flex `order: 2`** —— 不依赖 `composer.dock` 外壳（0.1.5 的"竖排、独占一行"在 0.1.7 变成居中横排，旧写法就会和 `ContextMeter` 挤在一行，见 §4.4）。实测版本：`0.1.7-rc.2`（坏的是 `0.1.5-rc.3 → 0.1.7-rc.2` 这一次升级） | 若哪天 `composerStack` 不再是 flex column、或输入卡片不再与 `input.dock` 同为它的子项，这套"order 落到卡片后面"就要重挑依据；判据仍是 §4.1 的"我和谁平级" |
 | 配色 | 硬编码浅色（`#f8fafc` / `#0f172a` 等） | 换用 `--dsw-alias-*` 主题变量以支持暗色 |
 | 文案 | 界面文案 = 繁体（zh-TW 惯用）；**代码注释**：bundle 里已一并转繁，动态原型里仍是简体（不影响界面） | 让原型注释也统一：把 `tools/s2t/convert.js --polish` 的输出贴回下一个 Package |
 | 文档 | `UI.md` / `README.md` 保持简体（是给人读的说明，不是界面文案） | 需要的话同一套工具能一次性转繁 |

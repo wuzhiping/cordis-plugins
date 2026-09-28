@@ -9,13 +9,18 @@ Originally prototyped as a dynamic Cordis Package (plugin `awui-2`, packages
 `pkg-2`…`pkg-15`); this bundle is that prototype frozen into an installable
 profile layer.
 
+> **Host compatibility.** Verified against `@deepseek-ai/dsh` **0.1.7-rc.2** (the
+> conversation UI that turned `conversation.composer.dock` into a centred flex row —
+> see *Why the wall is not in `composer.dock`*). The layout only relies on two stable
+> things: a list slot's `display: contents` anchor and the flex `order` of the entry's
+> root element, so the same code also works on 0.1.5.
+
 ## What it renders
 
 | Entry id | Slot | Content |
 |---|---|---|
 | `st-top` (order 1) | `conversation.input.dock` | **no static labels** — before a choice: one line of scenario chips (the largest row); after a choice: a header holding the **selected scenario as a brand-coloured badge** (icon + name) with a `✕` close button inside it, and below it one line of branch chips (one step smaller). Drag to pan. The panel's top-right corner holds the **expert pet** (see below) |
-| `st-top-templates` (order 2) | `conversation.input.dock` | the template wall **for a hero (brand-new) session only**; its root element carries flex `order: 2` so it lands below the composer card (see below). Renders `null` otherwise |
-| `st-bottom` (order 100) | `conversation.composer.dock` | the template wall for a normal session — the seat is already below the card |
+| `st-wall` (order 2) | `conversation.input.dock` | the template wall. It lives in the **top** dock on purpose and carries flex `order: 2` on its root element, so it sorts **below** the composer card in every layout (see *Why the wall is not in `composer.dock`*) |
 
 Interaction:
 
@@ -41,18 +46,40 @@ Interaction:
   templates from the cross-scenario pool (30 templates ⇒ 8 batches, then it
   cycles) and shows `推薦第 N/8 批`; `返回場景模板` goes back to the scenario's own
   templates.
-- In a **new (hero) session** there is no `conversation.composer.dock` to render
-  into: the shipped composer only renders that dock when `variant === "composer"`,
-  and `hero` is true while a session is blank (`client.js` in
-  `dsh-client-ui-conversation`, `hero = sessionId === undefined || (shellPhase === "blank" && …)`).
-  The bundle therefore registers a **second entry in the top dock**
-  (`st-top-templates`) and gives its root element flex `order: 2`: a list slot's
-  `SlotOutlet` anchor is `display: contents`, so that entry lays out as a direct
-  flex item of `composerStack` (a flex column) and sorts **after** the composer card
-  — i.e. below the input, where the composer-dock copy sits in a normal session.
-  The entry renders `null` outside the hero layout, so the two never both show.
-  Either copy renders nothing until a scenario is chosen — recommendations are
+- The wall renders `null` until a scenario is chosen — recommendations are
   scenario-scoped by design.
+
+### Why the wall is not in `conversation.composer.dock`
+
+`conversation.composer.dock` is the seat that *is* below the card — and on DSH 0.1.5
+(the line this plugin was written against) it was where the wall lived: the seat was
+rendered straight into `.uV2eYG_root`, a flex **column**, so the wall had a row to
+itself. From **0.1.7** (and in the 0.1.6 alphas) that seat sits inside a wrapper:
+
+```css
+.uV2eYG_dock{display:flex;justify-content:center;align-items:center;gap:12px;max-width:100%;padding-top:4px}
+```
+
+i.e. a **centred row** that also holds the shipped `ContextMeter`. Our panel is a
+`flex: none` block that wants to be one card wide, so the two items end up sharing
+one line: the wall overflows to the right and the meter is squeezed beside it.
+Nothing inside that wrapper is addressable from a plugin (hashed class name, no
+data attribute), and the wrapper's width is *fit-content*, so a percentage width
+inside it no longer has the card's box as its base.
+
+The top dock has neither problem: a list slot's `SlotOutlet` anchor is
+`display: contents`, so the entry is a **direct flex item of `composerStack`** (a
+flex column, `gap: 6px`) and `order: 2` sorts it after the card (`order: 0`). Its
+`100%` is the stack width — the same base the card uses — so
+`calc(100% - 2×clearance)` + `margin: 0 auto` reproduces the card's box exactly,
+in a normal session **and** in a hero (brand-new) one. That is why one entry
+covers both cases and no `composer.dock` copy exists.
+
+Consequence to know about: the shipped `ContextMeter` stays where the host puts it
+(directly under the card, inside the composer), so the vertical order is
+**card → meter → wall**. The meter renders nothing at all while the context
+occupancy is unknown, which is why fresh sessions show the wall right under the
+card.
 
 ## Data sources
 
@@ -353,8 +380,8 @@ being the spec's "刷新模板" button). No component changes are needed.
   injection*; if every service it wants is missing, it degrades to a no-op and the
   UI still renders.
 - `lib/client.js` is a CJS bundle wrapped in `window.__ModuleLoader__.load({ id, factory })`
-  whose factory returns `{ inject: ['slots'], apply(ctx) }` and registers three entries
-  (two in the top dock, one in the composer dock — see the table above). It uses
+  whose factory returns `{ inject: ['slots'], apply(ctx) }` and registers two entries,
+  both in the top dock (`st-top`, `st-wall` — see the table above). It uses
   `require("react")`, plain browser timers and `document` — a static client bundle is
   **not** sandboxed the way a dynamic Package is.
 
@@ -374,10 +401,11 @@ being the spec's "刷新模板" button). No component changes are needed.
 
    Do **not** copy `TodoPanel`'s `.lXshSW_root`, which subtracts 4 extra
    `--dsh-composer-dock-inset`s (that is its own "floating tip card" geometry) — doing so
-   makes the panel 16px narrower than the input card on each side. Same for
-   `._7yHdaG_dock` (the `conversation.composer.dock` wrapper, `padding: 0 8px`): the two
-   docks have different nesting, so they do not share a formula. Measuring the card with
-   `getBoundingClientRect()` instead is also fragile — the dock's parent is not a
+   makes the panel 16px narrower than the input card on each side. Do not copy
+   `._7yHdaG_dock` either: despite the name it is **not** the `composer.dock` wrapper but
+   the shipped *queue* panel (`QueueDock.module.css`, `padding: 0 8px`, negative
+   `margin-bottom`), and it is a sibling of the card in the stack. Measuring the card
+   with `getBoundingClientRect()` instead is also fragile — the dock's parent is not a
    reliable base.
 2. **The composer is a Lexical `contenteditable`, not a `<textarea>`.** Writing
    `textContent` and dispatching `input` is silently reverted by the editor.
@@ -386,12 +414,23 @@ being the spec's "刷新模板" button). No component changes are needed.
 3. **Registering a component must forward the slot props** —
    `slots.register(options, (props) => React.createElement(Comp, props))`.
    Dropping them loses `inputActions` / `useInput` entirely.
-4. **`conversation.composer.dock` only renders for `variant === "composer"`**, so a
-   hero (new) session has no seat below the card. The fix is *not* a floating layer:
-   register a separate entry in the top dock and give it flex `order: 2` — a list
-   slot's `SlotOutlet` anchor is `display: contents`
-   (`dsh-client-ui-renderer/lib/client.js:762-776`), so the entry is a direct flex
-   item of `composerStack` (`flex-direction: column`) and sorts after the card.
+4. **`conversation.composer.dock` is a trap in 0.1.7 — put below-the-card content in the
+   top dock with flex `order: 2` instead.** Two independent reasons, both verified against
+   `dsh-client-ui-conversation`:
+   - the seat only renders for `variant === "composer"`, so a hero (new) session has no
+     seat below the card at all;
+   - since 0.1.7 its wrapper `.uV2eYG_dock` is `display:flex; justify-content:center;
+     align-items:center; gap:12px` and also holds `ContextMeter` — a full-width panel
+     there shares one line with the meter and both squeeze/overflow (this is the
+     "擠在一起" bug of 0.1.7). Its width is also fit-content, so `%` widths lose the
+     card's box as their base.
+
+   The fix is *not* a floating layer or an injected `:has()` rule: register the entry in
+   the top dock and give its root element flex `order: 2` — a list slot's `SlotOutlet`
+   anchor is `display: contents` (`dsh-client-ui-renderer/lib/client.js:762-776`), so the
+   entry is a direct flex item of `composerStack` (`flex-direction: column`) and sorts
+   after the card. One entry then serves hero and normal sessions alike, and no DOM
+   sniffing (`isHeroLayout`) or "is the other copy mounted" flag is needed.
 5. **Pointer capture retargets clicks.** Calling `setPointerCapture` on
    `pointerdown` makes the following `mouseup`/`click` land on the capturing
    element, so items stop being selectable. Capture only after the drag
