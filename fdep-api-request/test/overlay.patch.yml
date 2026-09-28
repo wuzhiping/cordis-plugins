@@ -1,0 +1,15 @@
+# Throwaway overlay used only by the pre-check harness.
+#
+# It appends the fdep-api-request-bundle host row to the composed web profile
+# WITHOUT writing anything into $DSH_HOME/profiles/web. The row's `name`
+# resolves from the profile's node_modules, which is where `dsh plugin add`
+# would place the link anyway.
+#
+# Usage (read-only compose check):
+#   dsh --profile web --patch ./test/overlay.patch.yml --dump-config
+#
+# Usage (live pre-check on a throwaway port):
+#   dsh --profile web --port 3081 --patch ./test/overlay.patch.yml --no-open
+- insert:
+    - id: fdep-api-request-bundle
+      name: fdep-api-request-bundle

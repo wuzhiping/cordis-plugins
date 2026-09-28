@@ -1,0 +1,43 @@
+{
+  "name": "fdep-api-request-bundle",
+  "version": "0.1.0",
+  "description": "DSH bundle that wraps the fdep-api-request skill: host-side fdep_call tool + sidebar panel with parameter form. The skill at $DSH_HOME/skills/fdep-api-request remains the model-facing source of truth.",
+  "private": true,
+  "type": "commonjs",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "cordis.patch.yml",
+    "test",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "test": "node test/run-all.js",
+    "dev": "node test/dev.js",
+    "dev:once": "node test/dev.js --once",
+    "preview": "node test/preview.js",
+    "events": "node test/dev-events.js",
+    "boot": "node test/dev-boot.js",
+    "sync": "node test/dev-diff.js",
+    "shoot": "node test/shoot.js",
+    "docs": "node test/fdep-docs.js",
+    "gui": "node test/gui-probe.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "license": "MIT"
+}

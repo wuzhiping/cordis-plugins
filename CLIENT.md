@@ -46,7 +46,7 @@
 | `$DSH_HOME` | `D:\Refine\Books\ntop\AI\dsh` | 运行中的用户目录：`profiles/`、`settings.yaml`、`sessions/`、`skills/` |
 | `<PKGS>` | `D:\Refine\Books\ntop\AI\dsh\profiles\node_modules\@deepseek-ai` | **已安装的 shipped 客户端/服务端插件包**（含全部 `dsh-client-ui-*`），还有 `.d.ts` 契约 |
 | `<CLI>` | `D:\Refine\Books\ntop\AI\node\global\node_modules\@deepseek-ai\dsh` | `dsh` 命令本体（`lib/bin.js`）+ 宿主侧包 |
-| 你的工作区 | `C:\Users\shawoo\Desktop\feg.cn` | `cordis-plugins/`（自建插件）、`bundles/`（交付包） |
+| 你的工作区 | `C:\Users\shawoo\Desktop\feg.cn` | `cordis-plugins/`（自建插件 + 交付包） |
 
 当前版本：`@deepseek-ai/dsh` **0.1.5-rc.2**（`<CLI>/package.json:4`）。
 
@@ -164,7 +164,7 @@ exports.inject = inject;                     // ← 少声明一个服务，用�
 
 | 规则 | 说明 | 证据 |
 |---|---|---|
-| **`inject` 不声明就不能用** | 未声明的服务访问会抛 `... without inject` | `bundles/fdep-api-request/README.md`（host-shape 测试项） |
+| **`inject` 不声明就不能用** | 未声明的服务访问会抛 `... without inject` | `cordis-plugins/fdep-api-request/README.md`（host-shape 测试项） |
 | **`ctx.effect(fn, label)` 立即调用 `fn`，把 `fn` 的**返回值**当 disposer** | 传一个"已经造好的 disposer"会当场执行它 —— 必须包成 `ctx.effect(() => dispose, label)` | 同一个 README："`ctx.effect(dispose)` unregistered the tool immediately" |
 | **插件卸载时，注册在它 fiber 上的东西全自动回收** | 座位、样式、监听、定时器都随 fiber 走 | `registry.d.ts:67-83`（register 走 caller 的 `ctx.effect`） |
 
@@ -173,9 +173,15 @@ exports.inject = inject;                     // ← 少声明一个服务，用�
 你在 `apply(ctx)` 里用到的都是服务：`ctx.slots`、`ctx.locale`、`ctx.sessions`、`ctx.uiSession`、`ctx.theme`、
 `ctx.settingsScope`、`ctx.layout`、`ctx.uiConversation`、`ctx.remote`、`ctx.timer`、`ctx.uiWorkspace`。
 
-- **可选服务**用 `ctx.get('name')` 拿，拿不到返回 `undefined`，插件照样激活。
-  真实范例：`bundles/fdep-api-request/lib/client.js:895-899`（`inject: ['slots']` 是硬依赖，`uiWorkspace` 走 `ctx.get`，
-  这样没有 workspace 服务的组合里侧边栏图标仍然出现）。
+- **可选服务**有两种拿法，选错会踩坑：
+  - `ctx.get('name')` —— 只在**提供方 fiber 已经 ACTIVE** 时才有值（`ReflectService._getImpl` 里的
+    `strict` 过滤），所以在 `apply` 里读一次存起来，遇到"本插件比提供方先启动"（例如
+    `dsh.client.immediately`）就会**永久拿到 undefined**；
+  - `ctx.inject(['name'], (scope) => { scope.name … })` —— 依赖到位才回调（返回 disposer），
+    插件本身照常激活。**有可选依赖就用这个。**
+  真实范例：`cordis-plugins/fdep-api-request/lib/client.js:915-937`（`slots` 是硬依赖；
+  `uiWorkspace` 用 `ctx.inject` 延迟解析，这样既不会因为缺 workspace 服务而整个插件被搁置、
+  也不会在服务晚到时把按钮永久卡在 "Service unavailable"）。
 - **注册服务**用 `ctx.provide('theme', theme)` —— shipped `ui-theme` 就是这么把主题运行时暴露给全站的
   （`<PKGS>/dsh-client-ui-theme/lib/client.js`，`function apply` 内）。
 
@@ -351,7 +357,7 @@ window.__ModuleLoader__.load({
 
 ```sh
 # 从任意目录（相对路径会被重新锚定到"你敲命令的目录"，见下）
-dsh plugin --profile web add ./bundles/your-plugin
+dsh plugin --profile web add ./cordis-plugins/your-plugin
 dsh plugin --profile web remove your-plugin
 ```
 
@@ -382,7 +388,7 @@ dsh plugin --profile web remove your-plugin
 反之在**生产构建**里没有任何 watcher 会重写 bundle，所以什么都不会发生 ——
 HMR 的触发源只有"有东西真的改写了磁盘上的 bundle 字节"。
 
-三层迭代成本（`bundles/fdep-api-request/README.md` 的实测记录）：
+三层迭代成本（`cordis-plugins/fdep-api-request/README.md` 的实测记录）：
 
 | 层级 | 触发 | 代价 |
 |---|---|---|
@@ -511,7 +517,7 @@ ctx.slots.inject(<slotKey>, () => ctx.slots.register({ /* options */ }, Componen
 | `order` | `list` | 升序排序（`chat`=0、`trajectory`=10、自建=20 排在轨迹右边） | `dsh-client-ui-chat`/`-trajectory`/`jeeflow-panel` |
 | `priority` | `chain` | 选举优先级 | `dsh-client-ui-approval`（`priority: 1`）、`-subagent`（`priority: -10`） |
 | `select` | `chain` | `(ownerProps) => value \| null`，非 null 即接管 | 同上 |
-| `label` | `list`（部分） | 显示文本；字符串或 `() => string`。`conversation.view` 用它生成 tab 文案；`sidebar.panellist` 用它做可见文本 + 无障碍名 + 折叠提示 | `jeeflow-panel/lib/client.js:312`、`fdep-api-request/lib/client.js:914` |
+| `label` | `list`（部分） | 显示文本；字符串或 `() => string`。`conversation.view` 用它生成 tab 文案；`sidebar.panellist` 用它做可见文本 + 无障碍名 + 折叠提示 | `jeeflow-panel/lib/client.js:312`、`fdep-api-request/lib/client.js:951` |
 | `locale` | 需要 `t` 的座位 | 命名空间，决定注入的 `t`；`"common"` 用共享词表 | `dsh-client-ui-layout/lib/client.js`（`locale: "common"`） |
 | `children` | 声明子环 | **声明即独占渲染权**：声明了 `a.b.c`，别人就能坐进去 | `dsh-client-ui-sidebar`（声明 6 个）、`ui-layout`（声明 4 个） |
 | `store` | 需要私有状态 | store 工厂 → 按 scope 实例化；组件经 `PropsStore` 拿到 `useStore`/`actions` | `dsh-client-ui-theme`（`store`）、`-chat`（`store: chatStore`） |
@@ -633,7 +639,7 @@ sidebar                         single, root   ← ui-sidebar 的 SidebarRoot �
   ② `main`（keyed）用**同一个 `id` 作为 `key`** 注册页面本体。
   选择缺失的 `main` key 会**抛错**且不改当前选择（`dsh-client-ui-sidebar/README.md`）。
 
-真实范例（`bundles/fdep-api-request/lib/client.js:896-925`，可直接照抄）：
+真实范例（`cordis-plugins/fdep-api-request/lib/client.js:915-962`，可直接照抄）：
 
 ```js
 inject: ['slots'],
@@ -956,7 +962,7 @@ ctx.theme (ThemeRuntime)  ──发布──▶  ThemeSnapshot（不可变）
 **权威性声明**（很重要，官方 README 原文）：*"The token sheets are the sole color authority —
 values absent from the design system are deliberately not appended"*。
 也就是说：**设计系统里没有的值，不要自己造**（例如不要发明 `--dsh-primary-color` 这种东西，
-`bundles/fdep-api-request/lib/client.js` 的开头注释就记了这次翻车：早期用了不存在的 `--dsh-*` 名字，
+`cordis-plugins/fdep-api-request/lib/client.js` 的开头注释就记了这次翻车：早期用了不存在的 `--dsh-*` 名字，
 每个值都回落成硬编码深灰，浅色模式下整个面板看着"脱节"）。语义上最接近的令牌胜出。
 
 ### 7.4 完整核对：别名令牌清单（本机实测）
@@ -1381,7 +1387,7 @@ await scope.mutate([{ path: ['mode'], value: 'x' }]);  // 多操作，原子
 
 ### 11.5 测试一个客户端 bundle，不用起浏览器
 
-`bundles/fdep-api-request/test/client-contract.test.js` 是范本，它验证：
+`cordis-plugins/fdep-api-request/test/client-contract.test.js` 是范本，它验证：
 
 - loader 包装形状（`window.__ModuleLoader__.load` 的存在性与回退路径）；
 - `require('react')` 依赖（**没有 React 全局**）；
@@ -1389,7 +1395,7 @@ await scope.mutate([{ path: ['mode'], value: 'x' }]);  // 多操作，原子
 - 真实渲染面板并点击按钮；
 - 呈现契约（**每个 CSS 变量都是真令牌**、没有硬编码的明暗分叉）。
 
-`bundles/fdep-api-request/test/preview.js` 更进一步：用真样式表把组件在多个状态渲染成**独立页面**
+`cordis-plugins/fdep-api-request/test/preview.js` 更进一步：用真样式表把组件在多个状态渲染成**独立页面**
 （带明暗切换），并在写盘前**自校验**（每个发出的 class 都要有规则、SVG 自闭合、不泄漏 React-only prop）。
 它查出过三个真实缺陷：一个没有规则的 modifier class、被 HTML 解析器吞掉的 `<path>`、泄漏的 `key` 属性。
 
@@ -1542,7 +1548,7 @@ await scope.mutate([{ path: ['mode'], value: 'x' }]);  // 多操作，原子
 | 字号阶梯与二级档 | 同上（`gradient-shadow-text.css` 段） |
 | 抬升与 `corner-shape` | 同上 |
 | `--dsh-composer-*` / `--dsh-chat-*` 等布局变量 | `<PKGS>/dsh-client-ui-conversation/lib/client.js`（grep `--dsh-`） |
-| 消费令牌的真实 CSS 范例 | `cordis-plugins/jeeflow-panel/lib/client.js:76-112`、`bundles/fdep-api-request/lib/client.js`（`PANEL_CSS`） |
+| 消费令牌的真实 CSS 范例 | `cordis-plugins/jeeflow-panel/lib/client.js:76-112`、`cordis-plugins/fdep-api-request/lib/client.js`（`PANEL_CSS`） |
 
 ### 引导 / 模块 / 交付
 
@@ -1553,7 +1559,7 @@ await scope.mutate([{ path: ['mode'], value: 'x' }]);  // 多操作，原子
 | 懒加载、materialize、`/plugins` combo、rev 哈希 | `<PKGS>/dsh-client-modules/README.md` |
 | `dsh.client` 声明（`platform`/`inject`/`external`/`immediately`） | 同上（Declaring a client plugin / Sharing modules） |
 | 客户端 bundle 纯净性门禁（禁跨插件值导入） | `<PKGS>/dsh-client-ui-settings/lib/types/client/settings-scope.d.ts:93-99` |
-| HMR：500ms 轮询 + `/plugins/events` SSE + `rebuilt` | `bundles/fdep-api-request/README.md`（Development loop） |
+| HMR：500ms 轮询 + `/plugins/events` SSE + `rebuilt` | `cordis-plugins/fdep-api-request/README.md`（Development loop） |
 | 三层迭代成本 | 同上（The three tiers） |
 | JS 侧 `ctx.effect` 语义与踩坑 | 同上（What the contract testing changed，第 1 条） |
 | 座位锚点 `display:contents` 与 list 平铺 | `<PKGS>/dsh-client-ui-renderer/lib/client.js:762-776, 869`（行号见 `scene-template/UI.md` §8） |
@@ -1563,7 +1569,7 @@ await scope.mutate([{ path: ['mode'], value: 'x' }]);  // 多操作，原子
 | locale 服务的完整契约 | `<PKGS>/dsh-client-locale/lib/types/client/index.d.ts` |
 | settingsScope 契约 | `<PKGS>/dsh-client-ui-settings/lib/types/client/settings-scope.d.ts` |
 | 输入区一次真实改造的八条原理 | `cordis-plugins/scene-template/UI.md` §4 |
-| 全局面板（sidebar.panellist + main）实例 | `bundles/fdep-api-request/lib/client.js:896-925` |
+| 全局面板（sidebar.panellist + main）实例 | `cordis-plugins/fdep-api-request/lib/client.js:915-962` |
 | 常驻 iframe tab 实例 | `cordis-plugins/jeeflow-panel/lib/client.js` |
 | 语言包（简→繁自动转换）实例 | `cordis-plugins/zhtw-traditional-chinese/lib/client.js` |
 
@@ -1631,7 +1637,7 @@ await scope.mutate([{ path: ['mode'], value: 'x' }]);  // 多操作，原子
 | `conversation.chat.turnTail`（chain） | `-deliverables` | `select(owner)` 选举 + `inject` 私有 face |
 | `conversation.chat.assistant-actions` | `-message-feedback` | `list` + `{ messageId }` |
 | `conversation.session.header.*` | `-jobs`（actions）、`-schedule`（utilities）、`-open-in-app`（actions）、`-sidebar-right`（corner） | header 四个子座位的真实用法 |
-| `sidebar.panellist` + `main` | `bundles/fdep-api-request`（你的包）、`-settings-plugins` | 全局面板两步法 |
+| `sidebar.panellist` + `main` | `cordis-plugins/fdep-api-request`（你的包）、`-settings-plugins` | 全局面板两步法 |
 | `sidebar.brand.*` | `-brand-official` | 品牌座位的官方占用者 |
 | `settings.general.item` | `-theme`、`-locale`、`-chat`、`-permission-presets` | 四种"一行偏好"的写法 |
 | `settings.section` | `-settings-models`、`-settings-plugins` | 整页设置 |

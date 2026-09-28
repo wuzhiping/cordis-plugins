@@ -1,0 +1,10 @@
+# fdep-api-request bundle patch.
+#
+# Single host plugin row whose `name` is our own package name; the loader
+# resolves it from the profile's node_modules and mounts lib/index.js.
+#
+# dsh patch-loader semantics — a plain `- id:` row only patches an EXISTING
+# entry; new entries must be added with an `insert:` block.
+- insert:
+    - id: fdep-api-request-bundle
+      name: fdep-api-request-bundle

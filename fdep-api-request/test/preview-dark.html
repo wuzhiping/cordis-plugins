@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FDEP API Request — panel preview</title>
+<style>
+:root {
+    --dsw-alias-bg-base: #ffffff;
+    --dsw-alias-bg-layer-1: #ffffff;
+    --dsw-alias-bg-layer-2: #f4f5f6;
+    --dsw-alias-bg-overlay: #ffffff;
+    --dsw-alias-border-l1: rgb(0 0 0 / 10%);
+    --dsw-alias-border-l2: rgb(0 0 0 / 18%);
+    --dsw-alias-brand-primary: #0f1115;
+    --dsw-alias-label-primary: #0f1115;
+    --dsw-alias-label-secondary: #61666b;
+    --dsw-alias-state-error-primary: #c62828;
+    --dsw-alias-state-success-primary: #22c55e;
+    --dsw-alias-state-warn-primary: #a35b00;
+    --dsw-specific-sidebar-fill: #f7f8f9;
+}
+[data-theme="dark"] {
+    --dsw-alias-bg-base: #151517;
+    --dsw-alias-bg-layer-1: #1c1c1f;
+    --dsw-alias-bg-layer-2: #242428;
+    --dsw-alias-bg-overlay: #242428;
+    --dsw-alias-border-l1: rgb(255 255 255 / 12%);
+    --dsw-alias-border-l2: rgb(255 255 255 / 22%);
+    --dsw-alias-brand-primary: #f9fafb;
+    --dsw-alias-label-primary: #f9fafb;
+    --dsw-alias-label-secondary: #cfd3d6;
+    --dsw-alias-state-error-primary: #f87171;
+    --dsw-alias-state-success-primary: #4ade80;
+    --dsw-alias-state-warn-primary: #fbbf24;
+    --dsw-specific-sidebar-fill: #101012;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  background: var(--page-bg);
+  color: var(--page-fg);
+  transition: background .15s ease, color .15s ease;
+}
+:root {
+  --page-bg: #eef0f2;
+  --page-fg: #0f1115;
+  --page-muted: #61666b;
+  --page-card: #ffffff;
+  --page-line: rgb(0 0 0 / 10%);
+}
+[data-theme="dark"] {
+  --page-bg: #0c0c0e;
+  --page-fg: #f9fafb;
+  --page-muted: #adb2b8;
+  --page-card: #1a1a1d;
+  --page-line: rgb(255 255 255 / 12%);
+}
+.wrap { max-width: 1120px; margin: 0 auto; padding: 28px 20px 80px; }
+.head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.head h1 { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: -0.01em; }
+.head p { margin: 0; font-size: 13px; color: var(--page-muted); }
+.note { margin: 14px 0 22px; padding: 12px 14px; border: 1px solid var(--page-line); border-radius: 10px; background: var(--page-card); font-size: 12.5px; line-height: 19px; color: var(--page-muted); }
+.note b { color: var(--page-fg); }
+.toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.seg { display: inline-flex; border: 1px solid var(--page-line); border-radius: 8px; overflow: hidden; background: var(--page-card); }
+.seg button { appearance: none; border: 0; background: transparent; color: var(--page-muted); font: inherit; font-size: 12.5px; padding: 7px 13px; cursor: pointer; border-right: 1px solid var(--page-line); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--page-fg); color: var(--page-bg); font-weight: 600; }
+.spacer { flex: 1 1 auto; }
+.label { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; color: var(--page-muted); }
+
+.shots { display: grid; gap: 22px; }
+.shot { border: 1px solid var(--page-line); border-radius: 14px; overflow: hidden; background: var(--page-card); }
+.shot__cap { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--page-line); }
+.shot__cap b { font-size: 13px; font-weight: 620; }
+.shot__cap span { font-size: 12px; color: var(--page-muted); }
+.shot__body { background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); }
+.shot__body .fdep { height: auto; }
+
+.rail { display: flex; align-items: center; gap: 18px; padding: 16px 18px; border: 1px solid var(--page-line); border-radius: 14px; background: var(--dsw-specific-sidebar-fill); }
+.railbox { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 9px; background: transparent; }
+.railbox.is-active { background: var(--dsw-alias-bg-layer-2); }
+.raillabel { font-size: 12.5px; color: var(--dsw-alias-label-secondary); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { } }
+.fdep {
+  --fdep-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --fdep-line: var(--dsw-alias-border-l1, rgb(0 0 0 / 10%));
+  --fdep-line-strong: var(--dsw-alias-border-l2, rgb(0 0 0 / 18%));
+  --fdep-surface: var(--dsw-alias-bg-layer-1, #fff);
+  --fdep-surface-2: var(--dsw-alias-bg-layer-2, #f4f5f6);
+  --fdep-text: var(--dsw-alias-label-primary, #0f1115);
+  --fdep-text-2: var(--dsw-alias-label-secondary, #61666b);
+  --fdep-brand: var(--dsw-alias-brand-primary, #0f1115);
+  box-sizing: border-box;
+  height: 100%;
+  overflow-y: auto;
+  padding: 28px 24px 56px;
+  background: var(--dsw-alias-bg-base, #fff);
+  color: var(--fdep-text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 20px;
+}
+.fdep *, .fdep *::before, .fdep *::after { box-sizing: border-box; }
+.fdep__shell { max-width: 680px; margin: 0; }
+.fdep__head { margin-bottom: 18px; }
+.fdep__title { margin: 0 0 8px; font-size: 19px; line-height: 26px; font-weight: 600; letter-spacing: -0.01em; }
+.fdep__meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.fdep__chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 22px; padding: 0 9px;
+  border: 1px solid var(--fdep-line);
+  border-radius: 999px;
+  background: var(--fdep-surface-2);
+  color: var(--fdep-text-2);
+  font-size: 11px; line-height: 1; white-space: nowrap;
+}
+.fdep__chip b { font-weight: 600; letter-spacing: 0.04em; color: var(--fdep-brand); }
+.fdep__chip code { font-family: var(--fdep-mono); }
+.fdep__card {
+  border: 1px solid var(--fdep-line);
+  border-radius: 10px;
+  background: var(--fdep-surface);
+  padding: 14px 16px 16px;
+  margin-bottom: 12px;
+}
+.fdep__card--flush { padding: 0; overflow: hidden; }
+.fdep__step { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.fdep__stepnum {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; flex: none;
+  border: 1px solid var(--fdep-line);
+  border-radius: 50%;
+  background: var(--fdep-surface-2);
+  color: var(--fdep-text-2);
+  font-size: 10px; font-weight: 600; line-height: 1;
+}
+.fdep__steptitle { font-size: 13px; font-weight: 600; }
+.fdep__stepsuffix { margin-left: auto; font-size: 11px; color: var(--fdep-text-2); }
+.fdep__label {
+  display: block; margin-bottom: 5px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase;
+  color: var(--fdep-text-2);
+}
+.fdep__row { display: flex; gap: 8px; align-items: center; }
+.fdep__grow { flex: 1 1 auto; min-width: 0; }
+.fdep__input {
+  width: 100%; height: 34px; padding: 0 11px;
+  border: 1px solid var(--fdep-line);
+  border-radius: 7px;
+  background: var(--dsw-alias-bg-base, #fff);
+  color: var(--fdep-text);
+  font-family: inherit; font-size: 13px;
+  transition: border-color .12s ease;
+}
+.fdep__input::placeholder { color: var(--fdep-text-2); opacity: .65; }
+.fdep__input:hover { border-color: var(--fdep-line-strong); }
+.fdep__input:focus-visible { border-color: var(--fdep-brand); outline: 2px solid var(--fdep-brand); outline-offset: -1px; }
+.fdep__input--mono { font-family: var(--fdep-mono); }
+.fdep__input--list { height: auto; min-height: 34px; padding: 7px 11px; resize: vertical; line-height: 18px; }
+.fdep__fields { display: flex; flex-direction: column; gap: 12px; }
+.fdep__fieldhead { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; }
+.fdep__fieldtype {
+  margin-left: auto; padding: 1px 6px;
+  border: 1px solid var(--fdep-line); border-radius: 999px;
+  background: var(--fdep-surface-2); color: var(--fdep-text-2);
+  font-size: 10px; font-family: var(--fdep-mono); line-height: 15px;
+}
+.fdep__fieldname { font-family: var(--fdep-mono); font-size: 12px; font-weight: 600; }
+.fdep__fielddesc { margin-top: 4px; font-size: 11px; line-height: 16px; color: var(--fdep-text-2); word-break: break-word; }
+.fdep__fielddesc code { font-family: var(--fdep-mono); }
+.fdep__empty { margin: 0; font-size: 12px; line-height: 18px; color: var(--fdep-text-2); }
+.fdep__actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+.fdep__btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 34px; padding: 0 14px;
+  border: 1px solid var(--fdep-line);
+  border-radius: 7px;
+  background: var(--fdep-surface);
+  color: var(--fdep-text);
+  font-family: inherit; font-size: 13px; font-weight: 500; white-space: nowrap;
+  cursor: pointer;
+  transition: background .12s ease, border-color .12s ease, opacity .12s ease;
+}
+.fdep__btn:hover:not(:disabled) { background: var(--fdep-surface-2); border-color: var(--fdep-line-strong); }
+.fdep__btn:focus-visible { outline: 2px solid var(--fdep-brand); outline-offset: 1px; }
+.fdep__btn:disabled { opacity: .45; cursor: not-allowed; }
+.fdep__btn--primary { background: var(--fdep-brand); border-color: var(--fdep-brand); color: var(--dsw-alias-bg-base, #fff); }
+.fdep__btn--primary:hover:not(:disabled) { background: var(--fdep-brand); border-color: var(--fdep-brand); opacity: .86; }
+.fdep__btn--ghost { border-color: transparent; background: transparent; color: var(--fdep-text-2); }
+.fdep__btn--ghost:hover:not(:disabled) { background: var(--fdep-surface-2); color: var(--fdep-text); }
+.fdep__btn--sm { height: 26px; padding: 0 10px; font-size: 12px; }
+.fdep__spin {
+  width: 12px; height: 12px; flex: none;
+  border: 2px solid currentColor; border-right-color: transparent;
+  border-radius: 50%;
+  animation: fdep-spin .7s linear infinite;
+}
+@keyframes fdep-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .fdep__spin { animation-duration: 2.4s; } }
+.fdep__status {
+  --fdep-state: var(--fdep-text-2);
+  display: flex; gap: 9px; align-items: flex-start;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--fdep-line);
+  border-radius: 8px;
+  background: var(--fdep-surface);
+  font-size: 12px; line-height: 18px;
+}
+.fdep__status--ok { --fdep-state: var(--dsw-alias-state-success-primary, #0a7d43); }
+.fdep__status--info { --fdep-state: var(--dsw-alias-state-business-primary, #2563eb); }
+.fdep__status--warn { --fdep-state: var(--dsw-alias-state-warn-primary, #a35b00); }
+.fdep__status--err { --fdep-state: var(--dsw-alias-state-error-primary, #c62828); }
+.fdep__status--busy { --fdep-state: var(--fdep-brand); }
+.fdep__dot { width: 7px; height: 7px; flex: none; margin-top: 6px; border-radius: 50%; background: var(--fdep-state); }
+.fdep__statustitle { font-weight: 600; color: var(--fdep-state); }
+.fdep__statusbody { margin-top: 2px; color: var(--fdep-text-2); white-space: pre-wrap; word-break: break-word; }
+.fdep__bar { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--fdep-line); background: var(--fdep-surface); }
+.fdep__barlabel { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--fdep-text-2); }
+.fdep__barmeta { margin-left: auto; font-family: var(--fdep-mono); font-size: 11px; color: var(--fdep-text-2); }
+.fdep__pre {
+  margin: 0; padding: 12px;
+  max-height: 300px; overflow: auto;
+  background: var(--fdep-surface-2);
+  color: var(--fdep-text);
+  font-family: var(--fdep-mono); font-size: 11.5px; line-height: 17px;
+  white-space: pre-wrap; word-break: break-word;
+}
+.fdep__details { margin-top: 16px; border-top: 1px solid var(--fdep-line); padding-top: 12px; }
+.fdep__summary { cursor: pointer; font-size: 12px; color: var(--fdep-text-2); user-select: none; }
+.fdep__summary:hover { color: var(--fdep-text); }
+.fdep__details .fdep__pre { margin-top: 10px; border: 1px solid var(--fdep-line); border-radius: 8px; max-height: 180px; }
+.fdep-glyph {
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--dsw-alias-state-success-primary, #22c55e);
+  opacity: .78;
+  transition: opacity .12s ease;
+}
+.fdep-glyph--active { opacity: 1; }
+.fdep-glyph svg { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>FDEP API Request — panel preview</h1>
+    <p>rendered from the real component and the real stylesheet</p>
+  </div>
+
+  <div class="note">
+    <b>What is exact:</b> the component tree, the class names, the layout, and every
+    <code>var(--dsw-alias-*)</code> reference — this markup and this CSS are produced by
+    <code>lib/client.js</code> itself, not re-typed.<br>
+    <b>What is approximate:</b> the token <i>values</i> in this page. The live values belong to the
+    running theme, so they were taken from the shipped boot palette. In the real GUI the panel
+    inherits whatever light/dark palette is active — toggle below to see both extremes.<br>
+    <b>Interactivity:</b> hover and keyboard focus are real (they are pure CSS). State
+    <i>transitions</i> are frozen per snapshot, which is why each state has its own card.
+  </div>
+
+  <div class="toolbar">
+    <div class="seg" id="theme">
+      <button type="button" data-theme-set="light" aria-pressed="true">Light</button>
+      <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+    </div>
+    <span class="spacer"></span>
+    <span class="label">sidebar glyph, at rail size</span>
+    <div class="rail">
+      <span class="railbox is-active"><span class="fdep-glyph fdep-glyph--active" style="width:20px;height:20px"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 1.5 13.63 4.75v6.5L8 14.5 2.37 11.25v-6.5z" /><circle cx="8" cy="8" r="1.75" fill="currentColor" stroke="none" /></svg></span></span>
+      <span class="railbox"><span class="fdep-glyph" style="width:20px;height:20px"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 1.5 13.63 4.75v6.5L8 14.5 2.37 11.25v-6.5z" /><circle cx="8" cy="8" r="1.75" fill="currentColor" stroke="none" /></svg></span></span>
+      <span class="raillabel">selected / idle</span>
+    </div>
+  </div>
+
+  <div class="shots">
+    <section class="shot" id="shot-empty">
+      <div class="shot__cap"><b>Initial</b><span>Nothing loaded yet — the empty state tells the user what the first action is.</span></div>
+      <div class="shot__body"><div class="fdep" aria-busy="false"><div class="fdep__shell"><header class="fdep__head"><h2 class="fdep__title">MCP Gateway</h2><div class="fdep__meta"><span class="fdep__chip"><b>POST</b><code>/oauth2/fdep</code></span><span class="fdep__chip">abc.feg.com.tw</span><span class="fdep__chip">skill: fdep-api-request</span></div></header><section class="fdep__card"><div class="fdep__step"><span class="fdep__stepnum">1</span><span class="fdep__steptitle">Choose the API</span></div><label class="fdep__label" for="fdep-api-id">API ID</label><div class="fdep__row"><input id="fdep-api-id" type="text" class="fdep__input fdep__input--mono" value="twseMops.todayMaterial" placeholder="e.g. test.demo" autocomplete="off" aria-label="API ID"><button type="button" class="fdep__btn">Fetch docs</button></div></section><section class="fdep__card"><div class="fdep__step"><span class="fdep__stepnum">2</span><span class="fdep__steptitle">Parameters</span><span class="fdep__stepsuffix">from docs</span></div><p class="fdep__empty">Fetch the docs to discover which fields this API needs.</p></section><div class="fdep__actions"><button type="button" class="fdep__btn fdep__btn--primary" disabled>Run</button><button type="button" class="fdep__btn" disabled>Copy prompt</button><button type="button" class="fdep__btn" disabled>New session</button></div><details class="fdep__details"><summary class="fdep__summary">Pre-built skill prompt (paste into a new session)</summary><pre class="fdep__pre">Use the fdep-api-request skill to call the following FDEP API.
+
+api: twseMops.todayMaterial
+
+inbound:
+{}
+
+Steps:
+1. Do not fetch the docs again — the docs above are the authority on field names and types.
+2. Keep the inbound object exactly as written above; blank filters are already omitted.
+3. Execute with the fdep_call tool (mode: &quot;execute&quot;) and report the result.</pre></details></div></div></div>
+    </section>
+    <section class="shot" id="shot-docs">
+      <div class="shot__cap"><b>Docs loaded</b><span>Fields are discovered from the response; each carries its own description.</span></div>
+      <div class="shot__body"><div class="fdep" aria-busy="false"><div class="fdep__shell"><header class="fdep__head"><h2 class="fdep__title">MCP Gateway</h2><div class="fdep__meta"><span class="fdep__chip"><b>POST</b><code>/oauth2/fdep</code></span><span class="fdep__chip">abc.feg.com.tw</span><span class="fdep__chip">skill: fdep-api-request</span></div></header><div class="fdep__status fdep__status--ok" role="status" aria-live="polite"><span class="fdep__dot" aria-hidden="true"></span><div class="fdep__grow"><div class="fdep__statustitle">3 parameters discovered</div><div class="fdep__statusbody">抓取 TWSE(上市) + TPEX(上櫃) 當日全市場重大訊息；可選 watchlist(股號清單) / keyword(主旨關鍵詞) / an_code(條款) 過濾；回傳 twse 與 tpex 各自結果及合併排序後的 merged 列表（最多 100 筆）
+List fields take several values separated by commas.</div></div></div><section class="fdep__card"><div class="fdep__step"><span class="fdep__stepnum">1</span><span class="fdep__steptitle">Choose the API</span></div><label class="fdep__label" for="fdep-api-id">API ID</label><div class="fdep__row"><input id="fdep-api-id" type="text" class="fdep__input fdep__input--mono" value="test.demo" placeholder="e.g. test.demo" autocomplete="off" aria-label="API ID"><button type="button" class="fdep__btn">Fetch docs</button></div></section><section class="fdep__card"><div class="fdep__step"><span class="fdep__stepnum">2</span><span class="fdep__steptitle">Parameters</span><span class="fdep__stepsuffix">3 fields</span></div><div class="fdep__fields"><div><div class="fdep__fieldhead"><label class="fdep__fieldname" for="fdep-field-an_code">an_code</label><span class="fdep__fieldtype">string</span></div><input id="fdep-field-an_code" type="text" class="fdep__input" value="" placeholder="M26" autocomplete="off" aria-label="an_code"><div class="fdep__fielddesc">example: <code>&quot;M26&quot;</code></div></div><div><div class="fdep__fieldhead"><label class="fdep__fieldname" for="fdep-field-keyword">keyword</label><span class="fdep__fieldtype">string</span></div><input id="fdep-field-keyword" type="text" class="fdep__input" value="" placeholder="資安" autocomplete="off" aria-label="keyword"><div class="fdep__fielddesc">example: <code>&quot;資安&quot;</code></div></div><div><div class="fdep__fieldhead"><label class="fdep__fieldname" for="fdep-field-watchlist">watchlist</label><span class="fdep__fieldtype">array</span></div><textarea id="fdep-field-watchlist" class="fdep__input fdep__input--list" rows="2" value="" placeholder="1402, 4904" aria-label="watchlist"></textarea><div class="fdep__fielddesc">Comma or newline separated. example: <code>[&quot;1402&quot;,&quot;4904&quot;]</code></div></div></div></section><div class="fdep__actions"><button type="button" class="fdep__btn fdep__btn--primary">Run</button><button type="button" class="fdep__btn">Copy prompt</button><button type="button" class="fdep__btn">New session</button></div><details class="fdep__details"><summary class="fdep__summary">Pre-built skill prompt (paste into a new session)</summary><pre class="fdep__pre">Use the fdep-api-request skill to call the following FDEP API.
+
+api: test.demo
+
+Docs for this api (already fetched — do NOT call the docs endpoint again):
+desc: 抓取 TWSE(上市) + TPEX(上櫃) 當日全市場重大訊息；可選 watchlist(股號清單) / keyword(主旨關鍵詞) / an_code(條款) 過濾；回傳 twse 與 tpex 各自結果及合併排序後的 merged 列表（最多 100 筆）
+parameters (name: type — example value; a blank field is omitted from inbound):
+  an_code: string — &quot;M26&quot;
+  keyword: string — &quot;資安&quot;
+  watchlist: array — [&quot;1402&quot;,&quot;4904&quot;]
+raw docs payload (exactly what mode:&quot;docs&quot; returns under data.docs):
+{
+  &quot;desc&quot;: &quot;抓取 TWSE(上市) + TPEX(上櫃) 當日全市場重大訊息；可選 watchlist(股號清單) / keyword(主旨關鍵詞) / an_code(條款) 過濾；回傳 twse 與 tpex 各自結果及合併排序後的 merged 列表（最多 100 筆）&quot;,
+  &quot;an_code&quot;: &quot;M26&quot;,
+  &quot;keyword&quot;: &quot;資安&quot;,
+  &quot;watchlist&quot;: [
+    &quot;1402&quot;,
+    &quot;4904&quot;
+  ]
+}
+
+inbound:
+{}
+
+Steps:
+1. Do not fetch the docs again — the docs above are the authority on field names and types.
+2. Keep the inbound object exactly as written above; blank filters are already omitted.
+3. Execute with the fdep_call tool (mode: &quot;execute&quot;) and report the result.</pre></details></div></div></div>
+    </section>
+    <section class="shot" id="shot-running">
+      <div class="shot__cap"><b>In flight</b><span>The trigger button swaps to a spinner and the status strip reports the request.</span></div>
+      <div class="shot__body"><div class="fdep" aria-busy="true"><div class="fdep__shell"><header class="fdep__head"><h2 class="fdep__title">MCP Gateway</h2><div class="fdep__meta"><span class="fdep__chip"><b>POST</b><code>/oauth2/fdep</code></span><span class="fdep__chip">abc.feg.com.tw</span><span class="fdep__chip">skill: fdep-api-request</span></div></header><div class="fdep__status fdep__status--busy" role="status" aria-live="polite"><span class="fdep__dot" aria-hidden="true"></span><div class="fdep__grow"><div class="fdep__statustitle">Executing test.demo</div><div class="fdep__statusbody">POST with do: true</div></div></div><section class="fdep__card"><div class="fdep__step"><span class="fdep__stepnum">1</span><span class="fdep__steptitle">Choose the API</span></div><label class="fdep__label" for="fdep-api-id">API ID</label><div class="fdep__row"><input id="fdep-api-id" type="text" class="fdep__input fdep__input--mono" value="test.demo" placeholder="e.g. test.demo" autocomplete="off" aria-label="API ID"><button type="button" class="fdep__btn" disabled>Fetch docs</button></div></section><section class="fdep__card"><div class="fdep__step"><span class="fdep__stepnum">2</span><span class="fdep__steptitle">Parameters</span><span class="fdep__stepsuffix">3 fields</span></div><div class="fdep__fields"><div><div class="fdep__fieldhead"><label class="fdep__fieldname" for="fdep-field-an_code">an_code</label><span class="fdep__fieldtype">string</span></div><input id="fdep-field-an_code" type="text" class="fdep__input" value="" placeholder="M26" autocomplete="off" aria-label="an_code"><div class="fdep__fielddesc">example: <code>&quot;M26&quot;</code></div></div><div><div class="fdep__fieldhead"><label class="fdep__fieldname" for="fdep-field-keyword">keyword</label><span class="fdep__fieldtype">string</span></div><input id="fdep-field-keyword" type="text" class="fdep__input" value="" placeholder="資安" autocomplete="off" aria-label="keyword"><div class="fdep__fielddesc">example: <code>&quot;資安&quot;</code></div></div><div><div class="fdep__fieldhead"><label class="fdep__fieldname" for="fdep-field-watchlist">watchlist</label><span class="fdep__fieldtype">array</span></div><textarea id="fdep-field-watchlist" class="fdep__input fdep__input--list" rows="2" value="" placeholder="1402, 4904" aria-label="watchlist"></textarea><div class="fdep__fielddesc">Comma or newline separated. example: <code>[&quot;1402&quot;,&quot;4904&quot;]</code></div></div></div></section><div class="fdep__actions"><button type="button" class="fdep__btn fdep__btn--primary" disabled><span class="fdep__spin" aria-hidden="true"></span>Running…</button><button type="button" class="fdep__btn" disabled>Copy prompt</button><button type="button" class="fdep__btn" disabled>New session</button></div><details class="fdep__details"><summary class="fdep__summary">Pre-built skill prompt (paste into a new session)</summary><pre class="fdep__pre">Use the fdep-api-request skill to call the following FDEP API.
+
+api: test.demo
+
+Docs for this api (already fetched — do NOT call the docs endpoint again):
+desc: 抓取 TWSE(上市) + TPEX(上櫃) 當日全市場重大訊息；可選 watchlist(股號清單) / keyword(主旨關鍵詞) / an_code(條款) 過濾；回傳 twse 與 tpex 各自結果及合併排序後的 merged 列表（最多 100 筆）
+parameters (name: type — example value; a blank field is omitted from inbound):
+  an_code: string — &quot;M26&quot;
+  keyword: string — &quot;資安&quot;
+  watchlist: array — [&quot;1402&quot;,&quot;4904&quot;]
+raw docs payload (exactly what mode:&quot;docs&quot; returns under data.docs):
+{
+  &quot;desc&quot;: &quot;抓取 TWSE(上市) + TPEX(上櫃) 當日全市場重大訊息；可選 watchlist(股號清單) / keyword(主旨關鍵詞) / an_code(條款) 過濾；回傳 twse 與 tpex 各自結果及合併排序後的 merged 列表（最多 100 筆）&quot;,
+  &quot;an_code&quot;: &quot;M26&quot;,
+  &quot;keyword&quot;: &quot;資安&quot;,
+  &quot;watchlist&quot;: [
+    &quot;1402&quot;,
+    &quot;4904&quot;
+  ]
+}
+
+inbound:
+{}
+
+Steps:
+1. Do not fetch the docs again — the docs above are the authority on field names and types.
+2. Keep the inbound object exactly as written above; blank filters are already omitted.
+3. Execute with the fdep_call tool (mode: &quot;execute&quot;) and report the result.</pre></details></div></div></div>
+    </section>
+    <section class="shot" id="shot-result">
+      <div class="shot__cap"><b>Completed</b><span>The response gets its own flush card with a trace id and a copy action.</span></div>
+      <div class="shot__body"><div class="fdep" aria-busy="false"><div class="fdep__shell"><header class="fdep__head"><h2 class="fdep__title">MCP Gateway</h2><div class="fdep__meta"><span class="fdep__chip"><b>POST</b><code>/oauth2/fdep</code></span><span class="fdep__chip">abc.feg.com.tw</span><span class="fdep__chip">skill: fdep-api-request</span></div></header><div class="fdep__status fdep__status--ok" role="status" aria-live="polite"><span class="fdep__dot" aria-hidden="true"></span><div class="fdep__grow"><div class="fdep__statustitle">Completed</div><div class="fdep__statusbody">The response is shown below.</div></div></div><section class="fdep__card"><div class="fdep__step"><span class="fdep__stepnum">1</span><span class="fdep__steptitle">Choose the API</span></div><label class="fdep__label" for="fdep-api-id">API ID</label><div class="fdep__row"><input id="fdep-api-id" type="text" class="fdep__input fdep__input--mono" value="test.demo" placeholder="e.g. test.demo" autocomplete="off" aria-label="API ID"><button type="button" class="fdep__btn">Fetch docs</button></div></section><section class="fdep__card"><div class="fdep__step"><span class="fdep__stepnum">2</span><span class="fdep__steptitle">Parameters</span><span class="fdep__stepsuffix">3 fields</span></div><div class="fdep__fields"><div><div class="fdep__fieldhead"><label class="fdep__fieldname" for="fdep-field-an_code">an_code</label><span class="fdep__fieldtype">string</span></div><input id="fdep-field-an_code" type="text" class="fdep__input" value="M26" placeholder="M26" autocomplete="off" aria-label="an_code"><div class="fdep__fielddesc">example: <code>&quot;M26&quot;</code></div></div><div><div class="fdep__fieldhead"><label class="fdep__fieldname" for="fdep-field-keyword">keyword</label><span class="fdep__fieldtype">string</span></div><input id="fdep-field-keyword" type="text" class="fdep__input" value="資安" placeholder="資安" autocomplete="off" aria-label="keyword"><div class="fdep__fielddesc">example: <code>&quot;資安&quot;</code></div></div><div><div class="fdep__fieldhead"><label class="fdep__fieldname" for="fdep-field-watchlist">watchlist</label><span class="fdep__fieldtype">array</span></div><textarea id="fdep-field-watchlist" class="fdep__input fdep__input--list" rows="2" value="1402, 4904
+2330" placeholder="1402, 4904" aria-label="watchlist"></textarea><div class="fdep__fielddesc">Comma or newline separated. example: <code>[&quot;1402&quot;,&quot;4904&quot;]</code></div></div></div></section><div class="fdep__actions"><button type="button" class="fdep__btn fdep__btn--primary">Run</button><button type="button" class="fdep__btn">Copy prompt</button><button type="button" class="fdep__btn">New session</button></div><section class="fdep__card fdep__card--flush"><div class="fdep__bar"><span class="fdep__barlabel">Response</span><span class="fdep__barmeta">trace b41c8e2d-5a77-4f10-9c3e-8d2a6f0b1e44</span><button type="button" class="fdep__btn fdep__btn--ghost fdep__btn--sm" aria-label="Copy response">Copy</button></div><pre class="fdep__pre">{
+  &quot;data&quot;: {
+    &quot;echoed&quot;: {
+      &quot;an_code&quot;: &quot;M26&quot;,
+      &quot;keyword&quot;: &quot;資安&quot;,
+      &quot;watchlist&quot;: [
+        &quot;1402&quot;,
+        &quot;4904&quot;,
+        &quot;2330&quot;
+      ]
+    },
+    &quot;ok&quot;: true,
+    &quot;server&quot;: &quot;fdep-gw-02&quot;
+  },
+  &quot;trace_id&quot;: &quot;b41c8e2d-5a77-4f10-9c3e-8d2a6f0b1e44&quot;
+}</pre></section><details class="fdep__details"><summary class="fdep__summary">Pre-built skill prompt (paste into a new session)</summary><pre class="fdep__pre">Use the fdep-api-request skill to call the following FDEP API.
+
+api: test.demo
+
+Docs for this api (already fetched — do NOT call the docs endpoint again):
+desc: 抓取 TWSE(上市) + TPEX(上櫃) 當日全市場重大訊息；可選 watchlist(股號清單) / keyword(主旨關鍵詞) / an_code(條款) 過濾；回傳 twse 與 tpex 各自結果及合併排序後的 merged 列表（最多 100 筆）
+parameters (name: type — example value; a blank field is omitted from inbound):
+  an_code: string — &quot;M26&quot;
+  keyword: string — &quot;資安&quot;
+  watchlist: array — [&quot;1402&quot;,&quot;4904&quot;]
+raw docs payload (exactly what mode:&quot;docs&quot; returns under data.docs):
+{
+  &quot;desc&quot;: &quot;抓取 TWSE(上市) + TPEX(上櫃) 當日全市場重大訊息；可選 watchlist(股號清單) / keyword(主旨關鍵詞) / an_code(條款) 過濾；回傳 twse 與 tpex 各自結果及合併排序後的 merged 列表（最多 100 筆）&quot;,
+  &quot;an_code&quot;: &quot;M26&quot;,
+  &quot;keyword&quot;: &quot;資安&quot;,
+  &quot;watchlist&quot;: [
+    &quot;1402&quot;,
+    &quot;4904&quot;
+  ]
+}
+
+inbound:
+{
+  &quot;an_code&quot;: &quot;M26&quot;,
+  &quot;keyword&quot;: &quot;資安&quot;,
+  &quot;watchlist&quot;: [
+    &quot;1402&quot;,
+    &quot;4904&quot;,
+    &quot;2330&quot;
+  ]
+}
+
+Steps:
+1. Do not fetch the docs again — the docs above are the authority on field names and types.
+2. Keep the inbound object exactly as written above; blank filters are already omitted.
+3. Execute with the fdep_call tool (mode: &quot;execute&quot;) and report the result.</pre></details></div></div></div>
+    </section>
+    <section class="shot" id="shot-cors">
+      <div class="shot__cap"><b>Warning (CORS)</b><span>A blocked browser fetch explains the fallback instead of failing silently.</span></div>
+      <div class="shot__body"><div class="fdep" aria-busy="false"><div class="fdep__shell"><header class="fdep__head"><h2 class="fdep__title">MCP Gateway</h2><div class="fdep__meta"><span class="fdep__chip"><b>POST</b><code>/oauth2/fdep</code></span><span class="fdep__chip">abc.feg.com.tw</span><span class="fdep__chip">skill: fdep-api-request</span></div></header><div class="fdep__status fdep__status--warn" role="status" aria-live="polite"><span class="fdep__dot" aria-hidden="true"></span><div class="fdep__grow"><div class="fdep__statustitle">Browser fetch blocked</div><div class="fdep__statusbody">This looks like a network or CORS refusal (Failed to fetch).
+The host-side fdep_call tool has no such limit — use &quot;Copy prompt&quot; and run it in a session.</div></div></div><section class="fdep__card"><div class="fdep__step"><span class="fdep__stepnum">1</span><span class="fdep__steptitle">Choose the API</span></div><label class="fdep__label" for="fdep-api-id">API ID</label><div class="fdep__row"><input id="fdep-api-id" type="text" class="fdep__input fdep__input--mono" value="test.demo" placeholder="e.g. test.demo" autocomplete="off" aria-label="API ID"><button type="button" class="fdep__btn">Fetch docs</button></div></section><section class="fdep__card"><div class="fdep__step"><span class="fdep__stepnum">2</span><span class="fdep__steptitle">Parameters</span><span class="fdep__stepsuffix">from docs</span></div><p class="fdep__empty">Fetch the docs to discover which fields this API needs.</p></section><div class="fdep__actions"><button type="button" class="fdep__btn fdep__btn--primary" disabled>Run</button><button type="button" class="fdep__btn" disabled>Copy prompt</button><button type="button" class="fdep__btn" disabled>New session</button></div><details class="fdep__details"><summary class="fdep__summary">Pre-built skill prompt (paste into a new session)</summary><pre class="fdep__pre">Use the fdep-api-request skill to call the following FDEP API.
+
+api: test.demo
+
+inbound:
+{}
+
+Steps:
+1. Do not fetch the docs again — the docs above are the authority on field names and types.
+2. Keep the inbound object exactly as written above; blank filters are already omitted.
+3. Execute with the fdep_call tool (mode: &quot;execute&quot;) and report the result.</pre></details></div></div></div>
+    </section>
+    <section class="shot" id="shot-error">
+      <div class="shot__cap"><b>Failure</b><span>A real upstream error is reported as a failed state.</span></div>
+      <div class="shot__body"><div class="fdep" aria-busy="false"><div class="fdep__shell"><header class="fdep__head"><h2 class="fdep__title">MCP Gateway</h2><div class="fdep__meta"><span class="fdep__chip"><b>POST</b><code>/oauth2/fdep</code></span><span class="fdep__chip">abc.feg.com.tw</span><span class="fdep__chip">skill: fdep-api-request</span></div></header><div class="fdep__status fdep__status--err" role="status" aria-live="polite"><span class="fdep__dot" aria-hidden="true"></span><div class="fdep__grow"><div class="fdep__statustitle">Docs request failed</div><div class="fdep__statusbody">HTTP 500
+{
+  &quot;error&quot;: &quot;internal error&quot;
+}</div></div></div><section class="fdep__card"><div class="fdep__step"><span class="fdep__stepnum">1</span><span class="fdep__steptitle">Choose the API</span></div><label class="fdep__label" for="fdep-api-id">API ID</label><div class="fdep__row"><input id="fdep-api-id" type="text" class="fdep__input fdep__input--mono" value="test.demo" placeholder="e.g. test.demo" autocomplete="off" aria-label="API ID"><button type="button" class="fdep__btn">Fetch docs</button></div></section><section class="fdep__card"><div class="fdep__step"><span class="fdep__stepnum">2</span><span class="fdep__steptitle">Parameters</span><span class="fdep__stepsuffix">from docs</span></div><p class="fdep__empty">Fetch the docs to discover which fields this API needs.</p></section><div class="fdep__actions"><button type="button" class="fdep__btn fdep__btn--primary" disabled>Run</button><button type="button" class="fdep__btn" disabled>Copy prompt</button><button type="button" class="fdep__btn" disabled>New session</button></div><details class="fdep__details"><summary class="fdep__summary">Pre-built skill prompt (paste into a new session)</summary><pre class="fdep__pre">Use the fdep-api-request skill to call the following FDEP API.
+
+api: test.demo
+
+inbound:
+{}
+
+Steps:
+1. Do not fetch the docs again — the docs above are the authority on field names and types.
+2. Keep the inbound object exactly as written above; blank filters are already omitted.
+3. Execute with the fdep_call tool (mode: &quot;execute&quot;) and report the result.</pre></details></div></div></div>
+    </section>
+  </div>
+
+</div>
+<script>
+(function () {
+  var root = document.documentElement;
+  var buttons = document.querySelectorAll('[data-theme-set]');
+  function set(theme) {
+    root.setAttribute('data-theme', theme);
+    buttons.forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.themeSet === theme));
+    });
+  }
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () { set(b.dataset.themeSet); });
+  });
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) set('dark');
+})();
+</script>
+</body>
+</html>
