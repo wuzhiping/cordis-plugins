@@ -163,6 +163,22 @@ replaces the hero headline. The sidebar/hero overrides are CSS against
 `hHd-Xa_*` / `pXSMma_*` class hashes emitted by the DSH build — **they can go
 stale after a DSH upgrade** and need refreshing from the current DOM.
 
+The new-session hero headline is switchable through `HEADLINE_MODE` in
+`lib/client.js`:
+
+| Value | The new-session title line shows |
+|---|---|
+| `"hidden"` (default) | nothing — the whole `.pXSMma_headline` container is hidden, so no gap is left |
+| `"brand"` | the rebrand copy: `歡迎使用 💡 企業智慧數位員工@AIFE` |
+| `"stock"` | DSH's own copy (`探索未至之境` / `Into the Unknown`), still in the sapphire brand colour |
+
+Only the headline is affected: the sidebar banner, `document.title`, favicon and
+PWA manifest keep the brand in every mode.
+
+> Client bundles are served as one module group assembled **at host boot**, so a
+> `lib/client.js` edit reaches the browser only after the host restarts — a page
+> refresh alone keeps the boot-time copy.
+
 ## Development
 
 Everything below runs offline; only the `audit-dom` tools touch a browser.

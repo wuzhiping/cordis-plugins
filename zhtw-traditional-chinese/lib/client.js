@@ -522,9 +522,15 @@ window.__ModuleLoader__.load({
       "zh-TW": "歡迎使用 " + BRAND_ICON + " 企業智慧數位員工@AIFE",
       "en": "Welcome to " + BRAND_ICON + " 企業智慧數位員工@AIFE"
     };
-    var BRAND_STRINGS = {
+    // 新建页 hero 标题策略（只影响标题那一行；侧边栏品牌名、favicon、
+    // document.title 都不受它影响）：
+    //   "hidden" —— 不显示标题（当前默认）：品牌文案与 DSH 自带文案都不出现
+    //   "brand"  —— 原来的品牌文案「歡迎使用 💡 企業智慧數位員工@AIFE」
+    //   "stock"  —— 恢复 DSH 自带文案（zh: 探索未至之境 / en: Into the Unknown）
+    var HEADLINE_MODE = "hidden";
+    var BRAND_STRINGS = HEADLINE_MODE === "brand" ? {
       conversation: { "hero.headline": BRAND_HEADLINE }
-    };
+    } : {};
     var BRAND_CSS = [
       // Brand colour: 宝石蓝 (sapphire). The theme has exactly one blue token, and its
       // value (#4176e6) is a bright "business" blue, so it is deepened with the theme's
@@ -564,7 +570,12 @@ window.__ModuleLoader__.load({
       ".pXSMma_headlineText{grid-area:1/2}",
       ".pXSMma_previewBadge{display:none!important}",
       ".pXSMma_headline,.pXSMma_titleGroup,.pXSMma_headlineText{color:var(--zhtw-brand,#345db2)}"
-    ].join("");
+    ].concat(HEADLINE_MODE === "hidden" ? [
+      // 整行不显示：该容器里除了标题文本，还有已被上面隐藏的 fish 与预览徽标，
+      // 所以隐藏容器不会留下空隙。类名是 DSH 构建产出的 CSS-module 哈希，
+      // 升级 DSH 后若失效需重新取（用 cordis_inspect 或直接 grep 客户端 bundle）。
+      ".pXSMma_headline{display:none!important}"
+    ] : []).join("");
     var BRAND_FAVICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#16324f"/><text x="32" y="45" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="32" font-weight="700" fill="#ffffff">f</text></svg>';
 
     function applyBranding() {

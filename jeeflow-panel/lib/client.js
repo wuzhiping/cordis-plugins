@@ -31,6 +31,11 @@ window.__ModuleLoader__.load({
     var PANEL_URL = "https://abc.feg.cn/jeeflow/ui/";
     /** iframe 的無障礙標題。 */
     var PANEL_TITLE = "Jeeflow 工作流引擎";
+    /**
+     * 工具列是否顯示內嵌頁面的 URL。預設 false —— 位址列對使用者沒用，
+     * 右上角「另開新視窗」仍可把同一個位址開到瀏覽器。改 true 可恢復顯示。
+     */
+    var SHOW_PANEL_URL = false;
     /** `conversation.view` entry id（一個 session 內唯一）。 */
     var VIEW_ID = "jeeflow";
     /** Tab 排序：chat = 0、trajectory = 10 → 20 排在「軌跡」右邊。 */
@@ -39,6 +44,13 @@ window.__ModuleLoader__.load({
     var NS = "jeeflow-panel";
     /** 載入超過這麼久還沒好，就提示可能被擋掉。 */
     var SLOW_MS = 9000;
+    /**
+     * iframe 的顯示比例（1 = 原尺寸）。遠端頁面是寬版設計，預設按 85% 呈現，
+     * 讓它在這個面板寬度裡少一點橫向滾動；改這一個數字即可。
+     */
+    var FRAME_ZOOM = 0.85;
+    /** 佈局盒要補回的百分比：1/zoom。transform 只縮視覺，不縮佈局盒。 */
+    var FRAME_FILL = +(100 / FRAME_ZOOM).toFixed(4) + "%";
 
     // =====================================================================
     // 2. 文案（zh 會被 zhtw-traditional-chinese 自動轉成繁體）
@@ -98,9 +110,14 @@ window.__ModuleLoader__.load({
       ".jfp-frameWrap{position:relative;flex:1 1 auto;min-height:320px;" +
         "border:.5px solid var(--dsw-alias-border-l1);border-radius:12px;" +
         "overflow:hidden;background:var(--dsw-alias-bg-base)}",
-      ".jfp-frameHost{width:100%;height:100%;display:flex}",
-      ".jfp-frame{display:block;flex:1 1 auto;width:100%;height:100%;" +
-        "min-height:0;border:0;background:#fff}",
+      ".jfp-frameHost{width:100%;height:100%;display:block;position:relative;overflow:hidden}",
+      // iframe 本體：按 FRAME_ZOOM 呈現。用 transform 而不是 CSS zoom —— zoom 的
+      // 佈局語義（百分比對誰解析）在各引擎不一致，transform 則完全可預期：
+      // 佈局盒補成 1/zoom（FRAME_FILL），再從左上角縮回 zoom，
+      // 視覺上剛好填滿容器，既不溢出也不留白；位置改用絕對定位，避開 flex 伸縮。
+      ".jfp-frame{position:absolute;top:0;left:0;" +
+        "width:" + FRAME_FILL + ";height:" + FRAME_FILL + ";min-height:0;border:0;" +
+        "background:#fff;transform:scale(" + FRAME_ZOOM + ");transform-origin:top left}",
 
       // 載入遮罩
       ".jfp-overlay{position:absolute;inset:0;display:flex;padding:24px;" +
@@ -242,7 +259,7 @@ window.__ModuleLoader__.load({
         try {
           window.open(PANEL_URL, "_blank", "noopener,noreferrer");
         } catch (err) {
-          /* popup blocked — the address stays visible in the toolbar */
+          /* popup blocked — 「另开新窗口」是唯一入口，工具列不再顯示位址 */
         }
       }
 
@@ -252,7 +269,10 @@ window.__ModuleLoader__.load({
         e(
           "div",
           { className: "jfp-bar" },
-          e("span", { className: "jfp-url", title: PANEL_URL }, PANEL_URL),
+          // 位址列預設不顯示（SHOW_PANEL_URL=false）；spacer 留著，按鈕仍靠右。
+          SHOW_PANEL_URL
+            ? e("span", { className: "jfp-url", title: PANEL_URL }, PANEL_URL)
+            : null,
           e("span", { className: "jfp-spacer" }),
           e(
             "button",

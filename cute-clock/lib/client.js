@@ -73,6 +73,47 @@ window.__ModuleLoader__.load({
     }
 
     // =========================================================================
+    // 0.5 左栏图标 —— 与 DSH 其他面板图标同一套规矩
+    //
+    // 官方图标是 @deepseek-ai/dsh-client-ui-primitives 里的组件，但静态 bundle 的
+    // require 拿不到 Harness 客户端包，所以照 fdep-api-request 的做法手写 inline SVG：
+    //   - 16x16 viewBox，描边 1.5，stroke/fill 都用 currentColor
+    //   - 尺寸用 owner 传进来的 props.size（侧栏给 16 或 18）
+    //   - 不带自己的背景/悬停动画：悬停与激活底色由侧栏的 panelRow 负责
+    // 图形是"猫耳 + 表盘 + 指针"，保住猫咪时钟的身份，同时是单色线稿。
+    // =========================================================================
+    function CatClockGlyph(props) {
+      var size = (props && props.size) || 18;
+      var active = !!(props && props.active);
+      return e('span', {
+        className: 'cute-clock-glyph' + (active ? ' cute-clock-glyph--active' : ''),
+        style: { width: size + 'px', height: size + 'px' },
+        onClick: props && props.onClick
+      },
+        e('svg', {
+          width: size,
+          height: size,
+          viewBox: '0 0 16 16',
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 1.5,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          'aria-hidden': 'true',
+          focusable: 'false'
+        },
+          // 左耳 / 右耳
+          e('path', { d: 'M4.75 4.45 4.25 1.9 6.7 3.3' }),
+          e('path', { d: 'M11.25 4.45 11.75 1.9 9.3 3.3' }),
+          // 表盘
+          e('circle', { cx: 8, cy: 8.6, r: 5.15 }),
+          // 指针（时针 + 分针，同一折线）
+          e('path', { d: 'M8 5.7v2.9l1.95 1.2' })
+        )
+      );
+    }
+
+    // =========================================================================
     // 1. CSS —— 全部用 DSH 主题令牌，切明暗主题自动适配
     // =========================================================================
     var CLOCK_CSS = [
@@ -115,17 +156,11 @@ window.__ModuleLoader__.load({
       '.cute-clock-date{font-size:10.5px;color:var(--dsw-alias-label-tertiary,#6b7891)}',
 
       // ---------- 左栏图标 ----------
-      '.cute-clock-navicon{',
-      '  display:inline-flex;align-items:center;justify-content:center;',
-      '  width:36px;height:36px;border-radius:10px;',
-      '  font-size:18px;cursor:pointer;',
-      '  transition:background .18s ease,transform .18s ease;',
-      '  background:transparent;color:var(--dsw-alias-label-secondary,#43506b);',
-      '}',
-      '.cute-clock-navicon:hover{',
-      '  background:var(--dsw-alias-interactive-bg-hover,rgba(77,107,254,.08));',
-      '  transform:scale(1.08) rotate(-4deg);',
-      '}',
+      // 只画图形：颜色靠 currentColor 继承侧栏行的 label-primary，悬停/激活的
+      // 底色由侧栏的 .hHd-Xa_panelRow 提供（自带背景或缩放动画会和其他图标不一样）。
+      '.cute-clock-glyph{display:inline-flex;align-items:center;justify-content:center}',
+      '.cute-clock-glyph--active{opacity:1}',
+      '.cute-clock-glyph svg{display:block}',
 
       // ---------- 全局面板 ----------
       '.cute-clock-page{',
@@ -642,9 +677,9 @@ window.__ModuleLoader__.load({
           label: function () { return '猫咪时钟'; }
         }, function (iconProps) {
           if (useHiddenHere(iconProps)) return null;
-          return e('span', {
-            className: 'cute-clock-navicon',
-            title: '猫咪时钟',
+          return e(CatClockGlyph, {
+            size: iconProps && iconProps.size,
+            active: iconProps && iconProps.active,
             onClick: function () {
               if (ctx.layout && typeof ctx.layout.selectPanel === 'function') {
                 var current = iconProps && iconProps.active;
@@ -652,7 +687,7 @@ window.__ModuleLoader__.load({
                 ctx.layout.selectPanel(current ? null : 'cute-clock');
               }
             }
-          }, '🕐');
+          });
         });
       });
 
