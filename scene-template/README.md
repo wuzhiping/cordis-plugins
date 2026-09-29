@@ -193,9 +193,17 @@ The three choices do different jobs — only one of them is text in the composer
 The scenario and the template are injected host-side, because a composer draft is the wrong
 place for them: bulky, and the user would have to read (and could break) them.
 
-1. `lib/client.js` (browser) POSTs the current selection to `/plugins/scene-template/selection`
+1. `lib/client.js` (browser) POSTs the current selection to `/scene-template/selection`
    — an exact, same-origin route. The body carries `sessionId`, the scenario id/name/description,
    the branch id/name, and the template id/title/`previewUrl`.
+
+   > **The route is deliberately not under `/plugins/`.** DSH registers a prefix route on
+   > `/plugins` for the plugin-asset/bundle carrier, and a route registered there never runs:
+   > observed replies to `/plugins/scene-template/selection` are `GET 404` / `POST 405` with
+   > **no `content-type`** (the framework's asset handler), while the plugin's own handler
+   > always answers JSON with a content-type. Host-side changes need a `dsh web` restart,
+   > because the route is registered while the host half activates.
+   > `node test/probe-host-route.js` prints the verdict for both paths.
 2. `lib/index.js` (host) stores it per session and registers
    `systemPrompt.context({ name: 'scene-template/selection', order: 130, text })`. The prompt
    assembler calls that provider once per model step; it returns the rendered block, or `""`

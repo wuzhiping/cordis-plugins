@@ -874,10 +874,19 @@ async function main() {
   check('no status strip is rendered before any action', () => {
     assert.equal(findStatus(tree), undefined, 'a status strip rendered in the initial state');
   });
-  check('step markers and parameter placeholder are present', () => {
+  check('step markers are present and the endpoint chips are gone', () => {
     const classes = classNames(tree);
     assert.ok(classes.has('fdep__stepnum'), 'no step number badge');
-    assert.ok(classes.has('fdep__chip'), 'no endpoint chip');
+    // The header used to show POST /oauth2/fdep, abc.feg.com.tw and the skill name.
+    // Those are implementation details and must not be on screen any more.
+    assert.ok(!classes.has('fdep__chip'), 'endpoint chip still rendered');
+    assert.ok(!classes.has('fdep__meta'), 'endpoint chip row still rendered');
+    const all = [];
+    walk(tree, (n) => { const t = textOf(n); if (t) all.push(t); });
+    const joined = all.join(' ');
+    for (const leak of ['POST', 'oauth2', 'abc.feg.com.tw']) {
+      assert.ok(joined.indexOf(leak) === -1, 'header still leaks ' + leak);
+    }
   });
 
   // Enter in the API ID field should trigger the docs fetch.

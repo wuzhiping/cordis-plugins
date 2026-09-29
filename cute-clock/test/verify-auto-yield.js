@@ -161,15 +161,16 @@ const NUDGE = (left, top) => `(() => {
     await sleep(2000);
     allOk = await step('3. overlap gone: card is back', (s) => !s.overlap && s.opacity === '1' && s.pluginState === 'shown') && allOk;
 
-    // 4. focus
+    // 4. typing in the composer does NOT hide it by itself (focus is not a condition;
+    //    it used to be, and that made the card disappear with nothing overlapping).
     await cdp.eval("(() => { const e = document.querySelector('.uV2eYG_input,[contenteditable=\"true\"],textarea'); if (e) e.focus(); return !!e; })()");
-    await sleep(1800);
-    allOk = await step('4. composer focus: card hides while typing', (s) => s.focused && s.opacity === '0' && s.visibility === 'hidden' && s.leftovers === 0) && allOk;
+    await sleep(2000);
+    allOk = await step('4. composer focus alone must NOT hide the card', (s) => s.focused && !s.overlap && s.opacity === '1') && allOk;
 
-    // 5. blur
+    // 5. blur keeps it visible too
     await cdp.eval("(() => { const e = document.querySelector('.uV2eYG_input,[contenteditable=\"true\"],textarea'); if (e && e.blur) e.blur(); return true; })()");
     await sleep(1500);
-    allOk = await step('5. blur: card comes back', (s) => !s.focused && s.opacity === '1') && allOk;
+    allOk = await step('5. blur: still visible', (s) => !s.focused && s.opacity === '1') && allOk;
 
     // 6. narrow window
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: 760, height: 800, deviceScaleFactor: 1, mobile: false });

@@ -16,9 +16,9 @@
 // `window.__ModuleLoader__.load({ id, factory })`. The factory receives
 // `require` (a loader-provided function). There is NO `React` global.
 
+// Only the URL is kept: the endpoint's host/path used to be shown in the header and
+// in a status line, and both are gone, so the display-only constants went with them.
 const FDEP_URL = 'https://abc.feg.com.tw/oauth2/fdep';
-const FDEP_PATH = '/oauth2/fdep';
-const FDEP_HOST = 'abc.feg.com.tw';
 
 /** The api this panel exists for; the API-ID box starts with it. */
 const DEFAULT_API_ID = 'twseMops.todayMaterial';
@@ -458,19 +458,7 @@ const PANEL_CSS = [
 
   /* header */
   '.fdep__head { margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--fdep-line); }',
-  '.fdep__title { margin: 0 0 9px; font-size: 21px; line-height: 28px; font-weight: 650; letter-spacing: -0.015em; }',
-  '.fdep__meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }',
-  '.fdep__chip {',
-  '  display: inline-flex; align-items: center; gap: 6px;',
-  '  height: 22px; padding: 0 9px;',
-  '  border: 1px solid var(--fdep-line);',
-  '  border-radius: 999px;',
-  '  background: var(--fdep-tint);',
-  '  color: var(--fdep-text-2);',
-  '  font-size: 11px; line-height: 1; white-space: nowrap;',
-  '}',
-  '.fdep__chip b { font-weight: 650; letter-spacing: 0.04em; color: var(--fdep-text); }',
-  '.fdep__chip code { font-family: var(--fdep-mono); }',
+  '.fdep__title { margin: 0; font-size: 21px; line-height: 28px; font-weight: 650; letter-spacing: -0.015em; }',
 
   /* card: a tinted header band over a white body — the theme has no layer colour
      to lean on, so the band is what separates a card's title from its content.
@@ -995,7 +983,7 @@ function makeMainPanel(e, React, services) {
         return;
       }
       setBusy('docs');
-      setStatus({ kind: 'busy', title: '取得文件中', detail: 'POST ' + FDEP_HOST + FDEP_PATH + '（do: false）' });
+      setStatus({ kind: 'busy', title: '取得文件中', detail: '正在向 MCP網關 取得 ' + id + ' 的文件…' });
       const r = await tryBrowserCall(id, 'docs', {});
       setBusy(null);
       if (!r.ok) {
@@ -1237,17 +1225,12 @@ function makeMainPanel(e, React, services) {
         { className: 'fdep__shell' },
 
         // ---- header ----
+        // 只有標題：端點細節（POST /oauth2/fdep、abc.feg.com.tw、skill 名）不再顯示，
+        // 那些是實作資訊，使用者不需要看到。
         e(
           'header',
           { className: 'fdep__head' },
           e('h2', { className: 'fdep__title' }, 'MCP網關'),
-          e(
-            'div',
-            { className: 'fdep__meta' },
-            e('span', { className: 'fdep__chip' }, e('b', null, 'POST'), e('code', null, FDEP_PATH)),
-            e('span', { className: 'fdep__chip' }, FDEP_HOST),
-            e('span', { className: 'fdep__chip' }, 'skill: fdep-api-request'),
-          ),
         ),
 
         e(Status, { status: status }),

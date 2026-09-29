@@ -22,8 +22,17 @@
 // resolve. Nothing here writes to a session log or the filesystem.
 "use strict";
 
-/** Exact route the browser bundle POSTs its selection to. */
-const ROUTE_PATH = "/plugins/scene-template/selection";
+/**
+ * Exact route the browser bundle POSTs its selection to.
+ *
+ * NOT under `/plugins/`: DSH registers a prefix route on `/plugins` for the
+ * plugin-asset/bundle carrier, and `match()` resolves an exact hit before any
+ * prefix — but that exact table is not consulted for this path in practice, so a
+ * `/plugins/scene-template/selection` route never runs (observed: GET 404, POST
+ * 405, no content-type, i.e. the framework's asset handler answered). Keeping the
+ * route outside that tree is what makes it reachable. See test/probe-host-route.js.
+ */
+const ROUTE_PATH = "/scene-template/selection";
 /** Prompt-context name; unique in the registry, and how it reads in a trace. */
 const CONTEXT_NAME = "scene-template/selection";
 /** Built-in runtime contexts sit at 110 / 115 / 120 (sandbox, approval,

@@ -76,8 +76,9 @@ window.__ModuleLoader__.load({
     // =========================================================================
     var CLOCK_CSS = [
       // ---------- 漂浮小元件 ----------
+      // 位置：右下角，`bottom:33px` 比原本的 18px 再高 15px（`right` 維持 18px）。
       '.cute-clock-overlay{',
-      '  position:fixed;right:18px;bottom:18px;z-index:9999;',
+      '  position:fixed;right:18px;bottom:33px;z-index:9999;',
       '  pointer-events:auto;user-select:none;',
       '  font-family:var(--sans,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif)',
       '}',
@@ -88,11 +89,14 @@ window.__ModuleLoader__.load({
       '  border:1.5px solid var(--dsw-alias-border-l2,#c9d0da);',
       '  border-radius:22px;',
       '  box-shadow:var(--dsw-elevation-panel,0 6px 26px rgba(15,23,42,.10));',
-      '  transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s ease;',
+      '  transition:box-shadow .25s ease;',
       '  cursor:default;',
       '}',
+      // Hover 只改陰影，**不改幾何**：`.cute-clock-card` 的外框就是隱藏判斷要量的那個
+      // 盒子，任何位移／旋轉都會讓量到的矩形改變 —— 卡片稍微移一下就跨過判定邊界，
+      // 於是「隱藏 → 滑鼠離開 → 顯示 → 又 hover」來回跳，看起來就是閃爍。
+      // （實測舊版：hover 讓 top 639→633、高度 89→94。）
       '.cute-clock-card:hover{',
-      '  transform:translateY(-3px) rotate(-1deg);',
       '  box-shadow:0 12px 36px rgba(77,107,254,.22);',
       '}',
       // ---------- 讓位模式（輸入區和角落卡片重疊時）----------
@@ -113,11 +117,17 @@ window.__ModuleLoader__.load({
       '.cute-clock-hand-second{transition:transform .18s cubic-bezier(.34,1.56,.64,1)}',
       '.cute-clock-heart{transform-origin:center;animation:cute-pulse 1.4s ease-in-out infinite}',
       '@keyframes cute-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.22)}}',
-      '.cute-clock-text{display:flex;flex-direction:column;gap:2px;min-width:0;line-height:1.2}',
-      '.cute-clock-greet{font-size:10.5px;font-weight:700;color:var(--dsw-alias-brand-primary,#4d6bfe);letter-spacing:.5px}',
-      '.cute-clock-slogan{font-size:11px;font-weight:700;color:var(--dsw-alias-label-secondary,#43506b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:210px;animation:cute-pop .5s cubic-bezier(.34,1.56,.64,1)}',
+      // 文字欄固定寬度，卡片寬度才不會隨 slogan 長短跳動 —— 也就是「窄 15px」
+      // 能真的量得出來：這一欄比之前的最大值少 15px（見 README 的實測數字）。
+      // 太長的 slogan 照舊截斷（`text-overflow:ellipsis`），完整句子在 hover 的
+      // `title` 裡。
+      '.cute-clock-text{display:flex;flex-direction:column;gap:2px;width:165px;min-width:0;line-height:1.2}',
+      '.cute-clock-greet{font-size:10.5px;font-weight:700;color:var(--dsw-alias-brand-primary,#4d6bfe);letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.cute-clock-slogan{font-size:11px;font-weight:700;color:var(--dsw-alias-label-secondary,#43506b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:cute-pop .5s cubic-bezier(.34,1.56,.64,1)}',
       '@keyframes cute-pop{0%{transform:scale(.86);opacity:0}100%{transform:scale(1);opacity:1}}',
-      '.cute-clock-time{font-size:19px;font-weight:800;color:var(--dsw-alias-label-primary,#131926);font-variant-numeric:tabular-nums;letter-spacing:.3px}',
+      // 時分秒用等寬數字：秒數每秒變一次，比例字型的寬度會跟著跳，卡片外框也跟著
+      // 動 —— 那就等於「每秒抖一下」，同樣會擾動隱藏判斷。等寬之後寬度固定。
+      '.cute-clock-time{font-size:19px;font-weight:800;color:var(--dsw-alias-label-primary,#131926);font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;letter-spacing:.3px}',
       '.cute-clock-date{font-size:10.5px;color:var(--dsw-alias-label-tertiary,#6b7891)}',
 
       // ---------- 左欄圖示 ----------
@@ -158,9 +168,11 @@ window.__ModuleLoader__.load({
       '  color:var(--dsw-alias-label-secondary,#43506b);',
       '  text-align:center;z-index:1;',
       '}',
+      // 大頁面的 slogan：字級是原本的兩倍（13.5 → 27px），行高與內距一起放大，
+      // 並限制 `max-width` 讓長句自然換行，不會把面板撐爆。
       '.cute-clock-bigquote{',
-      '  margin-top:6px;padding:10px 22px;',
-      '  font-size:13.5px;font-weight:600;',
+      '  margin-top:6px;padding:14px 36px;max-width:min(760px,88vw);',
+      '  font-size:27px;line-height:1.35;font-weight:700;text-align:center;',
       '  color:var(--dsw-alias-brand-primary,#4d6bfe);',
       '  background:var(--dsw-alias-interactive-bg-hover,rgba(77,107,254,.08));',
       '  border-radius:999px;z-index:1;',
@@ -555,29 +567,10 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * 焦點是否落在輸入框裡（正在打字時也讓位，不必等幾何變化）。
-     * 兩段判斷：`closest` 走標準情況（焦點在編輯器或它的子節點），
-     * `contains` 是保險 —— 焦點有時落在輸入區塊裡但不屬於 `closest` 的鏈上。
-     * @returns true＝輸入框有焦點。
-     */
-    function composerHasFocus() {
-      if (typeof document === 'undefined') return false;
-      var active = document.activeElement;
-      if (!active) return false;
-      if (typeof active.closest === 'function'
-        && active.closest('[contenteditable="true"],textarea,.uV2eYG_input,.uV2eYG_root') !== null) return true;
-      var scopes = document.querySelectorAll('.uV2eYG_root,.uV2eYG_input,[contenteditable="true"],textarea');
-      for (var i = 0; i < scopes.length; i += 1) {
-        if (typeof scopes[i].contains === 'function' && scopes[i].contains(active)) return true;
-      }
-      return false;
-    }
-
-    /**
-     * 訂閱「輸入區的幾何或焦點有沒有變」。
+     * 訂閱「輸入區的幾何有沒有變」。
      * 輸入框長高、模板牆換一批、dock（佇列、context meter）冒出來、視窗縮放、
      * 切換會話都會改動幾何，所以用 ResizeObserver + MutationObserver + resize/scroll
-     * 三路一起盯，再加一個低頻 interval 當保險；焦點則由 focusin/focusout 回報。
+     * 三路一起盯，再加一個低頻 interval 當保險。
      * @param onGeometry - 幾何變化時呼叫。
      * @param onFocus - 焦點進出輸入框時呼叫，帶 true＝聚焦。
      * @returns 解除訂閱。
@@ -616,39 +609,39 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * 角落卡片是否該讓位。
-     * 讓位條件：卡片外框真的壓到輸入區外框（含安全距離），或者焦點正落在輸入框裡。
-     * 前者是「擋住了」，後者是「我正在打字」——兩者都先收起來。
+     * 角落卡片是否該隱藏。
      *
-     * 兩個讀數都由同一個 300ms 的取樣迴圈寫入，焦點不是靠事件即時驅動：焦點事件
-     * 在「頁面自己把焦點交給輸入框」等情況下不會來，而取樣一定會到。`tick` 只
-     * 用來讓 React 每次取樣都重畫一次（React 對同值 setState 會跳過，剛好省下
-     * 不必要的重畫）。
+     * **只看幾何**：卡片外框真的壓到輸入區外框（含安全距離）才藏。曾經多一條
+     * 「焦點在輸入框裡就藏」，結果是**誤判來源**：composer 常常自己拿到焦點
+     * （切工作區、開新工作階段、載入後自動聚焦），而且焦點會一直留著 —— 明明沒有
+     * 任何重疊，卡片卻整場不出現。實測：靜置 25 秒後無重疊、`focusish=true`、卡片
+     * 已隱藏。現在焦點不再是條件，IntersectionObserver 的量測也照舊只回報幾何。
+     *
+     * 幾何變化由 300ms 取樣 + ResizeObserver/MutationObserver/resize/scroll 觸發，
+     * 不看焦點、也不看是哪個工作階段。
      * @param cardRef - 卡片的 ref。
-     * @returns true＝收起。
-     */
-    function useAutoYield(cardRef) {
-      var statePair = useState({ yield: false, focused: false, tick: 0 });
-      var state = statePair[0];
-      var setState = statePair[1];
+     * @returns true＝隱藏。
+     */    function useAutoYield(cardRef) {
+      var pair = useState(false);
+      var hidden = pair[0];
+      var setHidden = pair[1];
 
       useEffect(function () {
         function measure() {
           var card = cardRef.current;
-          var cardRect = null;
-          if (card && typeof card.getBoundingClientRect === 'function') {
-            var r = card.getBoundingClientRect();
-            if (r.width > 0 || r.height > 0) cardRect = r;
+          if (!card || typeof card.getBoundingClientRect !== 'function') {
+            setHidden(false);
+            return;
           }
-          var blocked = cardRect !== null && cardIsBlocked(cardRect, blockingRects(), CLOCK_KEEP_AWAY);
-          setState(function (prev) {
-            return { yield: blocked, focused: composerHasFocus(), tick: prev.tick + 1 };
-          });
+          var rect = card.getBoundingClientRect();
+          // 隱藏期間卡片外框會塌成 0：這時不重算，等它顯示回來再判。
+          if (rect.width === 0 && rect.height === 0) return;
+          setHidden(cardIsBlocked(rect, blockingRects(), CLOCK_KEEP_AWAY));
         }
         return subscribeComposerGeometry(measure);
       }, []);
 
-      return state.yield || state.focused;
+      return hidden;
     }
 
     // =========================================================================
@@ -663,8 +656,9 @@ window.__ModuleLoader__.load({
       var date = (now.getMonth() + 1) + '月' + now.getDate() + '日 · ' + WEEKDAYS[now.getDay()];
       var slogan = useEnergySlogan(h);
 
-      // 擋到輸入區（或焦點在輸入框裡）就**整塊隱藏**：沒有小藥丸、沒有殘留的角落
-      // 元素，右下角完全讓給輸入區。焦點離開、或不再重疊時自己回來。
+      // 擋到輸入區就**整塊隱藏**：沒有小藥丸、沒有殘留的角落元素，右下角完全讓給
+      // 輸入區；不再重疊時自己回來。判斷只看幾何（見 useAutoYield 的註解：焦點
+      // 條件會誤判，因為 composer 常常自己拿到焦點且一直不放）。
       var cardRef = React.useRef(null);
       var hidden = useAutoYield(cardRef);
 

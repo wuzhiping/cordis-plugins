@@ -541,8 +541,12 @@ window.__ModuleLoader__.load({
 
     // 選中資料同步給宿主半邊(lib/index.js):它把這些資料註冊成模型的 runtime context。
     // 靜態 bundle 的客戶端跑在瀏覽器裡,沒有動態 Package 的 host.call —— 所以走一條
-    // DSH 自己的同源路由(宿主半邊用 webServer.register 開在 /plugins/scene-template/ 下)。
-    var SELECTION_ROUTE = "/plugins/scene-template/selection";
+    // DSH 自己的同源路由(宿主半邊用 webServer.register 開的 exact route)。
+    //
+    // 路徑**刻意不放在 `/plugins/` 底下**:DSH 為插件資源在 `/plugins` 註冊了一條
+    // prefix route,放在那裡的路由永遠輪不到(實測 GET 404 / POST 405、無
+    // content-type,都是框架的資源處理器回的)。詳見 lib/index.js 的 ROUTE_PATH 註解。
+    var SELECTION_ROUTE = "/scene-template/selection";
 
     function syncSelection(payload) {
       return fetch(SELECTION_ROUTE, {
