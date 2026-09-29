@@ -143,28 +143,44 @@ fixed, and the new session starts with each api's schema in context instead of r
    (a composition without `webServer`, or a plugin that has not been restarted yet).
 
 **How the host picks the session** — the panel is a root-scoped `main` occupant and never learns
-the new session's id (`uiWorkspace.startSession()` returns `void`), so the binding is by **time and
-scope**: the provider claims the first *scope* that assembles after the arm, then keeps contributing
-to that one scope for the rest of its life (a session's scope is stable while it lives). The arm
-reaches the host *before* `startSession()`, so in practice the new session's scope claims it
-milliseconds later. An assembly with no scope does not consume the arm, another scope cannot steal a
-claimed arm, an unclaimed arm expires after 30 minutes, and a later arm (or one without docs)
-replaces or clears it entirely. Nothing is written to the session log or the filesystem.
+the new session's id (`uiWorkspace.startSession()` returns `void`), so the host infers it from the
+assembly context. What the runtime actually hands the provider is
+`assembleContextFor(agent, signal)` from `dsh-agent`:
 
-> **Contract note (this was a live bug).** `AssembleContext` is `{ scope?, signal? }` — there is no
-> `agent` and no session id on it (`@deepseek-ai/dsh-system-prompt/lib/types/index.d.ts`). An earlier
-> revision read `assembleContext.agent.id` and looked that session up in a `sessions` service. The
-> arm always reported success (the route stores text without touching `systemPrompt`), but the
-> provider bailed on every real assembly — so **nothing was ever injected in the running GUI**, while
-> this plugin's own tests, which drove the fake `{agent: {id}}` shape the code was written against,
-> stayed green. `host-integration.test.js` now pins the shape from the installed `.d.ts`, and
-> `host-localhost.test.js` drives the provider with real `{scope}` objects (plus one scope-less
-> assembly that must not consume the arm). If injection ever silently stops again, start there.
+```js
+{ agent, scope: agent, signal? }      // agent.id IS the session id (Agent.id is a SessionId)
+```
+
+so the plugin reads the session id off `agent` (falling back to `scope`) and claims an arm only for a
+session that **did not exist when the arm was posted**. Which sessions existed is learned from the
+assemblies themselves: every session that assembles is recorded, and an arm snapshots that set — so
+the conversation you were already sitting in can never take the docs, while the session the panel
+just opened claims them on its first model step and keeps them for the rest of its life. An assembly
+with no session adds nothing and does not consume the arm, an unclaimed arm expires after 30
+minutes, and a later arm (or one without docs) replaces or clears it entirely. Nothing is written to
+the session log or the filesystem.
+
+> **Two live bugs found here, both worth remembering.**
+> 1. *The provider never fired.* The published `AssembleContext` type is `{ scope?, signal? }`
+>    (`@deepseek-ai/dsh-system-prompt/lib/types/index.d.ts`) — it does **not** document `agent`. A
+>    revision that read `assembleContext.agent.id` *and* looked the id up in a `sessions` service
+>    (no such service exists in the profile) silently contributed nothing, while the plugin's own
+>    tests — which drove the shape the code was written against — stayed green.
+> 2. *The docs went to the wrong session.* Once the provider did fire, it claimed the first assembly
+>    of any kind. In practice that was the session the user was chatting in (it assembles every
+>    step), so the armed docs were injected there — 37 times in one transcript — and the session the
+>    panel had just opened received nothing.
+>
+> `host-integration.test.js` pins the runtime shape from `dsh-agent`'s implementation (not the
+> narrower `.d.ts`), and `host-localhost.test.js` drives the provider with real `{agent, scope}` ids,
+> including the case that caused bug 2: a session that assembled *before* the arm must not be able to
+> take it. If injection ever silently stops again, start there.
 
 The route also answers with `hooked: true|false`: `false` means no `systemPrompt` is mounted in this
 composition, so the armed text can never be read. A *missing* flag means the running host half
 predates the field (the old build) — the panel then says “宿主端外掛是較舊的版本（請重啟 dsh web）”
-instead of reporting a successful injection.
+instead of reporting a successful injection. The reply also reports `known_sessions`, the number of
+sessions the arm had to exclude.
 
 Both texts are zh-TW (see *Language*). With two collected apis the **injected context** reads:
 

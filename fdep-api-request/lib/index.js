@@ -247,49 +247,64 @@ module.exports = {
     // opens next.
     //
     // The panel is a root-scoped `main` occupant: it never learns the new
-    // session's id (uiWorkspace.startSession() returns void), so the binding is
-    // by TIME and SCOPE instead — the client POSTs the brief BEFORE opening the
-    // session, and the context provider claims the first scope that assembles
-    // after that instant. From then on the docs stay attached to that one scope
-    // (a session's scope is stable for its lifetime). No session log and no file
-    // is written.
+    // session's id (uiWorkspace.startSession() returns void), so the binding has
+    // to be inferred. What the assembly context actually carries is
+    // `assembleContextFor(agent, signal)`'s result:
     //
-    // NOTE: the assembly context is `{ scope?, signal? }` — there is NO `agent`
-    // and no session id on it. An earlier revision read `assembleContext.agent.id`
-    // and looked the session up in the sessions store, which meant the provider
-    // silently contributed nothing in the real runtime (the shape only existed in
-    // this plugin's own tests). `scope` is an opaque identity-compared key, so it
-    // is compared by reference and never stringified.
+    //     { agent, scope: agent, signal? }        (dsh-agent/lib/index.js)
+    //
+    // i.e. `agent` IS the session (Agent.id is a SessionId), and `scope` is that
+    // same object. (The published `AssembleContext` type only documents
+    // `{ scope?, signal? }`, so this cannot be read off the .d.ts — the guard in
+    // host-integration.test.js checks the implementation instead.)
+    //
+    // The claim rule: an arm belongs to a session that did NOT exist when it was
+    // posted. Which sessions already existed is learned from the assemblies
+    // themselves — every session that assembles is recorded, and the arm snapshots
+    // that set. This matters: the first revision claimed the first assembly of any
+    // kind, and in practice that was the session the *user was chatting in* (which
+    // assembles every step), so the docs were injected into the wrong conversation
+    // while the freshly opened one got nothing.
     // ---------------------------------------------------------------------
-    const arm = { text: '', at: 0, scope: null };
+    const arm = { text: '', at: 0, sessionId: null, known: null };
+    /** Every session seen assembling since this plugin mounted. */
+    const seenSessions = new Set();
     /** Set once the provider is actually registered; surfaced in the arm reply. */
     let hooked = false;
+
+    /** The session id behind an assembly context (`agent` first, `scope` as the fallback). */
+    function sessionIdOf(assembleContext) {
+      if (assembleContext === undefined || assembleContext === null) return '';
+      const agent = assembleContext.agent !== undefined && assembleContext.agent !== null
+        ? assembleContext.agent
+        : assembleContext.scope;
+      return agent !== undefined && agent !== null && typeof agent.id === 'string' ? agent.id : '';
+    }
 
     /**
      * The prompt-context provider: called once per assembly. An empty string
      * means "no contribution" — the assembler drops empty contexts, so a session
      * that was never armed adds nothing at all.
-     * @param assembleContext - the assembly context (`{ scope?, signal? }`).
+     * @param assembleContext - the assembly context (`{ agent, scope, signal? }`).
      * @returns the runtime-context text.
      */
     function docsContextText(assembleContext) {
+      const sessionId = sessionIdOf(assembleContext);
+      if (sessionId !== '') seenSessions.add(sessionId);
       if (arm.text === '') return '';
-      const scope = assembleContext === undefined || assembleContext === null
-        ? undefined
-        : assembleContext.scope;
-      if (arm.scope !== null) {
-        // Bound: only that scope keeps receiving the docs, for as long as it lives.
-        return scope === arm.scope ? arm.text : '';
+      if (arm.sessionId !== null) {
+        // Bound: only that one session keeps receiving the docs, for its lifetime.
+        return sessionId === arm.sessionId ? arm.text : '';
       }
-      // Unclaimed: the first scope to assemble wins, and only while the arm is
-      // fresh. The panel arms immediately before opening the session, so this
-      // window is normally milliseconds wide.
+      // Unclaimed. Only a session that was NOT already alive when the arm was
+      // posted may take it, and only while the arm is fresh.
+      if (sessionId === '') return '';
       if (Date.now() - arm.at > ARM_TTL_MS) {
         arm.text = '';
         return '';
       }
-      if (scope === undefined || scope === null) return '';
-      arm.scope = scope;
+      if (arm.known !== null && arm.known.has(sessionId)) return '';
+      arm.sessionId = sessionId;
       return arm.text;
     }
 
@@ -329,14 +344,19 @@ module.exports = {
         // brief the user has moved on from.
         arm.text = '';
         arm.at = 0;
-        arm.scope = null;
+        arm.sessionId = null;
+        arm.known = null;
         send(200, { ok: true, armed: false, hooked: hooked });
         return;
       }
       const text = renderDocsContext(apis).slice(0, CONTEXT_MAX);
       arm.text = text;
       arm.at = Date.now();
-      arm.scope = null;
+      arm.sessionId = null;
+      // Snapshot the sessions that are already alive (they have assembled at least
+      // once): none of them may take this arm — only the session the panel is about
+      // to open can.
+      arm.known = new Set(seenSessions);
       send(200, {
         ok: true,
         armed: true,
@@ -346,7 +366,8 @@ module.exports = {
         hooked: hooked,
         api_ids: apis.map((entry) => entry.apiId),
         chars: text.length,
-        binds: 'the first scope assembled after this request',
+        known_sessions: arm.known.size,
+        binds: 'the first session opened after this request',
       });
     }
 

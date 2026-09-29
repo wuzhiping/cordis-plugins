@@ -124,13 +124,15 @@ async function main() {
   await post(body);
 
   console.log('\n=== the real assembler carries it, once, for the right session ===');
-  // The real `AssembleContext` is `{ scope?, signal? }`: two scope objects stand in
-  // for the session the panel opened and for another one.
-  const sessionAfter = {};
-  const sessionBefore = {};
+  // The real assembly context is `{ agent, scope: agent, signal? }` and `agent.id`
+  // is the session id (Agent.id is a SessionId), so id stubs stand in for the
+  // session the panel opened and for another one that is also assembling.
+  const asSession = (id) => ({ agent: { id: id }, scope: { id: id } });
+  const sessionAfter = asSession('session-after');
+  const sessionBefore = asSession('session-before');
   const systemPrompt = ctx.get('systemPrompt');
 
-  const after = await systemPrompt.assemble({ scope: sessionAfter });
+  const after = await systemPrompt.assemble(sessionAfter);
   const mine = after.contexts.filter((c) => c.name === 'fdep-api-request/docs');
   check('the session assembled first after the arm gets exactly one context with every api', () => {
     assert.equal(mine.length, 1, 'saw: ' + after.contexts.map((c) => c.name).join(','));
@@ -142,13 +144,13 @@ async function main() {
     assert.match(mine[0].text, /stockNo: string/);
   });
 
-  const before = await systemPrompt.assemble({ scope: sessionBefore });
+  const before = await systemPrompt.assemble(sessionBefore);
   check('another session gets nothing', () => {
     const leaked = before.contexts.filter((c) => c.name === 'fdep-api-request/docs' && c.text !== '');
     assert.equal(leaked.length, 0, 'leaked: ' + JSON.stringify(leaked));
   });
 
-  const again = await systemPrompt.assemble({ scope: sessionAfter });
+  const again = await systemPrompt.assemble(sessionAfter);
   check('later steps of that session keep it', () => {
     const kept = again.contexts.filter((c) => c.name === 'fdep-api-request/docs' && c.text !== '');
     assert.equal(kept.length, 1);

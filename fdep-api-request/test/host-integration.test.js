@@ -276,22 +276,22 @@ async function main() {
   const systemPrompt = ctx.get('systemPrompt');
   const routes = [];
 
-  // Contract guard. This plugin reads exactly one field off the assembly context
-  // (`scope`), because `AssembleContext` is `{ scope?, signal? }`. An earlier
-  // revision bound on `assembleContext.agent.id` — a field the real runtime never
-  // provides — so it silently contributed nothing while its own (self-written)
-  // tests passed. Pinning the shape here means a DSH upgrade that changes it fails
-  // loudly instead of quietly breaking the injection.
+  // Contract guard. This plugin derives the session id from the assembly context,
+  // which only works because `dsh-agent`'s `assembleContextFor(agent, signal)`
+  // returns `{ agent, scope: agent, signal? }` — `agent.id` is a SessionId. The
+  // *published* `AssembleContext` type is narrower (it documents only
+  // `{ scope?, signal? }`), so the implementation is the source of truth here:
+  // pinning it means a DSH upgrade that changes the shape fails loudly instead of
+  // silently injecting into the wrong session (or nowhere at all).
   {
-    const typesFile = path.join(DSH_SYSTEM_PROMPT, 'lib', 'types', 'index.d.ts');
-    const types = fs.readFileSync(typesFile, 'utf8');
-    const body = types.slice(
-      types.indexOf('export interface AssembleContext'),
-      types.indexOf('export interface AssembleContext') + 400,
-    );
-    check('the real AssembleContext still carries the scope this plugin binds on', () => {
-      assert.match(body, /scope\?: ScopeKey/, 'AssembleContext lost its scope field');
-      assert.ok(!/\bagent\b/.test(body), 'AssembleContext grew an agent field — binding may need revisiting');
+    const agentLib = path.join(DSH_ROOT, 'dsh-agent', 'lib', 'index.js');
+    const src = fs.readFileSync(agentLib, 'utf8');
+    const at = src.indexOf('function assembleContextFor');
+    const body = at === -1 ? '' : src.slice(at, at + 260);
+    check('the runtime still hands the provider an agent (whose id is the session id)', () => {
+      assert.ok(at !== -1, 'assembleContextFor is gone from dsh-agent');
+      assert.match(body, /\bagent,/, 'assembleContextFor no longer passes the agent');
+      assert.match(body, /scope:\s*agent/, 'the assembly scope is no longer the agent object');
     });
   }
 
@@ -346,12 +346,14 @@ async function main() {
     assert.deepEqual(armReply.json.api_ids, ['twseMops.todayMaterial', 'twseMops.companyProfile']);
   });
 
-  // The real `AssembleContext` is `{ scope?, signal? }` — no `agent`, no session
-  // id — so the two "sessions" here are scope objects.
-  const sessionAfter = {};
-  const sessionBefore = {};
+  // The real assembly context is `{ agent, scope: agent, signal? }` and `agent.id`
+  // is the session id (Agent.id is a SessionId), so id stubs stand in for the
+  // session the panel opened and for another one that is also assembling.
+  const asSession = (id) => ({ agent: { id: id }, scope: { id: id } });
+  const sessionAfter = asSession('session-after');
+  const sessionBefore = asSession('session-before');
 
-  const after = await systemPrompt.assemble({ scope: sessionAfter });
+  const after = await systemPrompt.assemble(sessionAfter);
   const injected = after.contexts.filter((c) => c.name === 'fdep-api-request/docs');
   check('the real assembler carries every api for the session assembled after the arm', () => {
     assert.equal(injected.length, 1, 'saw contexts: ' + after.contexts.map((c) => c.name).join(','));
@@ -363,7 +365,7 @@ async function main() {
     assert.match(injected[0].text, /這個 api 的 inbound（面板目前的值/);
   });
 
-  const before = await systemPrompt.assemble({ scope: sessionBefore });
+  const before = await systemPrompt.assemble(sessionBefore);
   check('another session gets nothing', () => {
     // `assemble()` lists every registered context; the empty ones are dropped
     // later by the render pass (`renderContextSections` keeps text.length > 0),
@@ -376,7 +378,7 @@ async function main() {
     );
   });
 
-  const again = await systemPrompt.assemble({ scope: sessionAfter });
+  const again = await systemPrompt.assemble(sessionAfter);
   check('the docs stay for that session on later steps', () => {
     assert.equal(again.contexts.filter((c) => c.name === 'fdep-api-request/docs').length, 1);
   });

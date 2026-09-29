@@ -233,6 +233,16 @@ async function main() {
   }
 
   const armAt = Date.now();
+  // The assembly context is `{ agent, scope: agent, signal? }` — `agent.id` IS the
+  // session id (Agent.id is a SessionId). This helper drives the provider the way
+  // the real agent loop does.
+  const asSession = (id) => ({ agent: { id: id }, scope: { id: id } });
+
+  // A session that is already chatting assembles BEFORE the arm: this is the case
+  // that used to steal it (the very first revision claimed the first assembly of
+  // any kind, which in practice was the conversation the user was sitting in).
+  assert.equal(spec.text(asSession('session-chatting')), '', 'an unarmed assembly adds nothing');
+
   // The multi-api form is the primary one: one scenario spans several apis.
   const armReply = await post({
     apis: [
@@ -252,17 +262,18 @@ async function main() {
   assert.equal(armReply.json.armed, true);
   assert.ok(armReply.json.chars > 0);
   assert.deepEqual(armReply.json.api_ids, ['twseMops.todayMaterial', 'twseMops.companyProfile']);
+  assert.equal(armReply.json.known_sessions, 1, 'the arm must snapshot the sessions already alive');
 
-  // Two scopes stand in for two sessions: the one the panel just opened, and
-  // some other session that happens to assemble too.
-  const scopeNew = {};
-  const scopeOther = {};
+  // An assembly with no session at all must not consume the arm.
+  assert.equal(spec.text({}), '', 'a session-less assembly must not claim the arm');
 
-  // An assembly with no scope at all (a global pass) must not consume the arm.
-  assert.equal(spec.text({}), '', 'a scope-less assembly must not claim the arm');
+  // …and after the arm, that same old session must still get nothing: the arm
+  // belongs to the session the panel is about to open.
+  assert.equal(spec.text(asSession('session-chatting')), '',
+    'a session that was already alive must not steal the arm');
 
-  // The first scope to assemble after the arm is the one that gets it.
-  const injected = spec.text({ scope: scopeNew });
+  // The new session is the one that claims it.
+  const injected = spec.text(asSession('session-new'));
   assert.match(injected, /2 個 FDEP api/, 'the set size is missing from the header');
   assert.match(injected, /api: twseMops\.todayMaterial/, 'the first api id is missing');
   assert.match(injected, /api: twseMops\.companyProfile/, 'the second api id is missing');
@@ -273,23 +284,23 @@ async function main() {
   assert.match(injected, /stockNo: string — "2330"/, 'the second api lost its parameter line');
   assert.match(injected, /\{ \{not a variable\}\}/, 'the {{ }} guard did not run');
 
-  // Bound to that one scope, and it stays for that scope's whole life.
-  assert.equal(spec.text({ scope: scopeOther }), '',
+  // Bound to that one session, and it stays for that session's whole life.
+  assert.equal(spec.text(asSession('session-other')), '',
     'the docs must not leak into another session');
-  assert.equal(spec.text({ scope: scopeNew }), injected,
-    'the bound scope must keep its context');
+  assert.equal(spec.text(asSession('session-new')), injected,
+    'the bound session must keep its context');
 
   // Disarm: a later arm without docs clears whatever was pending.
   const cleared = await post({ apis: [] });
   assert.equal(cleared.json.armed, false);
-  assert.equal(spec.text({ scope: scopeNew }), '', 'disarm did not clear the context');
+  assert.equal(spec.text(asSession('session-new')), '', 'disarm did not clear the context');
 
   // The legacy single-api body still arms — nothing else had to change for it.
   const legacy = await post({ apiId: 'test.demo', raw: { desc: 'x', name: 'aaa' }, inbound: {} });
   assert.equal(legacy.json.armed, true);
   assert.equal(legacy.json.hooked, true, 'the arm reply must report whether a provider is registered');
   assert.deepEqual(legacy.json.api_ids, ['test.demo']);
-  assert.match(spec.text({ scope: scopeNew }), /api: test\.demo/);
+  assert.match(spec.text(asSession('session-opened-later')), /api: test\.demo/);
   await post({ apis: [] });
 
   // An arm nobody claimed expires instead of leaking into a much later session.
@@ -297,7 +308,7 @@ async function main() {
   const realNow = Date.now;
   Date.now = () => realNow() + 31 * 60 * 1000;
   try {
-    assert.equal(spec.text({ scope: scopeOther }), '',
+    assert.equal(spec.text(asSession('session-much-later')), '',
       'a stale unclaimed arm must expire');
   } finally {
     Date.now = realNow;
@@ -310,9 +321,10 @@ async function main() {
 
   console.log('OK — runtime context checks held.');
   console.log('  • arm route: POST /plugins/fdep-api-request/context');
-  console.log('  • binds to the first SCOPE assembled after the arm (AssembleContext = { scope?, signal? })');
-  console.log('  • keeps the docs for that scope, never leaks to another');
-  console.log('  • a scope-less assembly does not consume the arm');
+  console.log('  • binds to the first session OPENED after the arm (agent.id from assembleContextFor)');
+  console.log('  • a session that was already alive cannot steal the arm');
+  console.log('  • keeps the docs for that session, never leaks to another');
+  console.log('  • a session-less assembly does not consume the arm');
   console.log('  • disarm + 30-minute expiry for unclaimed arms');
   console.log('  • {{ }} neutralised before the text becomes prompt context');
 
