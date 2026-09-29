@@ -4,18 +4,18 @@
 //
 //   node tools/verify-preset-param.js
 //
-// Opens the RUNNING GUI (http://127.0.0.1:3080) in its own headless Chrome,
-// records every `scene/list` request the real client bundle issues, and reports
-// the preset chip's state. Read-only: it navigates and reads, it never clicks a
-// scenario chip or writes anything.
+// Opens the RUNNING GUI (http://127.0.0.1:3080) in its own headless Chrome and
+// reports what the real client bundle actually did:
+//   1. every `scene/list` call, with its full query string — so `&preset=` is
+//      visible rather than inferred;
+//   2. the scene-list tooltip and the scenario chips in the live DOM;
+//   3. the agent-preset roster and a real preset switch, then the `scene/list`
+//      call that switch produced (a change must re-fetch).
 //
-// Findings it can report:
-//   - the exact request URL(s), so the `&preset=` parameter is visible;
-//   - how many times `scene/list` was requested, so a re-fetch is visible;
-//   - the agent-preset chip's label, i.e. which preset is current.
-//
-// It ends by opening the agent-preset menu, reporting the roster, and naming the
-// option a click would pick — the user's own session is never clicked through.
+// It uses a throwaway browser profile and restores the preset it found, so the
+// user's own window and session are untouched. `fetch` is wrapped through
+// `Page.addScriptToEvaluateOnNewDocument` because the CDP Network domain does
+// not report every cross-origin request here.
 
 const fs = require('node:fs');
 const os = require('node:os');
@@ -87,6 +87,35 @@ async function httpJson(url) {
   return res.json();
 }
 
+/** Every `scene/list` call the page made, newest last. */
+async function sceneCalls(cdp) {
+  const raw = await cdp.eval('JSON.stringify((window.__stProbe || []).map((c) => c.url))');
+  return JSON.parse(raw || '[]');
+}
+
+/** The composer panel's scenario chip row: its tooltip and its chips. */
+function panelReader() {
+  return `(() => {
+    const rows = Array.from(document.querySelectorAll('[data-st-scroll]'));
+    const tip = rows.map((el) => el.getAttribute('title') || '').filter((t) => t.length > 0);
+    const chips = Array.from(document.querySelectorAll('[data-st-scroll] div'))
+      .map((el) => (el.textContent || '').trim())
+      .filter((t) => t.length > 0 && t.length < 60);
+    return { tooltip: tip.slice(0, 2), chips: chips.slice(0, 8) };
+  })()`;
+}
+
+/** The agent-preset chip (mode selector) in the composer. */
+function presetChipReader() {
+  return `(() => {
+    const chip = Array.from(document.querySelectorAll('button')).find((el) => {
+      const t = ((el.getAttribute('aria-label') || '') + (el.textContent || '')).trim();
+      return /模式/.test(t) && !/權限/.test(t);
+    });
+    return chip ? { label: (chip.textContent || '').trim(), disabled: !!chip.disabled } : null;
+  })()`;
+}
+
 async function main() {
   const browser = BROWSERS.find((p) => fs.existsSync(p));
   if (!browser) { console.error('no Chrome/Edge found'); process.exit(2); }
@@ -114,110 +143,63 @@ async function main() {
 
     await cdp.send('Page.enable');
     await cdp.send('Runtime.enable');
-    await cdp.send('Network.enable');
+    await cdp.send('Page.addScriptToEvaluateOnNewDocument', {
+      source: `(() => {
+        window.__stProbe = [];
+        const original = window.fetch;
+        window.fetch = function (input, init) {
+          const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+          if (url.indexOf('/scene/') !== -1) window.__stProbe.push({ url });
+          return original.apply(this, arguments);
+        };
+      })();`,
+    });
     await cdp.send('Page.navigate', { url: GUI });
 
-    let booted = false;
-    for (let i = 0; i < 80; i += 1) {
-      await sleep(250);
-      try {
-        const n = await cdp.eval('document.querySelectorAll("button").length');
-        if (n && n > 3) { booted = true; break; }
-      } catch (_) { /* still loading */ }
-    }
-    console.log('app booted: ' + booted);
-    // The composer panel is contributed by this bundle; wait for it before
-    // reading requests, because a slow first paint otherwise reports "none".
     let panel = false;
-    for (let i = 0; i < 60; i += 1) {
+    for (let i = 0; i < 100; i += 1) {
+      await sleep(400);
       try {
         const n = await cdp.eval('document.querySelectorAll("[data-st-scroll]").length');
         if (n && n > 0) { panel = true; break; }
       } catch (_) { /* still loading */ }
-      await sleep(400);
     }
     console.log('scene panel mounted: ' + panel);
-    await sleep(2500);   // let the scene list effects settle
+    await sleep(2500);   // let the scene-list effects settle
 
-    const requests = [];
-    for (const ev of cdp.events) {
-      if (ev.method !== 'Network.requestWillBeSent') continue;
-      const url = ev.params && ev.params.request ? ev.params.request.url : '';
-      if (url.indexOf('/scene/') !== -1) requests.push({ url, type: ev.params.type, method: ev.params.request.method });
-    }
     console.log('');
-    console.log('=== scene API requests seen from the real bundle ===');
-    if (requests.length === 0) console.log('  (none — is the composer panel mounted?)');
-    for (const r of requests) console.log('  ' + r.method + ' ' + r.url);
+    console.log('=== scene/list calls at boot ===');
+    const boot = await sceneCalls(cdp);
+    for (const url of boot) console.log('  ' + url);
+    console.log('  calls: ' + boot.length + ', carrying &preset=: ' + boot.filter((u) => /[?&]preset=/.test(u)).length);
 
-    const listRequests = requests.filter((r) => r.url.indexOf('/scene/list') !== -1);
-    console.log('');
-    console.log('scene/list requests: ' + listRequests.length);
-    console.log('carry &preset=      : ' + listRequests.filter((r) => /[?&]preset=/.test(r.url)).length);
-
-    const dom = await cdp.eval(`(() => {
-      const chips = Array.from(document.querySelectorAll('[data-st-scroll] div'))
-        .map((el) => (el.textContent || '').trim())
-        .filter((t) => t.length > 0 && t.length < 60);
-      const tippy = Array.from(document.querySelectorAll('[data-st-scroll]'))
-        .map((el) => el.getAttribute('title') || '');
-      const presetChip = Array.from(document.querySelectorAll('button'))
-        .map((el) => ((el.getAttribute('aria-label') || '') + '|' + (el.textContent || '').trim()))
-        .filter((t) => /模式|preset|Preset/.test(t));
-      return { chips: chips.slice(0, 10), tippy: tippy.slice(0, 3), presetChip: presetChip.slice(0, 5) };
-    })()`);
+    const dom = await cdp.eval(panelReader());
+    const chip = await cdp.eval(presetChipReader());
     console.log('');
     console.log('=== DOM ===');
-    console.log('  scenario chips : ' + JSON.stringify(dom.chips));
-    console.log('  list tooltip   : ' + JSON.stringify(dom.tippy));
-    console.log('  preset controls: ' + JSON.stringify(dom.presetChip));
+    console.log('  list tooltip  : ' + JSON.stringify(dom.tooltip));
+    console.log('  scenario chips: ' + JSON.stringify(dom.chips));
+    console.log('  preset chip   : ' + JSON.stringify(chip));
 
-    const stUrls = await cdp.eval(`(() => {
-      const out = [];
-      try {
-        const store = window.__DSH_BOOT__ && window.__DSH_BOOT__.sessions;
-        if (store) out.push('boot.sessions=' + Object.keys(store).join(','));
-      } catch (e) { out.push('boot read failed: ' + e.message); }
-      out.push('boot keys=' + Object.keys(window.__DSH_BOOT__ || {}).join(','));
-      return out;
-    })()`);
-    console.log('  boot           : ' + JSON.stringify(stUrls));
-
-    // ---- agent-preset menu: switch to 办公模式 and watch the list re-fetch ----
-    const before = listRequests.length;
+    // ---- switch the preset and watch the list re-fetch ----
     await cdp.eval(`(() => {
-      const chip = Array.from(document.querySelectorAll('button')).find((el) => {
-        const t = ((el.getAttribute('aria-label') || '') + (el.textContent || '')).trim();
+      const el = Array.from(document.querySelectorAll('button')).find((b) => {
+        const t = ((b.getAttribute('aria-label') || '') + (b.textContent || '')).trim();
         return /模式/.test(t) && !/權限/.test(t);
       });
-      if (chip) chip.click();
-      return !!chip;
+      if (el) el.click();
+      return !!el;
     })()`);
     await sleep(1200);
-    const menu = await cdp.eval(`(() => {
-      const items = Array.from(document.querySelectorAll('[role="menuitem"], [role="option"]'))
-        .map((el) => (el.textContent || '').trim())
-        .filter((t) => t.length > 0);
-      return { items: items.slice(0, 12), count: items.length };
-    })()`);
+    const menu = await cdp.eval(`(() => Array.from(document.querySelectorAll('[role="menuitem"], [role="option"]'))
+      .map((el) => (el.textContent || '').trim()).filter((t) => t.length > 0).slice(0, 12))()`);
     console.log('');
-    console.log('=== agent-preset menu (opened on a disposable browser) ===');
-    console.log('  options: ' + JSON.stringify(menu.items));
+    console.log('=== agent-preset roster (throwaway browser) ===');
+    console.log('  ' + JSON.stringify(menu));
 
-    // Pick the preset the boot did NOT use, so the pick is a real change. This
-    // reaches the Host for the disposable browser's own blank session; the
-    // original preset is restored afterwards.
-    const currentChip = await cdp.eval(`(() => {
-      const chip = Array.from(document.querySelectorAll('button')).find((el) => {
-        const t = ((el.getAttribute('aria-label') || '') + (el.textContent || '')).trim();
-        return /模式/.test(t) && !/權限/.test(t);
-      });
-      return chip ? { label: (chip.textContent || '').trim(), disabled: !!chip.disabled } : null;
-    })()`);
-    const target = currentChip && /標準模式/.test(currentChip.label) ? '办公模式' : '標準模式';
-    console.log('  current chip: ' + JSON.stringify(currentChip) + '  -> picking ' + target);
-
-    const blank = await cdp.eval(`(() => {
+    const before = (await sceneCalls(cdp)).length;
+    const target = chip && /標準模式/.test(chip.label) ? '办公模式' : '標準模式';
+    const picked = await cdp.eval(`(() => {
       const want = ${JSON.stringify(target)};
       const hit = Array.from(document.querySelectorAll('[role="menuitem"], [role="option"]'))
         .find((el) => (el.textContent || '').indexOf(want) !== -1);
@@ -225,57 +207,30 @@ async function main() {
       hit.click();
       return true;
     })()`);
-    console.log('  clicked ' + target + ': ' + blank);
-    await sleep(5000);
+    console.log('  switching ' + (chip ? chip.label : '?') + ' -> ' + target + ': ' + picked);
+    await sleep(6000);
 
-    const chipAfter = await cdp.eval(`(() => {
-      const chip = Array.from(document.querySelectorAll('button')).find((el) => {
-        const t = ((el.getAttribute('aria-label') || '') + (el.textContent || '')).trim();
-        return /模式/.test(t) && !/權限/.test(t);
-      });
-      const chips = Array.from(document.querySelectorAll('[data-st-scroll] span, [data-st-scroll] div'))
-        .map((el) => (el.textContent || '').trim()).filter((t) => t.length > 0 && t.length < 40);
-      const tip = Array.from(document.querySelectorAll('[data-st-scroll]'))
-        .map((el) => el.getAttribute('title') || '').filter((t) => t.length > 0);
-      return {
-        chip: chip ? ((chip.getAttribute('aria-label') || '') + '|' + (chip.textContent || '').trim()) : null,
-        listTip: tip.slice(0, 2),
-        chips: chips.slice(0, 6),
-      };
-    })()`);
-    console.log('  chip after pick: ' + JSON.stringify(chipAfter.chip));
-    console.log('  list tooltip now: ' + JSON.stringify(chipAfter.listTip));
-    console.log('  scenario chips now: ' + JSON.stringify(chipAfter.chips));
-
-    const rpcs = [];
-    for (const ev of cdp.events) {
-      if (ev.method !== 'Network.requestWillBeSent') continue;
-      const url = (ev.params && ev.params.request ? ev.params.request.url : '');
-      if (url.indexOf('127.0.0.1') !== -1 && url.indexOf('scene') === -1) rpcs.push(url.replace('http://127.0.0.1:3080', ''));
-    }
-    console.log('  same-origin requests: ' + JSON.stringify(rpcs.slice(-12)));
-
-    const afterList = requests.filter((r) => r.url.indexOf('/scene/list') !== -1);
+    const after = await sceneCalls(cdp);
+    const fresh = after.slice(before);
     console.log('');
-    console.log('=== scene/list requests after the preset pick ===');
-    for (const r of afterList) console.log('  ' + r.method + ' ' + r.url);
-    console.log('  total: ' + afterList.length
-      + ', with &preset=: ' + afterList.filter((r) => /[?&]preset=/.test(r.url)).length
-      + ', with the picked preset: ' + afterList.filter((r) => r.url.indexOf('preset=' + encodeURIComponent(target === '办公模式' ? 'office' : 'standard')) !== -1).length);
+    console.log('=== scene/list calls after the switch ===');
+    for (const url of fresh) console.log('  ' + url);
+    console.log('  new calls: ' + fresh.length + ' (0 means the list did NOT re-fetch)');
+    console.log('  tooltip now: ' + JSON.stringify((await cdp.eval(panelReader())).tooltip));
 
-    // Leave the disposable browser on the preset it booted with.
-    if (currentChip !== null) {
+    // Leave the throwaway browser on the preset it booted with.
+    if (chip !== null) {
       await cdp.eval(`(() => {
-        const chip = Array.from(document.querySelectorAll('button')).find((el) => {
-          const t = ((el.getAttribute('aria-label') || '') + (el.textContent || '')).trim();
+        const el = Array.from(document.querySelectorAll('button')).find((b) => {
+          const t = ((b.getAttribute('aria-label') || '') + (b.textContent || '')).trim();
           return /模式/.test(t) && !/權限/.test(t);
         });
-        if (chip) chip.click();
-        return !!chip;
+        if (el) el.click();
+        return !!el;
       })()`);
       await sleep(800);
       const restored = await cdp.eval(`(() => {
-        const want = ${JSON.stringify(currentChip.label)};
+        const want = ${JSON.stringify(chip.label)};
         const hit = Array.from(document.querySelectorAll('[role="menuitem"], [role="option"]'))
           .find((el) => (el.textContent || '').indexOf(want) !== -1);
         if (!hit) return false;
@@ -283,7 +238,7 @@ async function main() {
         return true;
       })()`);
       await sleep(1500);
-      console.log('  restored ' + currentChip.label + ': ' + restored);
+      console.log('  restored ' + chip.label + ': ' + restored);
     }
   } finally {
     try { if (ws) ws.close(); } catch (_) {}

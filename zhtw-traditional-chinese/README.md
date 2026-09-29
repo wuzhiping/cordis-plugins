@@ -165,7 +165,7 @@ stale after a DSH upgrade** and need refreshing from the current DOM.
 
 The new-session hero headline keeps the brand but drops the greeting:
 `BRAND_HEADLINE` overrides `conversation.hero.headline` with
-`💡 企業智慧數位員工@AIFE` — no `歡迎使用` / `Welcome to` prefix — still in the
+`企業智慧數位員工@AIFE` — no `歡迎使用` / `Welcome to` prefix — still in the
 sapphire brand colour. Two ways back, both one-liners in `lib/client.js`:
 
 | Want | Change |
@@ -175,6 +175,39 @@ sapphire brand colour. Two ways back, both one-liners in `lib/client.js`:
 
 Only the headline is affected: the sidebar banner, `document.title`, favicon and
 PWA manifest keep the brand either way.
+
+### The mark is a PNG, not the 💡 emoji
+
+The brand mark used to be the `💡` emoji, rendered in three places (the sidebar
+banner, the hero headline, and the collapsed rail). It is now the feg.cn logo as
+a **48×48 PNG embedded in `lib/client.js` as a `data:image/png;base64,` URL**
+(`BRAND_ICON_DATA_URL`), drawn as a CSS background box at each placement:
+
+| where | element | box |
+|---|---|---|
+| sidebar banner | `.hHd-Xa_brand::before` (icon box + `padding-left`, the brand name is its text) | 16px |
+| hero headline | `.pXSMma_headline::before` | 24px |
+| collapsed 56px rail | `.hHd-Xa_railMark::before` | 20px |
+
+Two constraints decided this shape:
+
+- **A plugin directory has no HTTP route.** Only `<plugin>/client.js` is served
+  (via the module group at `/plugins/??…`), so an `url(logo.png)` or `<img src>`
+  would 404 and the asset has to travel inside the bundle.
+- **`padding` alone does not reserve space for a generated box.** Here the draw
+  sites are flex items, whose padding box collapses to zero; each rule therefore
+  sets an explicit `width`/`height` and positions the background inside it.
+
+48px is the master size: it covers the 24px headline at 2× DPR, and the browser
+downsamples it for the 20px and 16px placements (1.9 KB of base64, versus 1.3 KB
+at 32px). To swap the logo, regenerate the data URL at 48×48 with alpha and
+replace the one constant; to change a size, edit that placement's `background`
+shorthand plus its `width`/`height`. The favicon is still the separate inline
+`BRAND_FAVICON_SVG` (the `f` tile), so nothing there moves with the mark.
+
+> A raster mark cannot follow the theme, and this one is a dark teal on a dark
+> sidebar in dark mode. The bundle keeps the original colours; a dark-mode variant
+> would need a second data URL and a `@media (prefers-color-scheme: dark)` swap.
 
 > Client bundles are served as one module group whose content is cached until the
 > profile reloads. After a `lib/client.js` edit, trigger a profile reload — for
@@ -214,6 +247,15 @@ node test/audit-dom.js --click 設定,外掛   # …with dialogs opened first
   entry would look hand-picked forever).
 - `test/s2t.js` mirrors the bundle's converter so the tools can never disagree
   with the shipped code.
+- `test/sweep-simplified.js` and `test/sweep-settings.js` walk the live GUI surface
+  by surface (main views; then every Settings sub-page) and
+  `test/verify-mcp-and-simplified.js` does the same for one panel plus the
+  `MCP網關` label. All three classify each rendered string with the shipped table:
+  **Simplified** (a Simplified-only character that would change — must be 0) vs
+  **zh-TW phrasing** (already Traditional text whose phrasing the table's
+  preference list would still rewrite, e.g. `文件 → 檔案`, `參數 → 引數`). Only the
+  first kind is a defect; the second is a wording preference, so read the list
+  before acting on it.
 - There is no build step: `lib/client.js` is served as-is. After editing it,
   either restart `dsh web` or copy the file into
   `~/.dsh/profiles/web/node_modules/zhtw-traditional-chinese/lib/` (the running

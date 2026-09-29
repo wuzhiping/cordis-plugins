@@ -647,7 +647,7 @@ apply(ctx) {
   ctx.slots.inject('sidebar.panellist', () =>
     ctx.slots.register(
       { name: 'sidebar.panellist', id: 'fdep-api-request', order: 50,
-        label: () => 'MCP Gateway' },
+        label: () => 'MCP網關' },
       (iconProps) => e(Glyph, iconProps)));
 
   ctx.slots.inject('main', () =>

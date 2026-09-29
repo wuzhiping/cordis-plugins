@@ -24,8 +24,8 @@ The tool posts to `https://abc.feg.com.tw/oauth2/fdep` with `Content-Type: appli
 
 ### Client side
 
-A sidebar entry labelled **MCP Gateway**, marked with a green hexagon glyph, that opens a panel
-titled **MCP Gateway**. The panel is a three-step flow — three numbered cards in order (1 → 2 → 3),
+A sidebar entry labelled **MCP網關**, marked with a green hexagon glyph, that opens a panel
+titled **MCP網關**. The panel is a three-step flow — three numbered cards in order (1 → 2 → 3),
 followed by the response and the fallback prompt:
 
 1. **選擇 API** (Choose the API) — an API ID input (monospace) with **歷史 ▾** (history) and
@@ -185,7 +185,7 @@ sessions the arm had to exclude.
 Both texts are zh-TW (see *Language*). With two collected apis the **injected context** reads:
 
 ```
-GUI 的「MCP Gateway」面板把下列 2 個 FDEP api 的文件注入為本工作階段的背景上下文。
+GUI 的「MCP網關」面板把下列 2 個 FDEP api 的文件注入為本工作階段的背景上下文。
 請把它們當作欄位名稱與型別的唯一依據，不要再呼叫 docs；每個 api 各自帶著自己的 inbound。
 
 ============================================================
@@ -305,7 +305,7 @@ dsh plugin --profile web remove fdep-api-request-bundle
 ## Verify
 
 1. Restart `dsh web`.
-2. The sidebar should show a green hexagon glyph labelled **MCP Gateway** in the global panels list.
+2. The sidebar should show a green hexagon glyph labelled **MCP網關** in the global panels list.
 3. Click it — the main column should render the three numbered cards (1 選擇 API → 2 參數 → 3 執行),
    with `twseMops.todayMaterial` already in the API ID box and **複製提示** / **開新工作階段**
    greyed out until **取得文件** succeeds.

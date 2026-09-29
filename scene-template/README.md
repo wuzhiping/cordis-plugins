@@ -85,7 +85,7 @@ card.
 
 | endpoint | source |
 |---|---|
-| `scenarios.list` | **real API**: `GET https://abc.feg.com.tw/BDD/API/AI/dsh/scene/list` |
+| `scenarios.list` | **real API**: `GET https://abc.feg.com.tw/BDD/API/AI/dsh/scene/list?preset=<agent preset id>` — the list is **per agent preset**, so the current session's preset id travels as the `preset` query parameter (see *The list is per preset*) |
 | `scenarios.get` (detail + branches + templates) | **real API**: `POST https://abc.feg.com.tw/BDD/API/AI/dsh/scene/detail` with `{"id":"scn_writing"}` |
 | recommend (`✨ 推薦` / `🔄 換一批`) | **real API**: `POST https://abc.feg.com.tw/BDD/API/AI/dsh/scene/suggestion_template` with `{"scene_id":"scn_writing","content":"<composer draft>"}` |
 | `scenarios.templates` (dynamic templates), `templates.preview` | mock in `lib/client.js` (with `LATENCY`) — in practice the preview never needs the endpoint, because every template already carries a working `previewUrl` |
@@ -130,10 +130,35 @@ JavaScript to render a template, relax it to `sandbox="allow-scripts"`.
 **When does it fetch?** The scene list and the scenario detail are keyed on the slot's
 `sessionId` (the detail additionally on the scenario id), so **every new or switched session
 re-fetches them** — a session switch is not a page reload, the same panel instance just changes
-`sessionId`. A click on the expert pet bumps `tick` on the module bus (the dependency is
-`[sessionId, tick]`, the detail `[scenarioId, sessionId, tick]`) and is the one *manual* refresh —
-see "The expert pet". An already-loaded list stays visible while the refresh is in flight (no
-skeleton flash); only the very first load shows the skeleton.
+`sessionId`. The list is keyed on the **agent preset** as well (see below), so switching the
+mode chip re-fetches it too. A click on the expert pet bumps `tick` on the module bus (the
+dependency is `[sessionId, agentPreset, tick]`, the detail `[scenarioId, sessionId, tick]`) and
+is the one *manual* refresh — see "The expert pet". An already-loaded list stays visible while
+the refresh is in flight (no skeleton flash); only the very first load shows the skeleton.
+
+### The list is per preset
+
+The scene list is scoped to the **agent preset** the session runs (the mode chip on the new
+session screen: 標準模式 / 办公模式 / …), so the request carries it:
+
+```
+GET https://abc.feg.com.tw/BDD/API/AI/dsh/scene/list?_t=<ms>&preset=<preset id>
+```
+
+The id is read from the session row's `projectionValues.agentPreset` — the same key
+`ui-agent-preset` uses for the header label and the hero chip's `current` — through the slot's
+standard `useSessions` prop: the row for the slot's own `sessionId`, falling back to the row the
+main view retains (`retainedBy.mainView > 0`). When the slot exposes no `useSessions`, or no
+session records a preset yet, the parameter is omitted and the list is fetched without one; both
+are silent degradations, not errors.
+
+Because the list is per preset, the preset is part of the fetch effect's dependency array:
+**switching the mode chip re-pulls the list** (and the pet's tooltip reports which preset the
+current list belongs to: `當前模式 preset：office`).
+
+> The live endpoint still answers the same six scenarios for every preset — including a
+> nonsense one — so the parameter is not honoured server-side yet. The client sends it as
+> agreed, and per-preset filtering starts working the moment the backend reads it.
 
 Where the request happens differs by delivery form, because the two halves have different globals:
 
@@ -324,6 +349,18 @@ there is no conversion table to ship. The conversion was produced once by
 - Drag the chip rows / poster wall left-right: they pan, no scrollbar, and a drag
   never selects anything by accident; a plain click still selects.
 - `✨ 推薦` → four different posters; click again → the next batch.
+- Hover the scenario chip row: the tooltip names the source **and** the preset the list belongs to
+  (`場景清單：遠端 API（abc.feg.com.tw）` / `當前模式 preset：office`).
+- Switch the mode chip (標準模式 ↔ 办公模式 …) on a new session: the scene list is re-fetched with
+  the new `&preset=` value. `node tools/verify-preset-param.js` drives exactly this against the
+  running GUI and prints every `scene/list` URL (see *Tools*).
+
+## Tools
+
+| tool | what it does |
+|---|---|
+| `tools/verify-preset-param.js` | Opens the running GUI (http://127.0.0.1:3080) in its own headless Chrome, wraps `fetch` to record every `scene/list` call, prints the DOM's scenario chips + list tooltip, then switches the agent preset in that *throwaway* browser and prints the `scene/list` call the switch produced. Restores the preset it found; the user's window is untouched. |
+| `tools/s2t/` | The one-off Simplified→Traditional (zh-TW) conversion of `lib/client.js` — see *Language*. |
 
 ## Mock data → `mock/` (one file per endpoint)
 

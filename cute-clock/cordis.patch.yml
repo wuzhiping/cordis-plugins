@@ -1,6 +1,6 @@
-# 插件层：把自己的宿主行注册到 web profile 的组合树里
-# dsh patch-loader 语义：裸 `- id:` 行只修补已存在的 entry；
-# 新 entry 必须用 `insert:` 块加进去。
+# 外掛層：把自己的宿主行註冊到 web profile 的組合樹裡
+# dsh patch-loader 語義：裸 `- id:` 行只修補已存在的 entry；
+# 新 entry 必須用 `insert:` 塊加進去。
 - insert:
     - id: cute-clock
       name: cute-clock

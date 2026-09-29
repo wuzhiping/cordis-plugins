@@ -423,7 +423,7 @@ async function main() {
     assert.equal(panelEntry.options.name, 'sidebar.panellist');
     assert.equal(panelEntry.options.id, 'fdep-api-request');
     assert.equal(panelEntry.options.order, 50);
-    assert.equal(panelEntry.options.label(), 'MCP Gateway');
+    assert.equal(panelEntry.options.label(), 'MCP網關');
   });
   check('main entry carries key and name==slot key', () => {
     assert.ok(mainEntry, 'main entry missing');
@@ -526,8 +526,8 @@ async function main() {
     // A nav entry and the panel it opens must agree on the name.
     let heading = null;
     walk(tree, (n) => { if (n.type === 'h2') heading = textOf(n); });
-    assert.equal(heading, 'MCP Gateway');
-    assert.equal(panelEntry.options.label(), 'MCP Gateway');
+    assert.equal(heading, 'MCP網關');
+    assert.equal(panelEntry.options.label(), 'MCP網關');
   });
   check('panel renders with an API ID input', () => {
     assert.ok(findApiIdInput(tree), 'api id input missing');

@@ -511,19 +511,22 @@ window.__ModuleLoader__.load({
     // NOTE: hHd-Xa_* / pXSMma_* are CSS-module hashes emitted by the DSH build;
     // they can go stale after a DSH upgrade and need to be refreshed.
     var BRAND_NAME = "企業智慧數位員工@AIFE";
-    // The banner mark. The DSH fish/wordmark are hidden by the CSS below, so this
-    // is what the sidebar shows: the icon (a plain emoji, no asset to load) plus
-    // the brand text. The welcome headline carries the same icon, in the same place
-    // relative to the brand name — the locale string spells it out because that
-    // string is ours (the sidebar needs CSS content: it has no text node of its own).
-    var BRAND_ICON = "💡";
+    // The brand mark, in every place the sidebar and the hero show it: a 48x48 PNG
+    // embedded as a data URL, drawn as a CSS background box (see the sizes in
+    // BRAND_CSS). It replaced the 💡 emoji, which was a plain glyph with no asset to
+    // load; the plugin is served as a single client module (its directory has no HTTP
+    // route), so there is nowhere to point an <img>/url() at. 48px covers the largest
+    // placement (the hero headline, 24px at 2x DPR) and the browser downsamples for
+    // the 20px rail and 16px banner.
+    var BRAND_ICON_DATA_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAMAAABg3Am1AAACrFBMVEVMaXEqUV2tTVvmMUjrMUfrMUfrMUcqUV00TlXrMUcyT1U1TVXsMEfsMEnpMknjNEvpMUvsMEfrMkNzRlXoM0WZIC65SFNoUl6gHzjgIkBWPUxrRU/mM0ltQlxlUV91S1IqUV0qUV3rMkXpMkfrMUnrMEt0R1boMk3oMkvkNEt1RFfmMk/pMU2oT1t1RVN2RlRbUF11RFmoTmF1RVXkNEfdIznjNUm6JznVGy+uS1+tTGHlLUSiJDPeK0HfKkGxIT2jJjXhKD3hI0FXPU+jJTngJkBXPk1ZQFlRRUtrRFLlMFLjKUFxQVSwQUnlLEjlLUS3RE/gM1CxR1G3R1RBU19gR1TeI0BPQ1CtTV1YPlJHSV1cP1fRJD/cIDSbOlLgITstUWJUV2PDNUo2XWuqLECjQV6vNEWqS1ltVmRpU19iU1ugRVRpV2asK0LrL0joMUbtL0TLNEfrMEDlMkZvR1AqUV3rMUfpMkfsMEvsMUXrMkXsMEcpUl3rMUnpMkXsMEksUV3uMEfoM0foM0UrT1zpMU3sMUPuL0npMUvrMkPrMEsrUForU1otUl7uMUHpMknuLk0rT2AsT1wqU14rUmAmUVcpUl8qUmYtUlwtVFzuMEXuL0vmM0stVF7uMEPmM0nxLkfxLUnoMVHsL03xL0PmMlErU14yUFjmMkYoVGAwUFwuUVcwUlYvVFArVFTuLkbqMEgrU1wvUVwqVFoqVFwnVVMtTF8wUWTrL0bpM0MqU2LnNEouUmQuTV4uTFntL0QnVVwuTlrwLUbhNUvuMUonVFctUWAoTlQwUF4nT1YqTV8vUGIwUWYrUWbmME4oUljkNUXoL1ApUVopUFzjM0jlLk/nL0krUFgpU1koT13qMUIqUlnoMkvrME/uLVXmMk/uLk8uVFktVGDmMk0QMzOnAAAAdXRSTlMAM5nMZjPMzJmZmZmZZmZmZmYzZswzmWYzmcyZZplmmdb1M8xmZmZmZmZmZmY9ZmY9ZplmZmZmZmaZmZkzmZkpM5mZzDOZzMzMmcwzmXrMM5nMmZmZmZnMmczMzJmZXJnMUj0zM5kzmWZmZplmM8zMzB/MzJlYW8mDAAAACXBIWXMAAAPoAAAD6AG1e1JrAAACEElEQVRIx2NgwALE2mvbKoCgvhIIqkGs2jIYYBgiGoJrazvrQaC8qqy6uhYIyvBrCNrdtBNkeNn95rtdVc1AUI5fQ8CROeWNQDD73uMHFU1EaPD18wpkBoL8ouKCPGYRIFBmgwEGLiDg4AYCDjgICfWRlfWUlpYukZcvxDCtBghKwaAGBrbtO7hn+9yZM2fOffQwF0NDKSZoaGhoaQHpnDa9V2KIath76ubJ41OB4PyllhRiNJyeUnPjaA8Q3L5+OQ2PBgVGKEhOlJPLEgeCzIycJG9/ISBQYoUBJA3scENSr5671QQCF+bsP7S+DwgqEUkDm4bsaxevdHR1dXXcObxjw4pOIKjCryG9uqIJIl1eXV1WDgRl+DUwNbZDNFRXDxYNEaRqiIuPjQmTlJR0cnW0s7XmAQJOOEDSoMgOBQlR0ZHhUlJuUs7uHvbEJI0ZJ86cPdANAqu3uhCjYfOMY7t6JgPBxrXrHIjRsHLLjE3Ll02ZMqV3zSobYjQgwKSJokNLAyLiDPT0tYTVhIWFjQ3NLUwFgYAFDrCnpbbKCaAEUd7fWtVYXQUEhBLf4NNgWV+7qBykrL5i1qzqOiCoAtUvVSAWVg1W9RVLy4AaKhfMnlcJyQ8gDXU4NRh1LlkM0lC9sKKueX4rEHSBasYOEMCqQdfETIcfCDTVtWVkNASAQJUXCFT4gACrBrxgJGoAAIk5hMK+q+FZAAAAAElFTkSuQmCC";
     // 新建页 hero 标题：只把 DSH 原生的「探索未至之境」换成品牌名。
-    // 前面不带「歡迎使用 / Welcome to」那几个字 —— 图标与品牌名保留，
-    // 侧边栏横幅、favicon、document.title 也都不受影响。
+    // 前面不带「歡迎使用 / Welcome to」那几个字 —— 品牌名保留，
+    // 图标改由 CSS 画在这个标题上（形状与侧边栏一致）；侧边栏横幅、
+    // favicon、document.title 也都不受影响。
     var BRAND_HEADLINE = {
-      "zh": BRAND_ICON + " 企业智慧数位员工@AIFE",
-      "zh-TW": BRAND_ICON + " 企業智慧數位員工@AIFE",
-      "en": BRAND_ICON + " 企業智慧數位員工@AIFE"
+      "zh": BRAND_NAME,
+      "zh-TW": BRAND_NAME,
+      "en": BRAND_NAME
     };
     var BRAND_STRINGS = {
       conversation: { "hero.headline": BRAND_HEADLINE }
@@ -546,18 +549,23 @@ window.__ModuleLoader__.load({
       ".hHd-Xa_logoRow{position:relative;justify-content:center;padding-left:0}",
       ".hHd-Xa_brandMark{display:none!important}",
       ".hHd-Xa_brandName{display:none!important}",
-      ".hHd-Xa_brand{flex:1 1 auto;min-width:0;justify-content:center}",
+      ".hHd-Xa_brand{position:relative;flex:1 1 auto;min-width:0;justify-content:center}",
       // -20px: the banner is optically off to the right (the row is inset by DSH's own
       // padding and the collapse button sits in the corner), so the text is nudged
       // left of the geometric centre. `transform` keeps the flex centring intact.
-      ".hHd-Xa_brand::before{display:block;content:\"" + BRAND_ICON + " " + BRAND_NAME + "\";text-align:center;font-size:14px;font-weight:600;letter-spacing:0;color:var(--zhtw-brand,#345db2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform:translateX(-20px)}",
+      //
+      // The mark is a generated box, not a glyph: `brand` is a flex row, so a flex
+      // item's *padding* box collapses to zero here — an explicit width/height is
+      // what actually reserves the 16px the PNG needs. The brand name itself stays
+      // the real text of this ::before, inline after the box.
+      ".hHd-Xa_brand::before{content:\"" + BRAND_NAME + "\";display:block;padding-left:24px;background:url(\"" + BRAND_ICON_DATA_URL + "\") left center/16px 16px no-repeat;font-size:14px;line-height:16px;font-weight:600;letter-spacing:0;color:var(--zhtw-brand,#345db2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform:translateX(-20px)}",
       ".hHd-Xa_logoRow .hHd-Xa_toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%)}",
       // Collapsed rail (56px): the button must keep its own layout there — the brand
       // mark lives *inside* it, so taking it out of the flow would move the icon off
       // the rail's centre line. The fish is swapped for the icon instead.
       ".hHd-Xa_collapsed .hHd-Xa_toggle{position:static;right:auto;top:auto;transform:none}",
       ".hHd-Xa_railMark svg{display:none!important}",
-      ".hHd-Xa_railMark::before{content:\"" + BRAND_ICON + "\";font-size:20px;line-height:1}",
+      ".hHd-Xa_railMark::before{content:\"\";display:block;width:20px;height:20px;margin:0 auto;background-image:url(\"" + BRAND_ICON_DATA_URL + "\");background-size:20px 20px;background-position:center;background-repeat:no-repeat}",
       // Welcome headline (the title above the composer): hide the fish and the preview
       // badge, centre the title, and give it the same sapphire as the banner. The text
       // lives in `titleGroup` in current builds; `headlineText` is what older ones used,
@@ -565,6 +573,11 @@ window.__ModuleLoader__.load({
       ".pXSMma_headline{grid-template-columns:1fr auto 1fr;justify-content:center}",
       ".pXSMma_fishHitbox{display:none!important}",
       ".pXSMma_headlineText{grid-area:1/2}",
+      // The brand mark rides on the headline as a generated box (the hero copy
+      // carries no icon of its own any more). It is sized explicitly rather than
+      // by padding: inside a flex item the padding box collapses to zero here, so
+      // an explicit width/height + margin is what actually reserves the space.
+      ".pXSMma_headlineText::before,.pXSMma_headline::before{content:\"\";display:inline-block;width:24px;height:24px;margin-right:8px;vertical-align:-0.14em;background-image:url(\"" + BRAND_ICON_DATA_URL + "\");background-size:24px 24px;background-position:center;background-repeat:no-repeat}",
       ".pXSMma_previewBadge{display:none!important}",
       ".pXSMma_headline,.pXSMma_titleGroup,.pXSMma_headlineText{color:var(--zhtw-brand,#345db2)}"
     ].join("");

@@ -181,7 +181,7 @@ async function main() {
     const names = await cdp.eval(`(() => {
       const html = document.body.innerHTML;
       return {
-        mcp: (html.match(/MCP Gateway/g) || []).length,
+        mcp: (html.match(/MCP網關/g) || []).length,
         oldLabel: (html.match(/FDEP API/g) || []).length,
         oldTitle: (html.match(/FDEP API Request/g) || []).length,
         hexagon: (html.match(/M13\\.63 4\\.75/g) || []).length,
@@ -191,7 +191,7 @@ async function main() {
     })()`);
     console.log('');
     console.log('=== name occurrences in the live DOM ===');
-    console.log('  "MCP Gateway"       : ' + names.mcp);
+    console.log('  "MCP網關"       : ' + names.mcp);
     console.log('  "FDEP API"          : ' + names.oldLabel + (names.oldLabel ? '   <-- OLD NAME PRESENT' : ''));
     console.log('  "FDEP API Request"  : ' + names.oldTitle + (names.oldTitle ? '   <-- OLD TITLE PRESENT' : ''));
     console.log('  hexagon path        : ' + names.hexagon);
@@ -199,7 +199,7 @@ async function main() {
     // ---- 3. open the panel and read it ----
     const clicked = await cdp.eval(`(() => {
       const all = Array.from(document.querySelectorAll('button, [role="button"]'));
-      const hit = all.find((el) => /MCP Gateway|FDEP API/i.test(
+      const hit = all.find((el) => /MCP網關|FDEP API/i.test(
         (el.textContent || '') + (el.getAttribute('aria-label') || '') + (el.getAttribute('title') || '')));
       if (!hit) return { clicked: false };
       hit.click();

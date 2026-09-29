@@ -1,4 +1,4 @@
-// 宿主半边 —— 本 bundle 只贡献浏览器端座位，宿主侧只需一个能加载的空壳。
-// 浏览器要加载哪些模块，由宿主组合树里这一行决定（见 cordis.patch.yml）。
+// 宿主半邊 —— 本 bundle 只貢獻瀏覽器端座位，宿主側只需一個能載入的空殼。
+// 瀏覽器要載入哪些模組，由宿主組合樹裡這一行決定（見 cordis.patch.yml）。
 exports.name = 'cute-clock';
 exports.apply = function () {};

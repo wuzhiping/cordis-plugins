@@ -94,7 +94,7 @@ return module.exports;      // factory 的返回值就是插件
 
 | 组件 | 本地状态 | 说明 |
 |---|---|---|
-| `TopScenarioPanel` | `scenarios` / `active` | 场景目录 + 选中场景的详情（branches）；分支选中后调 `inputActions.setDraft(branch.preset)`；左上角挂 `ExpertPet` |
+| `TopScenarioPanel` | `scenarios` / `active` | 场景目录 + 选中场景的详情（branches）；目录**按当前 agent preset 拉**（`?preset=<projectionValues.agentPreset>`，切模式 chip 会重拉，见 §9）；分支选中后调 `inputActions.setDraft(branch.preset)`；左上角挂 `ExpertPet` |
 | `ExpertPet` | `state` 由选择派生（`idle` / `scenario` / `branch`） | 专家宠物：**内联 SVG**（零外部资源）小机器人，透明正方形 44×44，绝对定位在面板**右上角**外挂；浮动 + 眨眼用注入的 CSS keyframes，状态一变就换 `key` 重挂载 → hop 动画重放；表情气泡 💭 → 💡 → ✨；可点击（`cursor: pointer` + tooltip），点一下在模块总线上发 `{type:'refresh'}` → 两个面板各自重拉清单与详情 |
 | `TemplatePanel` | `active` / `dynTemplates` / `batch` / `batchInfo` / `batchLoading` / `preview` | 模板墙本体：静态模板、动态模板、推荐批次、预览弹窗 |
 | `TemplateDockEntry` | — | 只做一件事：把 `order: 2` 塞给 `TemplatePanel`（位置由 flex order 决定，几何全在 `S.panel`） |
@@ -391,6 +391,7 @@ return module.exports;      // factory 的返回值就是插件
 | 项 | 现状 | 后续可选 |
 |---|---|---|
 | 数据 | 场景清单 + 详情 + **推荐** 已接真接口（`/scene/list` GET、`/scene/detail` POST `{"id":…}`、`/scene/suggestion_template` POST `{scene_id, content}`，均带回退）；动态模板仍是 mock；预览已走 API 的 `previewUrl`（实测可 iframe，缺口是所有模板指向同一张页面，等后端按 id 参数化）；已按规范 §3 逐个接口导出到 `cordis-plugins/scene-template/mock/`（5 个文件）+ 对齐说明 | 换成真接口：只改 `api`（以及接一个网络口子）；待对齐点见 `mock/README.md`（`hasDynamicTemplates` 后端已补上 ✓；推荐接口已独立并上线 ✓） |
+| 清单按 preset 给 | `/scene/list` 带 `?preset=<当前会话的 projectionValues.agentPreset>`（值经槽位的标准 prop `useSessions` 读：先按座位的 `sessionId` 查行，退路是主视图持有的那行 `retainedBy.mainView > 0`；与 `ui-agent-preset` 读的是同一个键）。**preset 进 effect 依赖 → 换模式 chip 就重拉**；没有 `useSessions` 或会话还没记 preset 时不带该参数（静默降级）。宠物 hover 写明这份清单属于哪个模式：`當前模式 preset：office` | 后端目前对任何 preset（含不存在的）都回同一份 6 场景 —— 参数已按约定发出，等后端按 preset 过滤即生效 |
 | 选中数据的注入 | 场景（名称 + 说明）、分支（名称，preset 已在输入框）、模板（标题 + **案例内容**，上限 4000 字 + **预览地址**）按 session 注入每次模型步的 runtime context；宠物 hover 上有一行「會注入模型上下文：…／上次組裝：已注入 N 字」可自查。**预览地址是必给的兜底**：抽不到内容时注入里仍带 `預覽地址: <url>` 与「需要時可抓取上面的預覽地址查看完整範例」，模型可自行抓页；内联 `data:` URL 不进上下文（它本身就是内容且动辄几 KB）。**案例内容的数据缺口**：远端 `previewUrl` 对所有模板返回同一张样例页 → 此刻每张海报注入的内容是一样的（mock 的内联 `data:` 模板反而是逐模板的） | 后端给模板加 `content` 字段（或按模板 id 参数化预览页）；宿主里加一个"有 `content` 就直接用"的分支即可 |
 | 注入的会话定位 | `systemPrompt.context` 的 provider 直接读 `context.agent.id`（`dsh-agent` 的 `assembleContextFor` 一定带上 `agent`），`agents.currentInitiator()` 只作退路；宠物 hover 上会写明是哪条路径（`已注入 N 字（context.agent）`）。**踩过的坑**：Inspect 给出的 `AssembleContext` 类型只声明了 `scope`/`signal`，照着它写就会去猜会话（第一版就是这么错的 —— 猜不到时静默注入空串） | 若哪天 `agent` 真的不在 assembly context 里了，退路还有 `agent/pre-step`（payload 直接带 `agent`） |
 | 模拟延迟 | 各接口有 `LATENCY`（520/420/760/640/300ms）—— 只为让 loading 过渡可见 | 接真接口时删掉 `LATENCY`/`delayed`（或置 0） |

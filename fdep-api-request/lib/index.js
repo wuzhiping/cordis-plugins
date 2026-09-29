@@ -131,7 +131,7 @@ function renderDocsContext(apis) {
   const set = Array.isArray(apis) ? apis.filter((entry) => entry && typeof entry.apiId === 'string' && entry.apiId !== '') : [];
   if (set.length === 0) return '';
   const lines = [];
-  lines.push('GUI 的「MCP Gateway」面板把下列 ' + set.length + ' 個 FDEP api 的文件注入為本工作階段的背景上下文。');
+  lines.push('GUI 的「MCP網關」面板把下列 ' + set.length + ' 個 FDEP api 的文件注入為本工作階段的背景上下文。');
   lines.push('請把它們當作欄位名稱與型別的唯一依據，不要再呼叫 docs；每個 api 各自帶著自己的 inbound。');
   for (const entry of set) {
     lines.push('');

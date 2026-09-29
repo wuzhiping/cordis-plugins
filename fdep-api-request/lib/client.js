@@ -1240,7 +1240,7 @@ function makeMainPanel(e, React, services) {
         e(
           'header',
           { className: 'fdep__head' },
-          e('h2', { className: 'fdep__title' }, 'MCP Gateway'),
+          e('h2', { className: 'fdep__title' }, 'MCP網關'),
           e(
             'div',
             { className: 'fdep__meta' },
@@ -1595,7 +1595,7 @@ function pluginFactory(require) {
             name: 'sidebar.panellist',
             id: 'fdep-api-request',
             order: 50,
-            label: function () { return 'MCP Gateway'; },
+            label: function () { return 'MCP網關'; },
           },
           function (iconProps) { return e(Glyph, iconProps); },
         );

@@ -1,7 +1,7 @@
 {
   "name": "cute-clock",
   "version": "0.2.0",
-  "description": "🐱 一只住在 DSH Web GUI 角落里的猫咪时钟 —— 每次打开都送你一句全新的活力 slogan",
+  "description": "🕐 一個住在 DSH Web GUI 角落裡的元氣時鐘 —— 每次打開都送你一句全新的活力 slogan",
   "type": "commonjs",
   "main": "lib/index.js",
   "exports": {
