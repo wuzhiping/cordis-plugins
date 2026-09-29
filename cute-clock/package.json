@@ -1,0 +1,21 @@
+{
+  "name": "cute-clock",
+  "version": "0.2.0",
+  "description": "🐱 一只住在 DSH Web GUI 角落里的猫咪时钟 —— 每次打开都送你一句全新的活力 slogan",
+  "type": "commonjs",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  }
+}
