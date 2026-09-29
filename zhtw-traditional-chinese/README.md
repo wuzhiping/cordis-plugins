@@ -163,17 +163,18 @@ replaces the hero headline. The sidebar/hero overrides are CSS against
 `hHd-Xa_*` / `pXSMma_*` class hashes emitted by the DSH build — **they can go
 stale after a DSH upgrade** and need refreshing from the current DOM.
 
-The new-session hero headline is switchable through `HEADLINE_MODE` in
-`lib/client.js`:
+The new-session hero headline keeps the brand but drops the greeting:
+`BRAND_HEADLINE` overrides `conversation.hero.headline` with
+`💡 企業智慧數位員工@AIFE` — no `歡迎使用` / `Welcome to` prefix — still in the
+sapphire brand colour. Two ways back, both one-liners in `lib/client.js`:
 
-| Value | The new-session title line shows |
+| Want | Change |
 |---|---|
-| `"hidden"` (default) | nothing — the whole `.pXSMma_headline` container is hidden, so no gap is left |
-| `"brand"` | the rebrand copy: `歡迎使用 💡 企業智慧數位員工@AIFE` |
-| `"stock"` | DSH's own copy (`探索未至之境` / `Into the Unknown`), still in the sapphire brand colour |
+| DSH's own copy (`探索未至之境` / `Into the Unknown`) | drop the `conversation: { "hero.headline": … }` entry from `BRAND_STRINGS` |
+| no headline line at all | add `.pXSMma_headline{display:none!important}` to `BRAND_CSS` |
 
 Only the headline is affected: the sidebar banner, `document.title`, favicon and
-PWA manifest keep the brand in every mode.
+PWA manifest keep the brand either way.
 
 > Client bundles are served as one module group assembled **at host boot**, so a
 > `lib/client.js` edit reaches the browser only after the host restarts — a page
