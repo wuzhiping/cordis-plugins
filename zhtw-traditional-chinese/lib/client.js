@@ -513,17 +513,27 @@ window.__ModuleLoader__.load({
     var BRAND_NAME = "企業智慧數位員工@AIFE";
     // The banner mark. The DSH fish/wordmark are hidden by the CSS below, so this
     // is what the sidebar shows: the icon (a plain emoji, no asset to load) plus
-    // the brand text.
+    // the brand text. The welcome headline carries the same icon, in the same place
+    // relative to the brand name — the locale string spells it out because that
+    // string is ours (the sidebar needs CSS content: it has no text node of its own).
     var BRAND_ICON = "💡";
     var BRAND_HEADLINE = {
-      "zh": "欢迎使用 企业智慧数位员工@AIFE",
-      "zh-TW": "歡迎使用 企業智慧數位員工@AIFE",
-      "en": "Welcome to 企業智慧數位員工@AIFE"
+      "zh": "欢迎使用 " + BRAND_ICON + " 企业智慧数位员工@AIFE",
+      "zh-TW": "歡迎使用 " + BRAND_ICON + " 企業智慧數位員工@AIFE",
+      "en": "Welcome to " + BRAND_ICON + " 企業智慧數位員工@AIFE"
     };
     var BRAND_STRINGS = {
       conversation: { "hero.headline": BRAND_HEADLINE }
     };
     var BRAND_CSS = [
+      // Brand colour: 宝石蓝 (sapphire). The theme has exactly one blue token, and its
+      // value (#4176e6) is a bright "business" blue, so it is deepened with the theme's
+      // own label colour: near-black in the light theme (→ a real sapphire), near-white
+      // in the dark one (→ lifted, as a dark UI needs). It is declared once on <body>
+      // (where the theme variables actually resolve — they are not on :root) and shared
+      // by the sidebar banner and the welcome headline; the literal is the fallback for
+      // engines without `color-mix`.
+      "body{--zhtw-brand:color-mix(in srgb, var(--dsw-alias-state-business-primary,#0f52ba) 75%, var(--dsw-alias-label-primary,#0f1115))}",
       // Sidebar logo row: hide fish mark / wordmark; show the icon + text brand via
       // ::before, centred in the sidebar. The brand box spans the whole row and
       // centres its own text; the collapse/expand button is lifted out of the flow
@@ -537,12 +547,7 @@ window.__ModuleLoader__.load({
       // -20px: the banner is optically off to the right (the row is inset by DSH's own
       // padding and the collapse button sits in the corner), so the text is nudged
       // left of the geometric centre. `transform` keeps the flex centring intact.
-      // Banner colour: 宝石蓝 (sapphire). The theme has exactly one blue token, and its
-      // value (#4176e6) is a bright "business" blue, so it is deepened with the theme's
-      // own label colour: near-black in the light theme (→ a real sapphire), near-white
-      // in the dark one (→ lifted, as a dark UI needs). The plain token stays as the
-      // fallback for engines without `color-mix`.
-      ".hHd-Xa_brand::before{display:block;content:\"" + BRAND_ICON + " " + BRAND_NAME + "\";text-align:center;font-size:14px;font-weight:600;letter-spacing:0;color:var(--dsw-alias-state-business-primary, #0f52ba);color:color-mix(in srgb, var(--dsw-alias-state-business-primary, #0f52ba) 75%, var(--dsw-alias-label-primary, #0f1115));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform:translateX(-20px)}",
+      ".hHd-Xa_brand::before{display:block;content:\"" + BRAND_ICON + " " + BRAND_NAME + "\";text-align:center;font-size:14px;font-weight:600;letter-spacing:0;color:var(--zhtw-brand,#345db2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform:translateX(-20px)}",
       ".hHd-Xa_logoRow .hHd-Xa_toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%)}",
       // Collapsed rail (56px): the button must keep its own layout there — the brand
       // mark lives *inside* it, so taking it out of the flow would move the icon off
@@ -550,11 +555,15 @@ window.__ModuleLoader__.load({
       ".hHd-Xa_collapsed .hHd-Xa_toggle{position:static;right:auto;top:auto;transform:none}",
       ".hHd-Xa_railMark svg{display:none!important}",
       ".hHd-Xa_railMark::before{content:\"" + BRAND_ICON + "\";font-size:20px;line-height:1}",
-      // Hero headline: hide fish and preview badge, center the title.
+      // Welcome headline (the title above the composer): hide the fish and the preview
+      // badge, centre the title, and give it the same sapphire as the banner. The text
+      // lives in `titleGroup` in current builds; `headlineText` is what older ones used,
+      // and neither is individually reliable — hence the colour on all of them.
       ".pXSMma_headline{grid-template-columns:1fr auto 1fr;justify-content:center}",
       ".pXSMma_fishHitbox{display:none!important}",
       ".pXSMma_headlineText{grid-area:1/2}",
-      ".pXSMma_previewBadge{display:none!important}"
+      ".pXSMma_previewBadge{display:none!important}",
+      ".pXSMma_headline,.pXSMma_titleGroup,.pXSMma_headlineText{color:var(--zhtw-brand,#345db2)}"
     ].join("");
     var BRAND_FAVICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#16324f"/><text x="32" y="45" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="32" font-weight="700" fill="#ffffff">f</text></svg>';
 

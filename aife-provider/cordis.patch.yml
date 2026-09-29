@@ -27,3 +27,6 @@
         models:
           - id: MiniMax-M3
             name: MiniMax-M3
+            input:
+              - text
+              - image
