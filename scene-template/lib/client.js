@@ -125,6 +125,63 @@ window.__ModuleLoader__.load({
       return "";
     }
 
+    // ---------------------------------------------------------------------
+    // 1.5 當前 agent preset(新建會話那顆模式 chip 選的東西)
+    //
+    // 場景清單是「按 preset 給的」:同一個使用者換模式,清單本身就不一樣。所以
+    //   1. 清單請求帶上 ?preset=<id>,後端照 preset 篩;
+    //   2. preset 變了要把清單重拉一次(它進了 effect 依賴)。
+    // 值取自 session 列上的 projectionValues.agentPreset —— 就是 ui-agent-preset
+    // 讀來渲染 header 標籤、hero chip 用來算 current 的同一個鍵。
+    // ---------------------------------------------------------------------
+
+    /**
+     * 取「當前會話」記錄的 agent preset id。
+     * 座位把當前 session 的 id 一起給下來了,優先信它(hero 新建會話也有一個空白
+     * session);萬一沒有,退回主視圖持有的那一行(retainedBy.mainView > 0),
+     * 與 cute-clock 的做法一致。
+     * @param state - SessionListState。
+     * @param sessionId - 座位傳下來的當前 session id,可能是 undefined。
+     * @returns preset id,未定則 undefined。
+     */
+    function currentAgentPreset(state, sessionId) {
+      function presetAt(id) {
+        var row = state && state.byId ? state.byId[id] : undefined;
+        var value = row && row.projectionValues ? row.projectionValues.agentPreset : undefined;
+        return typeof value === "string" && value.length > 0 ? value : undefined;
+      }
+      if (sessionId !== undefined && sessionId !== null) {
+        var direct = presetAt(sessionId);
+        if (direct !== undefined) return direct;
+      }
+      if (!state || !state.byId) return undefined;
+      var ids = state.ids && state.ids.length ? state.ids : Object.keys(state.byId);
+      for (var i = 0; i < ids.length; i += 1) {
+        var row = state.byId[ids[i]];
+        if (!row || !row.retainedBy) continue;
+        if ((row.retainedBy.mainView || 0) > 0) return presetAt(ids[i]);
+      }
+      return undefined;
+    }
+
+    /**
+     * 組件裡讀當前 preset 的鉤子。槽位沒有 useSessions(或不在會話內)時回
+     * undefined,清單就照舊不帶參數拉 —— 這是刻意的降級,不是錯誤。
+     * @param props - 座位傳下來的 props。
+     * @param sessionId - 當前 session id。
+     * @returns preset id 或 undefined。
+     */
+    function useCurrentAgentPreset(props, sessionId) {
+      var useSessions = props && typeof props.useSessions === "function" ? props.useSessions : null;
+      if (useSessions === null) return undefined;
+      return useSessions(function (state) { return currentAgentPreset(state, sessionId); });
+    }
+
+    /** hover 提示裡顯示當前 preset,讓"清單是哪個模式給的"看得見。 */
+    function presetTipFor(preset) {
+      return preset === undefined ? "" : "當前模式 preset：" + preset;
+    }
+
     // 模擬網路延遲:讓各處 loading 過渡在靜態 bundle 裡也看得見。
     // 接真介面時把 LATENCY 全設 0（或把 delayed 換成真的 fetch）即可。
     var LATENCY = { list: 520, detail: 420, dynamic: 760, recommend: 640, preview: 300 };
@@ -504,15 +561,23 @@ window.__ModuleLoader__.load({
      * 上層組件一行都不用動。
      */
     var api = {
-      listScenarios: function () {
+      /**
+       * 場景清單。按當前 agent preset 給:preset 進查詢參數。
+       * @param preset - 當前 agent preset id(如 office);空/未定時不帶參數。
+       * @returns Promise<{ scenarios, source }>。
+       */
+      listScenarios: function (preset) {
         // 真接口 + 失敗回退:超時/非 2xx/形狀不對 → 用本檔案裡的 mock,
         // 並把 source 帶回去(介面上 hover 場景列可確認來源)。
         // 清單是 GET,回應只有一個弱 etag(沒有 cache-control / last-modified),所以每次加一個
         // 唯一查詢參數 —— 瀏覽器或中間快取都不可能把舊清單餵回來,新工作階段一定拿到最新。
         // (不用 fetch 的 cache:"no-store":它會帶上 cache-control 請求頭,把簡單請求變成需要 preflight)
+        // ?preset=<agent preset id>:後端按模式篩場景;沒有 preset 時就不帶這個鍵。
         var ctrl = typeof AbortController === "function" ? new AbortController() : null;
         var killer = setTimeout(function () { if (ctrl) { try { ctrl.abort(); } catch (err) {} } }, SCENE_API_TIMEOUT);
-        return fetch(SCENE_API + "?_t=" + Date.now(), {
+        var url = SCENE_API + "?_t=" + Date.now()
+          + (typeof preset === "string" && preset.length > 0 ? "&preset=" + encodeURIComponent(preset) : "");
+        return fetch(url, {
           headers: { accept: "application/json" },
           signal: ctrl ? ctrl.signal : undefined,
         }).then(function (res) {
@@ -963,6 +1028,8 @@ window.__ModuleLoader__.load({
       var actions = props ? props.inputActions : undefined;
       // 座位把當前的 session 一起給下來:換會話/新開會話時用它當依賴,重新拉一次
       var sessionId = props ? props.sessionId : undefined;
+      // 當前 agent preset(新建會話那顆模式 chip 的選擇):清單請求要帶上它
+      var agentPreset = useCurrentAgentPreset(props, sessionId);
       // 手動重新整理(點寵物)遞增這個計數,把它加到請求依賴上即可重跑
       var tick = useRefreshTick();
       var scenarioPan = useDragPan();
@@ -970,11 +1037,12 @@ window.__ModuleLoader__.load({
       var scenarioChosen = !!(sel && sel.scenarioId);
       var branchesLoading = scenarioChosen && !active;
 
-      // 場景清單:依賴 sessionId + tick —— 新開會話/切會話/點寵物都會重拉
+      // 場景清單:依賴 sessionId + agentPreset + tick —— 新開會話/切會話/換模式/
+      // 點寵物都會重拉(清單是按 preset 給的,preset 一換就不是同一份清單了)。
       // (已有資料時不閃骨架,靜默換成新的)
       React.useEffect(function () {
         var cancel = false;
-        api.listScenarios().then(function (r) {
+        api.listScenarios(agentPreset).then(function (r) {
           if (cancel) return;
           setScenarios((r && r.scenarios) || []);
           setScenarioSource((r && r.source) || null);
@@ -983,7 +1051,7 @@ window.__ModuleLoader__.load({
           if (!cancel) setScenarios([]);
         });
         return function () { cancel = true; };
-      }, [sessionId, tick]);
+      }, [sessionId, agentPreset, tick]);
 
       var scenarioId = sel && sel.scenarioId;
       // 場景詳情:除場景 id 外也跟 session 走
@@ -1069,10 +1137,12 @@ window.__ModuleLoader__.load({
         : null;
       var chosenIcon = chosen && chosen.icon ? chosen.icon : "✨";
       var petState = scenarioChosen ? (sel.branchId ? "branch" : "scenario") : "idle";
-      // 數據源只放在 hover 提示裡:一眼能確認到底是遠端還是回退 mock,又不佔版面
+      // 數據源只放在 hover 提示裡:一眼能確認到底是遠端還是回退 mock,又不佔版面;
+      // 順帶寫明這份清單是"哪個 agent preset"拉來的(清單按 preset 給)。
       var sourceTip = scenarioSource === "remote"
         ? "場景清單：遠端 API（abc.feg.com.tw）"
         : (scenarioSource === "mock" ? "場景清單：mock（遠端 API 失敗，已回退）" : "");
+      var listTip = [sourceTip, presetTipFor(agentPreset)].filter(function (line) { return line.length > 0; }).join("\n");
 
       return e("div", { style: S.panelPet },
         e(ExpertPet, {
@@ -1101,7 +1171,7 @@ window.__ModuleLoader__.load({
             className: "st-in",
             ref: scenarioPan.ref,
             "data-st-scroll": "1",
-            title: sourceTip,
+            title: listTip,
             style: S.scroller,
             ...scenarioPan.handlers,
           },
