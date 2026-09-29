@@ -176,9 +176,13 @@ sapphire brand colour. Two ways back, both one-liners in `lib/client.js`:
 Only the headline is affected: the sidebar banner, `document.title`, favicon and
 PWA manifest keep the brand either way.
 
-> Client bundles are served as one module group assembled **at host boot**, so a
-> `lib/client.js` edit reaches the browser only after the host restarts — a page
-> refresh alone keeps the boot-time copy.
+> Client bundles are served as one module group whose content is cached until the
+> profile reloads. After a `lib/client.js` edit, trigger a profile reload — for
+> example re-run `plugin_manager install_bundle` on this bundle — which rebuilds
+> the group under a **new `rev`**; a page refresh then picks the edit up with no
+> host restart. A plain refresh on its own keeps serving the cached copy (same
+> `rev`), and `restart-required` from the installer refers to the host-side row,
+> not to whether the browser half got republished.
 
 ## Development
 

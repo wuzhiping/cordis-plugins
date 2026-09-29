@@ -45,10 +45,10 @@ window.__ModuleLoader__.load({
     /** 載入超過這麼久還沒好，就提示可能被擋掉。 */
     var SLOW_MS = 9000;
     /**
-     * iframe 的顯示比例（1 = 原尺寸）。遠端頁面是寬版設計，預設按 85% 呈現，
+     * iframe 的顯示比例（1 = 原尺寸）。遠端頁面是寬版設計，預設按 90% 呈現，
      * 讓它在這個面板寬度裡少一點橫向滾動；改這一個數字即可。
      */
-    var FRAME_ZOOM = 0.85;
+    var FRAME_ZOOM = 0.9;
     /** 佈局盒要補回的百分比：1/zoom。transform 只縮視覺，不縮佈局盒。 */
     var FRAME_FILL = +(100 / FRAME_ZOOM).toFixed(4) + "%";
 
