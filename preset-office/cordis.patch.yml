@@ -1,0 +1,140 @@
+# preset-office：办公模式的 agent preset 声明（纯 patch bundle，无插件代码）。
+#
+# 安装：plugin_manager → install_bundle，target = 本目录绝对路径。
+#   本目录：C:\Users\shawoo\Desktop\feg.cn\cordis-plugins\preset-office
+# 效果：Web GUI 的 agent preset 名单里出现「办公模式」（order 10），
+#   新建会话选中它后才组装本组合；改这里只影响此后新建的会话。
+#
+# 放置准则（见 PRESET.md §2）：只决定"一个 agent 贡献什么"（工具 / prompt 段 /
+# 技能）的行放 preset；提供共享服务、被 realm 外读取的行留在 Host plane。
+# web bundle 已把 tool-fs / tool-fs-search / tool-pwsh / tool-bash / skill-filesystem /
+# tool-skill / tool-todo / tool-web / compaction-* 等 host 行 disabled: true，
+# 正是为了让 preset 接管这些 per-agent 行。
+- insert:
+    - id: preset-office
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: office
+        name: 办公模式
+        description: 文档、表格与简报的撰写、编辑、结构检查与交付；不装载代码开发工具。
+        order: 10
+        plugins:
+          # ── 身份与场景提示词 ───────────────────────────────────────────────
+          # persona 只能挂在 preset（全局挂载会与 prompt 注册表相撞）。
+          # suffix 必须显式重写：省略即"遮蔽"掉部署的 "Your working directory is {{cwd}}."
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: >-
+                You are an office-work agent powered by the {{model}} model. You produce, revise,
+                check, and deliver business documents: Word (.docx), Excel (.xlsx),
+                PowerPoint (.pptx), Markdown, and PDF. You are not a software-development agent:
+                keep your work inside the requested documents and their task folders, and do not
+                start code projects unless the user asks for one.
+              suffix: |-
+                Your working directory is {{cwd}}.
+                Ask before guessing when the deliverable's format, audience, or scope is genuinely
+                ambiguous; otherwise act. Load the matching office skill before touching
+                .docx / .pptx / .xlsx files, and run its structure check before you present a file.
+                Keep source scripts, intermediate files, and final documents inside the task
+                workspace, and preserve an existing document's design unless a redesign is
+                requested. Deliver finished files with the present tool, and state any check you
+                could not run.
+
+          # 工作区指令：$DSH_HOME/AGENTS.md + 项目根到 cwd 的 AGENTS.md/CLAUDE.md 链
+          # （持久 user 消息、仅追加，不会使更早的 KV 前缀失效）
+          - id: agent-instructions
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config:
+              maxBytes: 65536
+
+          # ── 读写与检索 ─────────────────────────────────────────────────────
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+
+          # ── 执行：office skill 的脚本与 LibreOffice Kit CLI 都需要 shell ────
+          # 若要做"零执行、只读检查"的办公模式，删掉这两行即可（届时
+          # check_office.py / kit CLI 都无法运行，交付前只能做人工检查）。
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+
+          # ── 技能：office 三件套 + 本地磁盘技能 ──────────────────────────────
+          # skill-office 注册 office-docx / office-pptx / office-xlsx 与
+          # 共享检查器 assets/scripts/check_office.py（只用 Python 标准库）。
+          # 它默认使用已安装的 LibreOffice Kit CLI
+          # （…/node_modules/@deepseek-ai/libreoffice-kit/lib/cli.js，本机存在）。
+          - id: skill-office
+            name: '@deepseek-ai/dsh-skill-office'
+
+          # 本地 provider：项目 .dsh/skills、.agents/skills、$DSH_HOME/skills
+          # （本机 $DSH_HOME/skills 下有 fdep-api-request、file-share）。
+          # 想只保留自己的技能集：设 includeDefaultRoots: false 并给 customSkillDirs。
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+
+          # 模型面 skill 目录与加载器；不挂它则目录与 skill 工具一起消失。
+          - id: tool-skill
+            name: '@deepseek-ai/dsh-tool-skill'
+
+          # ── 交付与协作 ─────────────────────────────────────────────────────
+          - id: tool-ask-user
+            name: '@deepseek-ai/dsh-tool-ask-user'
+
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
+            config:
+              allowParallelInProgress: true
+
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: true
+              searchTimeoutMs: 60000
+
+          # office-docx/pptx/xlsx 的 SKILL.md 明确要求用 present 交付成品文件。
+          # maxFiles 默认 8。
+          - id: present
+            name: '@deepseek-ai/dsh-tool-present'
+
+          # ── 长会话压缩（组内提供服务的行必须 isolate）──────────────────────
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024
+
+          # ── 本机暂不可用的行（留作备注，启用即会让整个 preset 变 broken）──
+          # office 技能默认要求 call load_workspace_dependencies 取随包 Python；
+          # 本机没有 primary-runtime payload（全盘无 runtime.json），该工具行的
+          # `source` 又必填，所以现在挂上去会激活失败。构建出 payload 后再加：
+          #
+          # - id: workspace-dependencies
+          #   name: '@deepseek-ai/dsh-tool-workspace-dependencies'
+          #   config:
+          #     source: D:/path/to/primary-runtime
+          #     root: D:/Refine/Books/ntop/AI/dsh/primary-runtime
+          #
+          # 同时：系统 Python 3.11.9 目前缺 python-docx / openpyxl / python-pptx
+          # （结构检查可用，创建/编辑前需 pip install，详见 PRESET.md §12）。

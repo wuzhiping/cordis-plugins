@@ -12,6 +12,14 @@
 | **`sidebar.panellist`** | 左栏新增 🕐 图标，点击切换到全局面板 |
 | **`main` (keyed)** | 全屏"猫咪时钟"页面：大钟 + 大字时间 + 飘落花瓣 + 活力 slogan |
 
+## 🏢 办公模式下自动退场
+
+agent preset **无法** enable/disable 浏览器插件（preset 只在自己的 agent scope 里挂插件，而浏览器名册是宿主启动时按 `dsh.client` 行组好的）。所以本插件自己判断：**当前会话跑在隐藏名单里的 preset 上时，三个座位一起不渲染** —— 浮层、左栏图标、时钟页面全部消失；如果人正停在时钟页上，会顺手切回会话，不留下空主栏。
+
+- 名单在 `lib/client.js` §0：`var HIDDEN_PRESETS = ['office'];` —— 登记的是 preset 的 **`config.id`**（当前即 `preset-office` 声明的 `office`）。想再挂别的模式，往数组里加即可。
+- 判断依据：`shell.overlay` / `sidebar.panellist` / `main` 三个槽位都是 root scope，标准 props 带 `useSessions`（会话列表 + 当前选择）；当前会话由 `retainedBy.mainView > 0` 标记，其 `projectionValues.agentPreset` 正是 `ui-agent-preset` 读的同一个键。
+- 没有会话时（新建页、空白页）照常显示；改完 `lib/client.js` **刷新页面**即可生效（纯 JS，无需构建）。
+
 ## 🎀 可爱的细节
 
 - 🐱 **圆脸小猫**：三角耳朵、内耳粉色、闪亮的黑眼睛、Q 弹腮红、微笑小嘴

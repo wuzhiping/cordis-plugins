@@ -1,0 +1,12 @@
+{
+  "name": "@local/preset-office",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "办公模式 agent preset：声明 preset-office —— 文档 / 表格 / 简报的读写、结构检查与交付，不装载代码开发工具。",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

@@ -7,6 +7,11 @@
 //   2. sidebar.panellist  —— 左栏图标 🕐
 //   3. main (keyed)       —— 点图标后展开的"猫咪时钟"全局面板
 //
+// 办公模式（agent preset `office`）下三个位置全部退场：agent preset 无法
+// enable/disable 客户端插件（preset 只在自己的 agent scope 里挂插件，而浏览器
+// 名册在宿主启动时按 `dsh.client` 行组好），所以这里改为主动读「当前会话的
+// preset」自行隐藏 —— 见 §0 与 apply() 里的三处 useHiddenHere()。
+//
 // 设计要点：
 //   - 配色全部走 DSH 主题令牌（--dsw-*），明暗主题自动适配
 //   - SVG 画一只圆脸小猫：耳朵、眼睛（会眨）、腮红、笑脸、爱心
@@ -28,6 +33,44 @@ window.__ModuleLoader__.load({
     var e = React.createElement;
 
     var inject = ['slots'];
+
+    // =========================================================================
+    // 0. 按当前会话的 agent preset 退场（办公模式隐藏）
+    //
+    // preset 不能 disable 客户端插件，所以由插件自己判断：当前主视图展示的
+    // 会话跑在这些 preset 上时，浮层/图标/面板一律不渲染。想再挂别的模式，
+    // 往 HIDDEN_PRESETS 里加 id 即可（登记的是 preset 的 config.id）。
+    // =========================================================================
+    var HIDDEN_PRESETS = ['office'];
+
+    /**
+     * 从 SessionListState 里取「当前会话」记录的 agentPreset。
+     * 当前会话由主视图持有：ui-session 以 retainedBy.mainView > 0 标记它，
+     * 行的 projectionValues.agentPreset 就是 ui-agent-preset 读的同一个键。
+     */
+    function currentPresetOf(state) {
+      if (!state || !state.byId) return undefined;
+      var ids = state.ids && state.ids.length ? state.ids : Object.keys(state.byId);
+      for (var i = 0; i < ids.length; i++) {
+        var row = state.byId[ids[i]];
+        if (!row || !row.retainedBy) continue;
+        if ((row.retainedBy.mainView || 0) > 0) {
+          return row.projectionValues ? row.projectionValues.agentPreset : undefined;
+        }
+      }
+      return undefined;
+    }
+
+    /**
+     * 本槽位是否应当整块退场。
+     * 这三个槽位都是 root scope，标准 props 带 useSessions（会话列表 + 当前
+     * 选择）。钩子调用顺序恒定：props 是否可用由槽位决定，不随渲染变化。
+     */
+    function useHiddenHere(props) {
+      var useSessions = props && props.useSessions;
+      if (typeof useSessions !== 'function') return false;
+      return HIDDEN_PRESETS.indexOf(useSessions(currentPresetOf)) !== -1;
+    }
 
     // =========================================================================
     // 1. CSS —— 全部用 DSH 主题令牌，切明暗主题自动适配
@@ -578,13 +621,14 @@ window.__ModuleLoader__.load({
       // ① CSS 注入（disposer 由 ctx.effect 自动管理）
       ctx.effect(installStyles, 'cute-clock: styles');
 
-      // ② 帧级浮层 —— 漂浮的猫咪小组件
+      // ② 帧级浮层 —— 漂浮的猫咪小组件（办公模式的会话下整块退场）
       ctx.slots.inject('shell.overlay', function () {
         return ctx.slots.register({
           name: 'shell.overlay',
           id: 'cute-clock-overlay',
           order: 100
-        }, function () {
+        }, function (slotProps) {
+          if (useHiddenHere(slotProps)) return null;
           return e('div', { className: 'cute-clock-overlay' }, e(FloatingClock, null));
         });
       });
@@ -597,6 +641,7 @@ window.__ModuleLoader__.load({
           order: 30,
           label: function () { return '猫咪时钟'; }
         }, function (iconProps) {
+          if (useHiddenHere(iconProps)) return null;
           return e('span', {
             className: 'cute-clock-navicon',
             title: '猫咪时钟',
@@ -616,7 +661,15 @@ window.__ModuleLoader__.load({
         return ctx.slots.register({
           name: 'main',
           key: 'cute-clock'
-        }, function () {
+        }, function (slotProps) {
+          var hidden = useHiddenHere(slotProps);
+          // 办公模式：如果人正停在时钟页上，顺手切回会话，避免主栏空着
+          useEffect(function () {
+            if (hidden && ctx.layout && typeof ctx.layout.selectPanel === 'function') {
+              ctx.layout.selectPanel(null);
+            }
+          }, [hidden]);
+          if (hidden) return null;
           return e(BigClockPage, null);
         });
       });
