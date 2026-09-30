@@ -76,9 +76,9 @@ window.__ModuleLoader__.load({
     // =========================================================================
     var CLOCK_CSS = [
       // ---------- 漂浮小元件 ----------
-      // 位置：右下角，`bottom:33px` 比原本的 18px 再高 15px（`right` 維持 18px）。
+      // 位置：右下角，`bottom:73px`（33px 的基礎上整體再往上移 40px；`right` 維持 18px）。
       '.cute-clock-overlay{',
-      '  position:fixed;right:18px;bottom:33px;z-index:9999;',
+      '  position:fixed;right:18px;bottom:73px;z-index:9999;',
       '  pointer-events:auto;user-select:none;',
       '  font-family:var(--sans,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif)',
       '}',
