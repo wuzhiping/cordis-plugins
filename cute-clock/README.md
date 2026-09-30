@@ -60,6 +60,7 @@
 - 🕐 **問候語隨時間切換**：早安/午安/晚安/夜深了…（帶 emoji）
 - 🌸 **花瓣飄落**（僅大螢幕）：18 片隨機花瓣從頂部飄下
 - 💪 **活力 slogan，每次開啟都不一樣**：75 條鬧鐘級打氣文案，按時段分 5 桶（morning/noon/afternoon/evening/night），**每次開啟面板或重新整理頁面都隨機抽一條**；浮動小卡片和大面板各抽各的；大面板上**點一下 slogan 就再換一條**。跨時段（比如 14:00）時會自動換到時段的句子
+- 🔠 **大面板的 slogan 是 54px**（`.cute-clock-bigquote`，由 13.5px 連乘兩次 2 倍），`line-height:1.3`、`padding:20px 48px`、`max-width:min(760px,88vw)` —— 長句自然折成兩行、貼齊同一條中線（面板內容整組 `translateX(-50px)`）。浮動小卡片那句維持 11px，兩者刻意不同
 
 ## 💪 活力 slogan 機制
 
@@ -108,10 +109,13 @@ dsh plugin --profile web remove cute-clock
 
 - 改 `lib/client.js`：**不用重新啟動**。檔案一改，模組群組的 `rev` 就變（服務端按內容重算），瀏覽器**重新整理頁面**即拿到新的那一份
 - 改 `lib/index.js` / `package.json` / `cordis.patch.yml`：**必須重新啟動**宿主
+- **先確認 profile 裡的安裝形態**：這個插件在 `profiles/web/node_modules/cute-clock` 是**目錄副本**（`LinkType` 為空），所以「改工作區」不會自動生效 —— 要先把 `lib/client.js` 複製進那個目錄（複製後 `rev` 自己會變），或重跑 `plugin_manager install_bundle`。同一 profile 裡 `jeeflow-panel` / `today-material-panel` 才是符號連結（那份改完刷新即可）。
+  ```powershell
+  Get-Item "$env:DSH_PROFILE_DIR\node_modules\cute-clock" | Select-Object LinkType, Target
+  Copy-Item .\lib\client.js "$env:DSH_PROFILE_DIR\node_modules\cute-clock\lib\client.js" -Force
+  ```
 
-## 📁 檔案結構
-
-```
+## 📁 檔案結構```
 cute-clock/
 ├── package.json          # 三處 dsh.* 聲明
 ├── cordis.patch.yml      # 把自己插入組合樹

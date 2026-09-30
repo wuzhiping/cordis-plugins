@@ -640,6 +640,74 @@ window.__ModuleLoader__.load({
         } catch (e) {}
       }
 
+      // 5) First-run dialogs: the 预览版说明 notice and the 首次 API Key prompt.
+      //    Both are blocking modals that a deployment with a preconfigured provider
+      //    does not need. Suppression happens in the DOM (the two dialogs live in
+      //    another plugin's settings shell, so this bundle cannot unmount them):
+      //      - the preview notice is hidden AND its own 继续 button is clicked, so
+      //        the acknowledgement persists through the framework's own write path
+      //        (a pure `display:none` would leave the state unacknowledged and the
+      //        modal would return on every later visit);
+      //      - the API-key prompt is only hidden — never auto-submitted, because
+      //        that dialog would write credentials.
+      //    Class names are CSS-module hashes from the DSH build and can go stale
+      //    after an upgrade; each selector has a fallback and the sweep is
+      //    reported by test/verify-first-run-dialogs.js.
+      function installFirstRunSuppression() {
+        var local = [];
+        var NOTICE_COPY = ".t1T8VW_copy";
+        var NOTICE_PRIMARY = ".t1T8VW_primary";
+        var KEY_EDITOR = ".GL8Viq_editor,.GL8Viq_description";
+        var MODAL = ".jLrgrW_dialog";
+        var seen = new WeakSet();
+
+        var style = document.createElement("style");
+        style.dataset.plugin = "zhtw-traditional-chinese";
+        style.dataset.pluginCss = "zhtw-traditional-chinese/first-run.css";
+        // Belt and braces: if the sweep never sees the modal (its hash changed, or
+        // the row renders outside the observed subtree), the CSS still hides both
+        // dialogs. The sweep is what makes the preview notice stick.
+        style.textContent = MODAL + ":has(" + NOTICE_COPY + ")," + MODAL + ":has(" + KEY_EDITOR + "){display:none!important}";
+        document.head.appendChild(style);
+        local.push(function () { style.remove(); });
+
+        function handle(dialog) {
+          if (seen.has(dialog)) return;
+          var isNotice = dialog.querySelector(NOTICE_COPY) !== null;
+          var isKeyPrompt = dialog.querySelector(KEY_EDITOR) !== null;
+          if (!isNotice && !isKeyPrompt) return;
+          seen.add(dialog);
+          dialog.setAttribute("data-zhtw-suppressed", isNotice ? "preview-notice" : "api-key-prompt");
+          dialog.style.setProperty("display", "none", "important");
+          if (isNotice) {
+            var button = dialog.querySelector(NOTICE_PRIMARY);
+            if (button !== null) {
+              try { button.click(); } catch (e) {}
+            }
+          }
+        }
+
+        function sweep() {
+          var dialogs = document.querySelectorAll(MODAL + ",[role=dialog],[aria-modal=true]");
+          for (var i = 0; i < dialogs.length; i++) handle(dialogs[i]);
+        }
+
+        var observer = null;
+        if (typeof MutationObserver === "function") {
+          observer = new MutationObserver(sweep);
+          observer.observe(document.body, { childList: true, subtree: true });
+        }
+        sweep();
+        local.push(function () { if (observer) observer.disconnect(); });
+
+        return function () {
+          for (var i = local.length - 1; i >= 0; i--) {
+            try { local[i](); } catch (e) {}
+          }
+        };
+      }
+      disposers.push(installFirstRunSuppression());
+
       return function restoreBranding() {
         for (var i = disposers.length - 1; i >= 0; i--) {
           try { disposers[i](); } catch (e) {}

@@ -138,11 +138,15 @@ window.__ModuleLoader__.load({
       '.cute-clock-glyph svg{display:block}',
 
       // ---------- 全域面板 ----------
+      // 內容整組往左 50px：這個面板的寬度包含左欄，光靠 flex 居中會讓鐘面、時間、
+      // slogan 全部落在整頁中線偏右；`transform` 只挪位置不改排版，所以內部仍各自
+      // 居中（背景那層 `::before` 也一起移，不會露邊）。
       '.cute-clock-page{',
       '  position:relative;',
       '  width:100%;height:100%;min-height:100%;',
       '  display:flex;flex-direction:column;align-items:center;justify-content:center;',
       '  gap:24px;padding:40px 24px;',
+      '  transform:translateX(-50px);',
       '  background:radial-gradient(circle at 50% 30%,var(--dsw-alias-bg-layer-1,#ffffff) 0%,var(--dsw-alias-bg-base,#f6f7f9) 70%);',
       '  font-family:var(--sans,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif);',
       '  overflow:hidden;',
@@ -168,11 +172,11 @@ window.__ModuleLoader__.load({
       '  color:var(--dsw-alias-label-secondary,#43506b);',
       '  text-align:center;z-index:1;',
       '}',
-      // 大頁面的 slogan：字級是原本的兩倍（13.5 → 27px），行高與內距一起放大，
-      // 並限制 `max-width` 讓長句自然換行，不會把面板撐爆。
+      // 大頁面的 slogan：字級是原本的兩倍（13.5 → 27px），再乘 2（→ 54px）；
+      // 行高與內距一起放大，`max-width` 讓長句自然換行，不會把面板撐爆。
       '.cute-clock-bigquote{',
-      '  margin-top:6px;padding:14px 36px;max-width:min(760px,88vw);',
-      '  font-size:27px;line-height:1.35;font-weight:700;text-align:center;',
+      '  margin-top:6px;padding:20px 48px;max-width:min(760px,88vw);',
+      '  font-size:54px;line-height:1.3;font-weight:700;text-align:center;',
       '  color:var(--dsw-alias-brand-primary,#4d6bfe);',
       '  background:var(--dsw-alias-interactive-bg-hover,rgba(77,107,254,.08));',
       '  border-radius:999px;z-index:1;',

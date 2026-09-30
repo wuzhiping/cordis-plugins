@@ -216,6 +216,40 @@ shorthand plus its `width`/`height`. The favicon is still the separate inline
 > host restart. A plain refresh on its own keeps serving the cached copy (same
 > `rev`), and `restart-required` from the installer refers to the host-side row,
 > not to whether the browser half got republished.
+>
+> **Check which copy the profile actually serves.** This plugin is installed in this
+> profile as a **directory copy** (`node_modules/zhtw-traditional-chinese`, not a
+> symlink), so a workspace edit alone does not reach the running host. Copy
+> `lib/client.js` into that directory (the served `rev` changes on its own) or
+> reinstall the bundle; `Get-Item …\node_modules\zhtw-traditional-chinese | Select
+> LinkType` shows which form is in use.
+
+## First-run dialogs (suppressed)
+
+Two blocking modals are suppressed for this deployment. Both belong to
+`@deepseek-ai/dsh-client-ui-settings-models` and live in **another plugin's** settings
+shell, so this bundle cannot unmount them — it hides them in the DOM instead:
+
+| dialog | markers (CSS-module hashes of the shipped build) | what this bundle does |
+|---|---|---|
+| preview notice (`welcomeTitle`) | shared modal chrome `jLrgrW_dialog` + notice copy `t1T8VW_copy` (+ primary button `t1T8VW_primary`) | hides it **and clicks its own `继续` button**, so the acknowledgement persists through the framework's own write path |
+| first-run API-key prompt (`onboardingTitle`) | `jLrgrW_dialog` + `GL8Viq_editor` / `GL8Viq_description` | hides it only — **nothing inside is clicked**, because that dialog writes credentials |
+
+Why click the notice's button instead of just hiding it: `WelcomeNotice` renders
+`null` only while `state.acknowledged`, and acknowledgement is a settings write
+(`ui-settings-general` → `welcomeNoticeVersion`). A pure `display:none` would leave
+the state unacknowledged, so the modal would come back on every later visit. Clicking
+its own button is exactly what a user would do, with no extra write path of our own.
+The key prompt has no such state (it disappears once a provider is usable), so hiding
+it is enough.
+
+Each dialog gets `data-zhtw-suppressed="preview-notice" | "api-key-prompt"` for
+inspection, and the sweep never touches a dialog that carries neither marker (a
+delete-confirmation modal is verified to stay visible). A `:has()` stylesheet is
+installed as a fallback, so a dialog still disappears even when the marker class
+changed under us. **These are DSH build hashes: re-check them after an upgrade** —
+`node test/verify-first-run-dialogs.js` injects stand-ins with the real class names
+and reports all six conditions, including the stale-marker fallback.
 
 ## Development
 
@@ -247,8 +281,10 @@ node test/audit-dom.js --click 設定,外掛   # …with dialogs opened first
   entry would look hand-picked forever).
 - `test/s2t.js` mirrors the bundle's converter so the tools can never disagree
   with the shipped code.
-- `test/sweep-simplified.js` and `test/sweep-settings.js` walk the live GUI surface
-  by surface (main views; then every Settings sub-page) and
+- `test/verify-first-run-dialogs.js` covers the first-run suppression (see
+  *First-run dialogs* above): it injects dialogs with the shipped class names and
+  reports the six conditions, including the `:has()` fallback for a stale marker.
+- `test/sweep-simplified.js` and `test/sweep-settings.js` walk the live GUI surface  by surface (main views; then every Settings sub-page) and
   `test/verify-mcp-and-simplified.js` does the same for one panel plus the
   `MCP網關` label. All three classify each rendered string with the shipped table:
   **Simplified** (a Simplified-only character that would change — must be 0) vs
