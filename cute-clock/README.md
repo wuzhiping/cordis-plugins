@@ -60,7 +60,7 @@
 - 🕐 **問候語隨時間切換**：早安/午安/晚安/夜深了…（帶 emoji）
 - 🌸 **花瓣飄落**（僅大螢幕）：18 片隨機花瓣從頂部飄下
 - 💪 **活力 slogan，每次開啟都不一樣**：75 條鬧鐘級打氣文案，按時段分 5 桶（morning/noon/afternoon/evening/night），**每次開啟面板或重新整理頁面都隨機抽一條**；浮動小卡片和大面板各抽各的；大面板上**點一下 slogan 就再換一條**。跨時段（比如 14:00）時會自動換到時段的句子
-- 🔠 **大面板的 slogan 是 54px**（`.cute-clock-bigquote`，由 13.5px 連乘兩次 2 倍），`line-height:1.3`、`padding:20px 48px`、`max-width:min(760px,88vw)` —— 長句自然折成兩行、貼齊同一條中線（面板內容整組 `translateX(-50px)`）。浮動小卡片那句維持 11px，兩者刻意不同
+- 🔠 **大面板的 slogan 是 32px**（`.cute-clock-bigquote`；13.5 → 27 → 54px 之後取 54 的 60%），`line-height:1.3`、`padding:12px 29px`、`max-width:min(760px,88vw)` —— 長句自然折行、與鐘面／時間貼齊同一條中線（面板內容整組 `translateX(-50px)`）。浮動小卡片那句維持 11px，兩者刻意不同
 
 ## 💪 活力 slogan 機制
 

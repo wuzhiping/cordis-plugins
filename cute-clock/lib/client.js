@@ -172,11 +172,11 @@ window.__ModuleLoader__.load({
       '  color:var(--dsw-alias-label-secondary,#43506b);',
       '  text-align:center;z-index:1;',
       '}',
-      // 大頁面的 slogan：字級是原本的兩倍（13.5 → 27px），再乘 2（→ 54px）；
-      // 行高與內距一起放大，`max-width` 讓長句自然換行，不會把面板撐爆。
+      // 大頁面的 slogan：13.5px → 27px（×2）→ 54px（×2）都偏大，最後取 54 的 60%
+      // ＝32px（約原始 2.4 倍）。行高與內距同比縮，`max-width` 讓長句自然換行。
       '.cute-clock-bigquote{',
-      '  margin-top:6px;padding:20px 48px;max-width:min(760px,88vw);',
-      '  font-size:54px;line-height:1.3;font-weight:700;text-align:center;',
+      '  margin-top:6px;padding:12px 29px;max-width:min(760px,88vw);',
+      '  font-size:32px;line-height:1.3;font-weight:700;text-align:center;',
       '  color:var(--dsw-alias-brand-primary,#4d6bfe);',
       '  background:var(--dsw-alias-interactive-bg-hover,rgba(77,107,254,.08));',
       '  border-radius:999px;z-index:1;',
