@@ -76,9 +76,9 @@ window.__ModuleLoader__.load({
     // =========================================================================
     var CLOCK_CSS = [
       // ---------- 漂浮小元件 ----------
-      // 位置：右下角，`bottom:73px`（33px 的基礎上整體再往上移 40px；`right` 維持 18px）。
+      // 位置：右下角，`bottom:33px` 比原本的 18px 再高 15px（`right` 維持 18px）。
       '.cute-clock-overlay{',
-      '  position:fixed;right:18px;bottom:73px;z-index:9999;',
+      '  position:fixed;right:18px;bottom:33px;z-index:9999;',
       '  pointer-events:auto;user-select:none;',
       '  font-family:var(--sans,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif)',
       '}',
@@ -146,7 +146,7 @@ window.__ModuleLoader__.load({
       '  width:100%;height:100%;min-height:100%;',
       '  display:flex;flex-direction:column;align-items:center;justify-content:center;',
       '  gap:24px;padding:40px 24px;',
-      '  transform:translateX(-50px);',
+      '  transform:translateX(-50px) translateY(-40px);',
       '  background:radial-gradient(circle at 50% 30%,var(--dsw-alias-bg-layer-1,#ffffff) 0%,var(--dsw-alias-bg-base,#f6f7f9) 70%);',
       '  font-family:var(--sans,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif);',
       '  overflow:hidden;',
