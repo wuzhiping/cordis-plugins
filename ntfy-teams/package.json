@@ -1,0 +1,41 @@
+{
+  "name": "ntfy-teams",
+  "version": "0.2.0",
+  "private": true,
+  "description": "團隊協同 · ntfy-teams：在 DSH Web GUI 裡訂閱 ntfy 主題的工作群組面板 —— 顯示歷史訊息、即時推送新訊息、支援 Markdown、可設定 @username 與帳號認證。",
+  "type": "commonjs",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "lib/core.js",
+    "build.js",
+    "cordis.patch.yml",
+    "README.md",
+    "test",
+    "package.json"
+  ],
+  "scripts": {
+    "build": "node build.js",
+    "test": "node test/core-node.js && node test/host-node.js && node test/core-live.js && node test/client-offline.js && node test/zh-tw-check.js",
+    "test:offline": "node test/core-node.js && node test/host-node.js && node test/client-offline.js && node test/zh-tw-check.js",
+    "test:live": "node test/core-live.js",
+    "test:zh-tw": "node test/zh-tw-check.js",
+    "verify:browser": "node test/browser-verify.js full2"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "license": "MIT"
+}

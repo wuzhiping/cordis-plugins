@@ -1,0 +1,11 @@
+# ntfy-teams bundle patch（团队协同）.
+#
+# dsh patch-loader 语义：裸 `- id:` 行只能修补「已存在」的 entry；
+# 新 entry 必须放进 `insert:` 区块。
+#
+# 这一行同时是「宿主半边」的挂载点（lib/index.js）：本插件目前完全靠浏览器
+# 端工作（ntfy 服务器 https://msn.feg.cn 已回 Access-Control-Allow-Origin: *，
+# 浏览器可直接 fetch / SSE），宿主半边只保留一个可被以后扩展的空壳。
+- insert:
+    - id: ntfy-teams
+      name: ntfy-teams

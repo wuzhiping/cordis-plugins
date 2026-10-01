@@ -1,0 +1,5 @@
+﻿# 团队协同 ntfy-teams：使用者设定与凭证。
+# 这两个档案是「这台机器的连线资讯与帐密」，不该进版本控制。
+config.yml
+secrets.yml
+*.tmp-*

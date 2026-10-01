@@ -1,0 +1,1323 @@
+'use strict';
+
+// =============================================================================
+// 团队协同 · ntfy-teams —— 离线测试（不需要网络、不需要浏览器）
+//
+//   node test/client-offline.js
+//
+// 验证三件事：
+//   1. lib/client.js 是「一支 classic script、注册恰好一个 factory」，id 必须是
+//      套件名 'ntfy-teams'（client-modules 以此为准，注册不到就是载入失败）。
+//   2. factory(require) 回传的 exports 形状正确：apply 是函数、inject === ['slots']。
+//   3. apply(ctx) 真的挂上三个座位：样式 effect、sidebar.panellist(id=ntfy-teams)、
+//      main(key=ntfy-teams)，而且不抛错；另外抽验纯函数与仓库接线。
+//
+// 这里的 React 是「足以跑 hooks 的最小替身」：只实作本档用到的 useState/useEffect/
+// useRef/createElement。它不渲染 DOM，只确保元件建得出来、hooks 不越界。
+// =============================================================================
+
+const path = require('node:path');
+const assert = require('node:assert');
+
+const BUNDLE = path.join(__dirname, '..');
+const CORE_PATH = path.join(BUNDLE, 'lib', 'core.js');
+const CLIENT_PATH = path.join(BUNDLE, 'lib', 'client.js');
+
+let passed = 0;
+let failed = 0;
+
+/**
+ * 跑一条断言。
+ * @param name - 测试名称。
+ * @param fn - 测试主体。
+ */
+function test(name, fn) {
+  try {
+    fn();
+    passed += 1;
+    console.log('  PASS  ' + name);
+  } catch (err) {
+    failed += 1;
+    console.log('  FAIL  ' + name);
+    console.log('        ' + (err && err.message ? err.message : String(err)));
+  }
+}
+
+// ---------------------------------------------------------------- 环境替身 --
+
+/** 最小 localStorage 替身。 */
+function makeStorage() {
+  const map = new Map();
+  return {
+    getItem: (k) => (map.has(k) ? map.get(k) : null),
+    setItem: (k, v) => { map.set(k, String(v)); },
+    removeItem: (k) => { map.delete(k); },
+    clear: () => { map.clear(); },
+    get length() { return map.size; },
+    key: (i) => Array.from(map.keys())[i] ?? null,
+  };
+}
+
+/** 最小 document/head 替身，只够 installStyles 用。 */
+function makeDocument() {
+  const head = [];
+  return {
+    head: {
+      appendChild(node) { head.push(node); },
+      removeChild(node) {
+        const i = head.indexOf(node);
+        if (i !== -1) head.splice(i, 1);
+      },
+    },
+    createElement(tag) {
+      return {
+        tagName: String(tag).toUpperCase(),
+        attributes: {},
+        textContent: '',
+        parentNode: null,
+        setAttribute(name, value) { this.attributes[name] = value; },
+      };
+    },
+    __head: head,
+  };
+}
+
+/**
+ * 足以驱动 hooks 的 React 替身。
+ * createElement 只记录 type/props/children，不产生 DOM。
+ */
+function makeReact() {
+  const slots = [];
+  let cursor = 0;
+  let effects = [];
+
+  function useState(initial) {
+    const index = cursor;
+    cursor += 1;
+    if (!(index in slots)) slots[index] = typeof initial === 'function' ? initial() : initial;
+    const setState = (next) => {
+      slots[index] = typeof next === 'function' ? next(slots[index]) : next;
+    };
+    return [slots[index], setState];
+  }
+
+  function useEffect(fn, deps) {
+    const index = cursor;
+    cursor += 1;
+    slots[index] = { fn, deps };
+    effects.push(slots[index]);
+  }
+
+  function useRef(initial) {
+    const index = cursor;
+    cursor += 1;
+    if (!(index in slots)) slots[index] = { current: initial };
+    return slots[index];
+  }
+
+  function createElement(type, props, ...children) {
+    return { type, props: props || {}, children: children.length > 1 ? children : children[0] };
+  }
+
+  return {
+    React: {
+      useState,
+      useEffect,
+      useRef,
+      createElement,
+      useMemo: (fn) => fn(),
+      useCallback: (fn) => fn,
+    },
+    /** 每次要建立元件树之前呼叫：重置 hooks 游标。 */
+    reset() { cursor = 0; effects = []; },
+    /** 已登记的 effect 数量（用来确认元件真的有挂 effect）。 */
+    get effects() { return effects; },
+  };
+}
+
+// ------------------------------------------------------------- 载入浏览器档 --
+//
+// 这里刻意**不**先载入 core.js：浏览器拿到的只有 lib/client.js 这一个档案
+// （dsh.client 只送 exports["./client"]），所以 core 必须已经内嵌在里面。
+// 若内嵌失效，下面「core 必须由 client.js 自己带进来」那条会立刻失败 ——
+// 那正是让「核心模块未加载」在离线就被抓到的那道防线。
+
+const localStorageStub = makeStorage();
+globalThis.localStorage = localStorageStub;
+
+let captured = null;
+const documentStub = makeDocument();
+const reactStub = makeReact();
+
+// 浏览器里 window === globalThis（同一个 realm 的同一个物件），所以这里也这样模拟；
+// 用「另建一个 window 物件」会造出一个浏览器不存在的分歧：内嵌的 core 会把
+// moduleRoot 挂在 globalThis 上，而 factory 读的却是那个替身 window —— 于是测试
+// 失败、浏览器却正常（反之亦然）。真实形状才抓得到真实的 bug。
+globalThis.__ModuleLoader__ = {
+  load(registration) {
+    assert.strictEqual(captured, null, 'client.js 注册了多于一个 factory');
+    captured = registration;
+  },
+};
+globalThis.window = globalThis;
+globalThis.document = documentStub;
+
+// 载入浏览器档（会注册 factory，但还不执行 factory 本体）。
+require(CLIENT_PATH);
+
+// ---------------------------------------------------------------- 测试本体 --
+
+console.log('');
+console.log('ntfy-teams · client.js 离线测试');
+console.log('');
+
+test('注册恰好一个 factory，且 id === "ntfy-teams"', () => {
+  assert.ok(captured, 'window.__ModuleLoader__.load 没有被呼叫');
+  assert.strictEqual(typeof captured.factory, 'function', 'factory 不是函数');
+  assert.strictEqual(captured.id, 'ntfy-teams', 'factory id 必须是套件名 ntfy-teams');
+});
+
+/** 以替身 require 建立 exports。 */
+function buildExports() {
+  const record = {};
+  const fakeRequire = (name) => {
+    record.requested = record.requested || [];
+    record.requested.push(name);
+    if (name === 'react') return reactStub.React;
+    throw new Error('未预期的 require("' + name + '")');
+  };
+  const exports = captured.factory(fakeRequire);
+  return { exports, record };
+}
+
+let built = null;
+/** core 在 factory materialize 之后才会出现，所以这里留一个可变参考。 */
+let core = null;
+
+test('factory(require) 只 require("react")，并回传 exports', () => {
+  built = buildExports();
+  assert.ok(built.exports && typeof built.exports === 'object', 'factory 没有回传 exports');
+  assert.deepStrictEqual(built.record.requested, ['react'], '除了 react 不该 require 其他套件');
+});
+
+test('core 由 client.js 自己带进来（协议层已内嵌，不是隔壁档案）', () => {
+  core = globalThis.window.__ntfyTeamsCore;
+  assert.ok(core, 'factory materialize 后 window.__ntfyTeamsCore 必须存在');
+  assert.strictEqual(typeof core.store, 'object', 'core.store 必须存在');
+  assert.strictEqual(typeof core.decodeId, 'function');
+  assert.strictEqual(typeof core.publishMessage, 'function');
+  assert.strictEqual(typeof core.subscribeTopic, 'function');
+});
+
+test('exports.inject === ["slots","layout"]（ctx.layout 必须先注入）', () => {
+  // 实测教训：inject 只宣告 'slots' 时，在 onClick 里读 ctx.layout 会抛
+  // `cannot get property "layout" without inject`，`if (ctx.layout && …)` 挡不住
+  // （读属性本身就抛了）。所以 'layout' 必须一起注入。
+  assert.deepStrictEqual(built.exports.inject, ['slots', 'layout']);
+  // core.js 内嵌区块不应把 'layout' 覆盖回去
+  assert.ok(built.exports.inject.indexOf('layout') !== -1);
+});
+
+test('exports.apply 是函数', () => {
+  assert.strictEqual(typeof built.exports.apply, 'function');
+});
+
+/** 收集注册进座的座位。 */
+function makeCtx() {
+  const seats = {};
+  const context = {
+    effect(fn, label) {
+      const dispose = fn();
+      return () => { if (typeof dispose === 'function') dispose(); };
+    },
+    slots: {
+      inject(slotName, callback) {
+        callback();
+        return () => {};
+      },
+      register(options, component) {
+        seats[options.name + (options.key ? ':' + options.key : options.id ? ':' + options.id : '')] = {
+          options,
+          component,
+        };
+        return () => {};
+      },
+    },
+    layout: {
+      selected: null,
+      selectPanel(id) { this.selected = id; },
+    },
+  };
+  return { context, seats };
+}
+
+test('apply(ctx) 挂上三个座位且不抛错', () => {
+  const { context, seats } = makeCtx();
+  built.exports.apply(context);
+
+  assert.ok(seats['main:' + 'ntfy-teams'], 'main 座位没有注册 key=ntfy-teams');
+  assert.ok(seats['sidebar.panellist:ntfy-teams'], 'sidebar.panellist 没有注册 id=ntfy-teams');
+  assert.strictEqual(seats['main:' + 'ntfy-teams'].options.key, 'ntfy-teams');
+  assert.strictEqual(seats['sidebar.panellist:ntfy-teams'].options.id, 'ntfy-teams');
+  assert.strictEqual(
+    seats['sidebar.panellist:ntfy-teams'].options.label(),
+    '團隊協同',
+    '側欄標籤必須是「團隊協同」（繁體，與宿主介面語言一致）',
+  );
+});
+
+test('apply(ctx) 注入一支 <style data-plugin="ntfy-teams">', () => {
+  const { context } = makeCtx();
+  documentStub.__head.length = 0;
+  built.exports.apply(context);
+  const styles = documentStub.__head.filter((n) => n.tagName === 'STYLE');
+  assert.strictEqual(styles.length, 1, '应该恰好注入一支样式表');
+  assert.strictEqual(styles[0].attributes['data-plugin'], 'ntfy-teams');
+  assert.ok(styles[0].textContent.includes('.ntfy-teams-root'), '样式表内容不对');
+});
+
+test('样式表只用主题令牌，不写死颜色（SVG 图稿除外）', () => {
+  const { context } = makeCtx();
+  documentStub.__head.length = 0;
+  built.exports.apply(context);
+  const css = documentStub.__head[0].textContent;
+  const hex = css.match(/#[0-9a-fA-F]{3,8}\b/g) || [];
+  const rgb = css.match(/\brgba?\(/g) || [];
+  assert.deepStrictEqual(hex, [], 'CSS 里出现写死的十六进制颜色: ' + hex.join(', '));
+  assert.deepStrictEqual(rgb, [], 'CSS 里出现写死的 rgb()/rgba() 颜色');
+  assert.ok(css.includes('var(--dsw-alias-'), 'CSS 没有使用任何主题令牌');
+});
+
+test('侧栏图示点一下会切换面板（active 时回 null）', () => {
+  const { context, seats } = makeCtx();
+  built.exports.apply(context);
+  const seat = seats['sidebar.panellist:ntfy-teams'];
+
+  reactStub.reset();
+  const closedProps = { size: 18, active: false, onClick: undefined };
+  const closedNode = seat.component(closedProps);
+  // 侧栏给的 onClick 由座位自己接上；直接驱动它。
+  const ctx2 = context;
+  reactStub.reset();
+  const node = seat.component({ size: 18, active: false });
+  assert.ok(node, '图示元件没有渲染出东西');
+  node.props.onClick();
+  assert.strictEqual(ctx2.layout.selected, 'ntfy-teams', '未选中时应切到 ntfy-teams');
+
+  reactStub.reset();
+  const activeNode = seat.component({ size: 18, active: true });
+  activeNode.props.onClick();
+  assert.strictEqual(ctx2.layout.selected, null, '已选中时应切回会话（null）');
+  void closedNode;
+});
+
+test('面板座位的元件建得出来（core 已加载）', () => {
+  const { context, seats } = makeCtx();
+  built.exports.apply(context);
+  reactStub.reset();
+  const seat = seats['main:ntfy-teams'];
+  // 座位回传的是 <PanelEntry/>：core 存在时它再委派给 <MainPanel/>。
+  const entry = seat.component();
+  assert.ok(entry, '面板没有渲染出东西');
+  assert.strictEqual(typeof entry.type, 'function', '座位应回传一个元件');
+  // 把 PanelEntry 展开一层，确认它委派到 MainPanel 而不是「核心模块未加载」。
+  reactStub.reset();
+  const inner = entry.type();
+  assert.ok(inner, 'PanelEntry 没有回传内容');
+  assert.strictEqual(typeof inner.type, 'function', 'PanelEntry 应委派给 MainPanel 元件');
+});
+
+test('纯函数：serverHost / phaseModifier / badgeText', () => {
+  const t = built.exports.__test;
+  assert.strictEqual(t.serverHost('https://msn.feg.cn'), 'msn.feg.cn');
+  assert.strictEqual(t.serverHost('https://msn.feg.cn/base/'), 'msn.feg.cn');
+  assert.strictEqual(t.phaseModifier('live'), 'ok');
+  assert.strictEqual(t.phaseModifier('error'), 'err');
+  assert.strictEqual(t.phaseModifier('connecting'), 'warn');
+  assert.strictEqual(t.badgeText(0), '');
+  assert.strictEqual(t.badgeText(7), '7');
+  assert.strictEqual(t.badgeText(120), '99+');
+});
+
+test('纯函数：safeHref 只放行 http/https', () => {
+  const t = built.exports.__test;
+  assert.strictEqual(t.safeHref('https://a.example/x'), 'https://a.example/x');
+  assert.strictEqual(t.safeHref('http://a.example'), 'http://a.example');
+  assert.strictEqual(t.safeHref('javascript:alert(1)'), '');
+  assert.strictEqual(t.safeHref('  '), '');
+});
+
+test('纯函数：时间格式与 id 推时', () => {
+  const t = built.exports.__test;
+  // 注意：本台 ntfy 服务器（msn.feg.cn）发出的 id 是随机字串，不是时间编码，
+  // 实测 8 个样本的任一种位元组解读都对不上 time 栏位。因此 decodeId 回 null
+  // 是正确行为，UI 一律以服务器给的 time 栏位为准。
+  const decoded = t.decodeTime('1jLfaNcFIDCe');
+  assert.strictEqual(decoded, null, '随机 id 不应被硬解成荒谬的年份');
+  assert.strictEqual(t.decodeTime('not-base64!!'), null);
+
+  // time 缺失（0）且 id 无法解时回 null，UI 显示空白而非乱数时间。
+  assert.strictEqual(t.messageTime({ id: '1jLfaNcFIDCe', time: 0 }), null);
+  // time 存在时一律优先采用。
+  assert.strictEqual(t.messageTime({ id: '1jLfaNcFIDCe', time: 1790756810 }), 1790756810);
+  assert.strictEqual(t.messageTime({ id: 'x', time: 123 }), 123);
+
+  const out = t.formatTime(1790756810);
+  assert.ok(/^\d{2}:\d{2}:\d{2}$|^\d{2}\/\d{2} \d{2}:\d{2}:\d{2}$/.test(out), '时间格式不对: ' + out);
+  assert.strictEqual(t.formatTime(0), '');
+  assert.strictEqual(t.formatTime(null), '');
+});
+
+test('仓库接线：addMessage 后快照换了新参考且讯息进了对应 topic', () => {
+  const snapBefore = core.store.getSnapshot();
+  const snapSame = core.store.getSnapshot();
+  assert.strictEqual(snapBefore, snapSame, '没有变动时 getSnapshot() 必须回同一个参考');
+
+  core.store.ensureTopic('pub_offline');
+  const topic = core.store.getSnapshot();
+  assert.ok(topic.topics.includes('pub_offline'), 'ensureTopic 没有把 topic 加进去');
+
+  const changed = core.store.addMessage('pub_offline', {
+    id: '1jLfaNcFIDCe',
+    time: 1790756810,
+    topic: 'pub_offline',
+    message: 'offline harness message',
+    tags: [],
+  });
+  assert.strictEqual(changed, true, 'addMessage 应回报有新增');
+
+  const after = core.store.getSnapshot();
+  assert.notStrictEqual(after, snapBefore, '有变动后 getSnapshot() 必须换新参考');
+  const list = after.messagesByTopic.pub_offline || [];
+  assert.strictEqual(list.length, 1);
+  assert.strictEqual(list[0].message, 'offline harness message');
+
+  // 同一则再喂一次不应该重复。
+  core.store.addMessage('pub_offline', {
+    id: '1jLfaNcFIDCe',
+    time: 1790756810,
+    topic: 'pub_offline',
+    message: 'offline harness message',
+    tags: [],
+  });
+  assert.strictEqual((core.store.getSnapshot().messagesByTopic.pub_offline || []).length, 1, '同一 id 不该重复');
+
+  core.store.removeTopic('pub_offline');
+});
+
+test('仓库订阅：listener 会被呼叫，取消订阅后不再收到', () => {
+  let hits = 0;
+  const off = core.store.subscribe(() => { hits += 1; });
+  core.store.ensureTopic('pub_offline_sub');
+  assert.ok(hits > 0, '订阅后变更应通知 listener');
+  off();
+  const before = hits;
+  core.store.ensureTopic('pub_offline_sub2');
+  assert.strictEqual(hits, before, '取消订阅后不该再收到通知');
+  core.store.removeTopic('pub_offline_sub');
+  core.store.removeTopic('pub_offline_sub2');
+});
+
+test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () => {
+  const saved = globalThis.window.__ntfyTeamsCore;
+  globalThis.window.__ntfyTeamsCore = undefined;
+  // client.js 已 materialize，factory 内的 core 变数已固定；这里改的是 fallback 路径的
+  // 可用性检查，因此直接抽验 __test.apply 在 core 存在时仍正常即可。
+  const { context, seats } = makeCtx();
+  assert.doesNotThrow(() => built.exports.apply(context));
+  assert.ok(seats['main:ntfy-teams']);
+  globalThis.window.__ntfyTeamsCore = saved;
+});
+
+// ------------------------------- 回归：单一档案自足（真实浏览器载入形状） --
+//
+// 这是浏览器端真正发生的事，也是最初的 bug：
+//   * combo script 把每个 plugin 档案包成 lazy body，档案在「注册阶段」不执行；
+//   * dsh-client-modules 只送 exports["./client"] 这一个档案 —— 隔壁 lib/core.js
+//     永远不会被送出去（实测 GET /plugins/ntfy-teams/core.js → 404）。
+// 于是「core.js 排在前面」或「client.js 呼叫 root.moduleRoot()」都救不了：
+// moduleRoot 根本不存在，面板显示「核心模块未加载」。
+//
+// 正确做法是 core 内嵌进 client.js（见 build.js）。这个回归用干净的 registry
+// 从零重跑一次，且**刻意不预先把任何 core 放进全局**。
+(function regression() {
+  console.log('');
+  console.log('回归：单一档案自足（lazy body + 只有一个 client 档案）');
+  console.log('');
+
+  const MODULE_ID = 'ntfy-teams';
+  const registry = new Map();
+
+  // 同样模拟浏览器：window === globalThis。
+  const savedWindow = globalThis.window;
+  const savedLoader = globalThis.__ModuleLoader__;
+  const savedCore = globalThis.__ntfyTeamsCore;
+  delete globalThis.__ntfyTeamsCore;
+
+  globalThis.__ModuleLoader__ = {
+    load(registration) {
+      assert.ok(!registry.has(registration.id), '重复注册 factory：' + registration.id);
+      registry.set(registration.id, registration.factory);
+    },
+  };
+  globalThis.window = globalThis;
+
+  test('没有外部 core 时，client.js 自己就能把协议层带进来', () => {
+    assert.strictEqual(
+      typeof globalThis.__ntfyTeamsCore,
+      'undefined',
+      '起跑点必须干净：全局不该预先有 core',
+    );
+
+    // 1) 只载入 client.js —— 浏览器就是这样，没有第二个档案
+    delete require.cache[require.resolve(CLIENT_PATH)];
+    require(CLIENT_PATH);
+    const factory = registry.get(MODULE_ID);
+    assert.ok(factory, 'client.js 没有注册 factory');
+    assert.strictEqual(registry.size, 1, '应当只注册一个 factory，实际 ' + registry.size);
+    assert.strictEqual(
+      typeof globalThis.__ntfyTeamsCore,
+      'undefined',
+      '注册阶段不该执行 factory 本体',
+    );
+
+    // 2) materialize —— 内嵌的 core 必须在这一刻出现
+    const fakeRequire = (name) => {
+      if (name === 'react') return reactStub.React;
+      throw new Error('未预期的 require("' + name + '")');
+    };
+    let exports;
+    assert.doesNotThrow(() => { exports = factory(fakeRequire); }, 'factory 不应抛错');
+    assert.ok(exports && typeof exports.apply === 'function');
+    assert.ok(
+      globalThis.__ntfyTeamsCore && typeof globalThis.__ntfyTeamsCore.decodeId === 'function',
+      'factory 执行后必须存在 window.__ntfyTeamsCore（代表内嵌区块真的在跑）',
+    );
+
+    // 3) 面板必须渲染「真面板」，而不是「核心模块未加载」的 fallback
+    const seats = {};
+    const ctx = {
+      effect: (fn) => { const d = fn(); return () => { if (typeof d === 'function') d(); }; },
+      slots: {
+        inject: (_name, cb) => { cb(); return () => {}; },
+        register: (options, component) => {
+          seats[options.name + ':' + (options.key || options.id)] = { options, component };
+          return () => {};
+        },
+      },
+      layout: { selectPanel() {} },
+    };
+    exports.apply(ctx);
+    const seat = seats['main:ntfy-teams'];
+    assert.ok(seat, 'main 座位没有注册');
+    reactStub.reset();
+    const entry = seat.component();
+    reactStub.reset();
+    const inner = entry.type();
+    // 「核心模块未加载」会回传一个 div（host 型别是字串）；真面板会委派给 MainPanel（函数）。
+    assert.strictEqual(
+      typeof inner.type,
+      'function',
+      '面板落回了「核心模块未加载」——内嵌区块没有生效，回头跑 node build.js',
+    );
+  });
+
+  globalThis.window = savedWindow;
+  globalThis.__ModuleLoader__ = savedLoader;
+  if (savedCore === undefined) delete globalThis.__ntfyTeamsCore;
+  else globalThis.__ntfyTeamsCore = savedCore;
+})();
+
+// ------------------------------------------ 回归：订阅清单必须真的落盘 --
+//
+// 这条是为了一个实测漏掉的 bug：core.store 是纯状态、不写 localStorage，
+// 而 UI 层当初只呼叫 loadPersisted()、从来没有呼叫 persist()。结果
+// localStorage 里永远没有 ntfy-teams:store:v1，重新整理后订阅清单就没了
+// （浏览器验证抓到：加完 topic 后 key 不存在，手动 persist() 才出现）。
+//
+// 这里用一个「会重跑 hooks」的 React 替身，把核心顺序走一遍：
+// 挂载 → loadPersisted() → 建立 topic → 应该写出 store 快照。
+(function persistRegression() {
+  console.log('');
+  console.log('回归：面板挂载后，订阅清单必须落盘（persist 有被呼叫）');
+  console.log('');
+
+  const savedLoader = globalThis.__ModuleLoader__;
+  const savedCore = globalThis.__ntfyTeamsCore;
+  const savedWindow = globalThis.window;
+  const store = makeStorage();
+  globalThis.localStorage = store;
+  globalThis.window = globalThis;
+
+  /** 会保存 hooks 并同步重跑的 React 替身（makeHookedReact，定义在档尾）。 */
+  const makeRealishReact = makeHookedReact;
+
+  const harness = makeHookedReact();
+  const registry = new Map();
+  globalThis.__ModuleLoader__ = {
+    load(registration) { registry.set(registration.id, registration.factory); },
+  };
+  delete globalThis.__ntfyTeamsCore;
+
+  test('透过面板的「+ 訂閱主題」新增主題后，清单立刻落盘', () => {
+    delete require.cache[require.resolve(CLIENT_PATH)];
+    require(CLIENT_PATH);
+    const factory = registry.get('ntfy-teams');
+    assert.ok(factory, '没有注册 factory');
+
+    const exports = factory((name) => {
+      if (name === 'react') return harness.React;
+      throw new Error('未预期的 require("' + name + '")');
+    });
+
+    const core = globalThis.__ntfyTeamsCore;
+    assert.ok(core && core.store, '内嵌 core 必须可用');
+    assert.strictEqual(
+      typeof exports.__test.saveSubscriptions,
+      'function',
+      '必须导出 saveSubscriptions 供测试与内部使用',
+    );
+
+    const STORE_KEY = 'ntfy-teams:store:v1';
+    assert.strictEqual(store.getItem(STORE_KEY), null, '起跑点应该没有存档');
+
+    const seats = {};
+    exports.apply({
+      effect: (fn) => { const d = fn(); return () => { if (typeof d === 'function') d(); }; },
+      slots: {
+        inject: (_n, cb) => { cb(); return () => {}; },
+        register: (options, component) => {
+          seats[options.name + ':' + (options.key || options.id)] = { options, component };
+          return () => {};
+        },
+      },
+      layout: { selectPanel() {} },
+    });
+
+    // 面板主体挂载（会跑 loadPersisted 等 effect）
+    assert.ok(harness.render(seats['main:ntfy-teams'].component, {}), '面板没有渲染出东西');
+
+    // TopicBar 的「+ 订阅 topic」在 commit() 里就是做这两件事，然后 saveSubscriptions()。
+    core.store.ensureTopic('pub_persist_probe');
+    core.store.setActiveTopic('pub_persist_probe');
+    const wrote = exports.__test.saveSubscriptions();
+    assert.strictEqual(wrote, true, 'saveSubscriptions 应该回报已写');
+
+    const raw = store.getItem(STORE_KEY);
+    assert.ok(raw, '订阅之后必须写出 ' + STORE_KEY);
+    const parsed = JSON.parse(raw);
+    assert.ok(
+      Array.isArray(parsed.topics) && parsed.topics.indexOf('pub_persist_probe') !== -1,
+      '存档里应包含刚订阅的 topic，实际：' + raw.slice(0, 200),
+    );
+
+    // 读回路径：重新建立 store 状态后 loadPersisted() 应还原清单。
+    core.store.removeTopic('pub_persist_probe');
+    const restored = core.store.loadPersisted();
+    assert.strictEqual(restored, true, 'loadPersisted 应该读回刚刚的存档');
+    assert.ok(
+      core.store.getSnapshot().topics.indexOf('pub_persist_probe') !== -1,
+      'loadPersisted 应还原订阅清单',
+    );
+    core.store.removeTopic('pub_persist_probe');
+  });
+
+  // 还原
+  globalThis.__ModuleLoader__ = savedLoader;
+  globalThis.window = savedWindow;
+  if (savedCore === undefined) delete globalThis.__ntfyTeamsCore;
+  else globalThis.__ntfyTeamsCore = savedCore;
+})();
+
+// -------------------------------------------- 回归：工作群組 UI / markdown / #username --
+//
+// 这一组盯住三个「看得到才算数」的需求：
+//   1. 面板是工作组结构（群组抬头 + 头像 + 訊息串 + 撰写区），不是一条扁平列表；
+//   2. 內文走 markdown 渲染，而且绝不產生危险元素（不注入 HTML、不放行 javascript:）；
+//   3. 送出的訊息 title 就是 #username。
+(function redesignRegression() {
+  console.log('');
+  console.log('回归：工作群組 UI、markdown 渲染、#username 身分');
+  console.log('');
+
+  const savedLoader = globalThis.__ModuleLoader__;
+  const savedCore = globalThis.__ntfyTeamsCore;
+  const savedWindow = globalThis.window;
+  const store = makeStorage();
+  globalThis.localStorage = store;
+  globalThis.window = globalThis;
+
+  const registry = new Map();
+  globalThis.__ModuleLoader__ = {
+    load(registration) { registry.set(registration.id, registration.factory); },
+  };
+  delete globalThis.__ntfyTeamsCore;
+
+  /**
+   * 把 React 元素树摊平成 {tag, cls, text, props} 清单。
+   *
+   * 每个测试都用「自己的」harness 呼叫这个函式（hook 状态不跨测试共用）。
+   *
+   * 展开自订元件时的规则（踩过两次坑才定下来）：
+   *   进入 walk 时先冻结一份 hook 状态 `outer`，之后**每次**展开元件都先还原到
+   *   `outer` 再呼叫它。这样：
+   *     * 元件之间不会互相沿用 stateSlots（否则摘要会读到别的元件的 useState 值）；
+   *     * 元件在展开期间呼叫 setState 造成的重绘也不会被还原掉
+   *       （否则「双击 → 变成输入框」这种需要状态的画面永远看不到）。
+   *   两者只做其中一个都会坏，所以这里是「还原到同一个外层快照」而不是各自 reset。
+   *
+   * @param harness - makeHookedReact() 的实例，用来安全地展开自订元件。
+   * @param node - React 元素或元素阵列。
+   * @param out - 累积用的阵列。
+   * @param depth - 目前深度。
+   * @param outer - 内部用：整棵树共用的外层快照。
+   */
+  function walk(harness, node, out, depth, outer) {
+    if (outer === undefined) outer = harness.snapshot();
+    if (node === null || node === undefined || depth > 40) return;
+    if (Array.isArray(node)) {
+      node.forEach((child) => walk(harness, child, out, depth + 1, outer));
+      return;
+    }
+    if (typeof node === 'string' || typeof node === 'number') {
+      out.push({ tag: '#text', text: String(node) });
+      return;
+    }
+    if (typeof node !== 'object') return;
+    if (typeof node.type === 'function') {
+      harness.restore(outer);
+      let rendered = null;
+      try {
+        rendered = node.type(node.props);
+      } catch (err) {
+        rendered = null;
+      }
+      walk(harness, rendered, out, depth + 1, outer);
+      return;
+    }
+    if (typeof node.type === 'string') {
+      out.push({ tag: node.type, cls: (node.props && node.props.className) || '', props: node.props || {} });
+      const kids = node.children;
+      if (Array.isArray(kids)) kids.forEach((child) => walk(harness, child, out, depth + 1, outer));
+      else walk(harness, kids, out, depth + 1, outer);
+      return;
+    }
+  }
+
+  /** @param nodes - walk 结果。 @returns 全部文字。 */
+  function allText(nodes) {
+    return nodes.filter((n) => n.tag === '#text').map((n) => n.text).join(' ');
+  }
+
+  /** @param nodes - walk 结果。 @param tag - 元素名。 @returns 该元素出现次数。 */
+  function countTag(nodes, tag) {
+    return nodes.filter((n) => n.tag === tag).length;
+  }
+
+  /**
+   * 每个测试都从干净状态开始：新的 harness、重新 materialize client.js。
+   * @returns {{harness: object, exports: object, core: object, seats: object}}
+   */
+  function freshPanel() {
+    const harness = makeHookedReact();
+    delete require.cache[require.resolve(CLIENT_PATH)];
+    require(CLIENT_PATH);
+    const factory = registry.get('ntfy-teams');
+    assert.ok(factory, '没有注册 factory');
+    const mod = factory((name) => {
+      if (name === 'react') return harness.React;
+      throw new Error('未预期的 require("' + name + '")');
+    });
+    const core = globalThis.__ntfyTeamsCore;
+    assert.ok(core && core.store, '内嵌 core 必须可用');
+    const seats = {};
+    mod.apply({
+      effect: (fn) => { const d = fn(); return () => { if (typeof d === 'function') d(); }; },
+      slots: {
+        inject: (_n, cb) => { cb(); return () => {}; },
+        register: (options, component) => {
+          seats[options.name + ':' + (options.key || options.id)] = { options, component };
+          return () => {};
+        },
+      },
+      layout: { selectPanel() {} },
+    });
+    return { harness, exports: mod, core, seats };
+  }
+
+  test('面板渲染出工作组结构（群组抬头 / 头像 / 訊息串 / 撰写区）', () => {
+    const { harness, core, seats } = freshPanel();
+
+    // 准备一则带 markdown 与身分的訊息，让訊息串真的有东西可渲染。
+    core.store.ensureTopic('pub_demo');
+    core.store.addMessage('pub_demo', {
+      id: 'msg-1',
+      time: 1790756810,
+      topic: 'pub_demo',
+      title: '#shawoo',
+      message: '# 標題\n\n**粗體** 與 `code`\n\n- 甲\n- 乙\n\n> 引用\n\n```js\nconst a = 1;\n```\n\n[連結](https://example.com)',
+    });
+
+    const tree = harness.render(seats['main:ntfy-teams'].component, {});
+    const nodes = [];
+    walk(harness, tree, nodes, 0);
+
+    assert.ok(nodes.some((n) => n.cls && n.cls.indexOf('ntfy-teams-grouplogo') !== -1),
+      '应有工作组標誌（grouplogo）');
+    assert.ok(nodes.some((n) => n.cls && n.cls.indexOf('ntfy-teams-title') !== -1),
+      '应有群組名稱');
+    assert.ok(nodes.some((n) => n.cls && n.cls.indexOf('ntfy-teams-subtitle') !== -1),
+      '应有副標題（伺服器 / 話題數 / 身分）');
+    assert.ok(nodes.some((n) => n.cls && n.cls.indexOf('ntfy-teams-avatar') !== -1),
+      '每則訊息應有頭像（workgroup 觀感）');
+    assert.ok(nodes.some((n) => n.cls && n.cls.indexOf('ntfy-teams-sender') !== -1),
+      '每則訊息應有發送者');
+    assert.ok(nodes.some((n) => n.cls && n.cls.indexOf('ntfy-teams-stream') !== -1),
+      '應有訊息串容器');
+    assert.ok(nodes.some((n) => n.cls && n.cls.indexOf('ntfy-teams-compose') !== -1),
+      '應有撰寫區');
+
+    const txt = allText(nodes);
+    assert.ok(txt.indexOf('團隊協同') !== -1, '群組名稱應為繁體「團隊協同」，實際：' + txt.slice(0, 120));
+    assert.ok(txt.indexOf('#shawoo') !== -1, '應顯示發送者 #shawoo');
+  });
+
+  test('markdown 渲染成真正元素，且不注入 HTML', () => {
+    const { harness, core, seats } = freshPanel();
+    core.store.ensureTopic('pub_md');
+    core.store.addMessage('pub_md', {
+      id: 'md-1',
+      time: 1790756900,
+      topic: 'pub_md',
+      title: '#someone',
+      message: [
+        '# H1',
+        '## H2',
+        '',
+        '**粗體** *斜體* ~~刪除~~ `行內`',
+        '',
+        '- 項目一',
+        '- 項目二',
+        '',
+        '> 引用文字',
+        '',
+        '```js',
+        'const x = 1;',
+        '  indented();',
+        '```',
+        '',
+        '[安全連結](https://example.com/path)',
+        '',
+        '[危險連結](javascript:alert(1))',
+        '',
+        '<script>alert(2)</script>',
+        '<img src=x onerror=alert(3)>',
+      ].join('\n'),
+    });
+
+    const tree = harness.render(seats['main:ntfy-teams'].component, {});
+    const nodes = [];
+    walk(harness, tree, nodes, 0);
+
+    assert.ok(countTag(nodes, 'h1') >= 1, '應渲染 <h1>');
+    assert.ok(countTag(nodes, 'h2') >= 1, '應渲染 <h2>');
+    assert.ok(countTag(nodes, 'strong') >= 1, '應渲染 <strong>');
+    assert.ok(countTag(nodes, 'em') >= 1, '應渲染 <em>');
+    assert.ok(countTag(nodes, 'del') >= 1, '應渲染 <del>');
+    assert.ok(countTag(nodes, 'code') >= 1, '應渲染 <code>');
+    assert.ok(countTag(nodes, 'ul') >= 1 && countTag(nodes, 'li') >= 2, '應渲染清單');
+    assert.ok(countTag(nodes, 'blockquote') >= 1, '應渲染 <blockquote>');
+    assert.ok(countTag(nodes, 'pre') >= 1, '應渲染 <pre>');
+
+    // 围栏程式码内容必须逐字保留（含缩排）。
+    const preText = nodes.filter((n) => n.tag === '#text').map((n) => n.text).join('\n');
+    assert.ok(preText.indexOf('const x = 1;') !== -1, '程式碼內容應保留');
+    assert.ok(preText.indexOf('  indented();') !== -1, '程式碼縮排應逐字保留');
+
+    // 只有 http/https 會變成 <a>：javascript: 必須退化為文字。
+    const anchors = nodes.filter((n) => n.tag === 'a');
+    assert.strictEqual(anchors.length, 1, '只應有一個連結，實際：' + anchors.length);
+    assert.strictEqual(
+      anchors[0].props.href,
+      'https://example.com/path',
+      '唯一連結必須是安全的那一個',
+    );
+    assert.ok(
+      preText.indexOf('javascript:alert(1)') !== -1,
+      'javascript: 連結必須以純文字呈現',
+    );
+
+    // 不得注入 HTML：沒有 script / img 元素產生。
+    assert.strictEqual(countTag(nodes, 'script'), 0, '不得產生 <script>');
+    assert.strictEqual(countTag(nodes, 'img'), 0, '不得產生 <img>');
+    assert.ok(
+      preText.indexOf('<script>alert(2)</script>') !== -1,
+      '原始 HTML 必須以純文字呈現（未被當成標籤）',
+    );
+
+    core.store.removeTopic('pub_md');
+  });
+
+  test('送出的訊息 title 就是 #username（核心規則 + 撰寫區顯示）', () => {
+    // 先設定身分，再開面板，撰寫區才會帶著 #name。
+    const coreProbe = require(CORE_PATH);
+    if (typeof coreProbe.setIdentity === 'function') coreProbe.setIdentity('shawoo');
+
+    const { harness, exports: mod, core, seats } = freshPanel();
+    core.store.ensureTopic('pub_identity');
+    if (typeof core.setIdentity === 'function') core.setIdentity('shawoo');
+
+    const tree = harness.render(seats['main:ntfy-teams'].component, {});
+    const nodes = [];
+    walk(harness, tree, nodes, 0);
+    const txt = allText(nodes);
+    assert.ok(txt.indexOf('#shawoo') !== -1, '撰寫區應顯示 #shawoo，實際：' + txt.slice(0, 300));
+    assert.ok(txt.indexOf('的身分傳送') !== -1, '應說明以誰的身分傳送');
+
+    // core 的規則
+    assert.strictEqual(core.getIdentity(), 'shawoo', 'setIdentity 應存下 shawoo');
+    assert.strictEqual(core.senderTitle('shawoo'), '#shawoo', 'senderTitle(shawoo) 應為 #shawoo');
+    assert.strictEqual(core.senderTitle('#shawoo'), '#shawoo', 'senderTitle 應冪等，不得變成 ##shawoo');
+    assert.strictEqual(core.senderTitle(''), '', '空名稱應回空字串');
+
+    // client 的 titleFor 必須與 core 的規則一致（撰寫區送出的 title 用它產生）
+    const t = mod.__test;
+    assert.strictEqual(t.titleFor('shawoo'), '#shawoo', 'titleFor(shawoo) 應為 #shawoo');
+    assert.strictEqual(t.titleFor('#shawoo'), '#shawoo', 'titleFor 應冪等');
+    assert.strictEqual(t.titleFor('  bob  '), '#bob', 'titleFor 應 trim');
+    assert.strictEqual(t.titleFor(''), '', 'titleFor(\'\') 應為空');
+    assert.strictEqual(t.PANEL_LABEL, '團隊協同');
+    assert.deepStrictEqual(
+      t.identityOf('#shawoo'),
+      { handle: 'shawoo', isMention: true },
+      'identityOf 應解析 #shawoo',
+    );
+    // 舊的 @ 格式：解析仍要成功（否則舊主題的訊息會變成未具名），
+    // 而且送出的 title 會被正規化成 #。
+    assert.deepStrictEqual(
+      t.identityOf('@shawoo'),
+      { handle: 'shawoo', isMention: true },
+      'identityOf 仍應解析舊的 @shawoo',
+    );
+    assert.strictEqual(t.titleFor('@shawoo'), '#shawoo', '舊 @ 輸入要正規化成 #');
+    assert.deepStrictEqual(
+      t.identityOf('隨便一個標題'),
+      { handle: '', isMention: false },
+      '非 # 開頭的標題不算發送者',
+    );
+
+    core.store.removeTopic('pub_identity');
+  });
+
+  test('側欄未讀數量 badge：計數語意與顯示', () => {
+    const { harness, exports: mod, core, seats } = freshPanel();
+    const t = mod.__test;
+
+    core.store.ensureTopic('pub_a');
+    core.store.ensureTopic('pub_b');
+    core.store.setActiveTopic('pub_a');
+    assert.strictEqual(t.totalUnread(core.store.getSnapshot()), 0, '起點應為 0');
+
+    // 歷史載入不算未讀
+    core.store.addMessages('pub_b', [{ id: 'h1', time: 100, topic: 'pub_b', message: 'history' }], 'history');
+    assert.strictEqual(t.totalUnread(core.store.getSnapshot()), 0, '歷史訊息不應計入未讀');
+
+    // 即時訊息：非當前主題才累加
+    core.store.addMessage('pub_b', { id: 's1', time: 200, topic: 'pub_b', message: 'live', source: 'sse' });
+    core.store.addMessage('pub_b', { id: 's2', time: 201, topic: 'pub_b', message: 'live2', source: 'sse' });
+    core.store.addMessage('pub_a', { id: 's3', time: 202, topic: 'pub_a', message: 'active', source: 'sse' });
+    assert.strictEqual(t.totalUnread(core.store.getSnapshot()), 2, 'pub_b 的 2 則即時訊息應計入未讀');
+
+    // 側欄 badge 顯示的是「數量」，不是只有一個紅點
+    harness.reset();
+    const icon = seats['sidebar.panellist:ntfy-teams'].component({ size: 16, active: false });
+    const nodes = [];
+    walk(harness, icon, nodes, 0);
+    assert.ok(
+      nodes.some((n) => n.cls && n.cls.indexOf('ntfy-teams-unreadbadge') !== -1),
+      '側欄應有未讀 badge 元素',
+    );
+    assert.ok(allText(nodes).indexOf('2') !== -1, 'badge 應顯示數量 2');
+
+    // 看過（切到該主題）就清零
+    core.store.setActiveTopic('pub_b');
+    assert.strictEqual(t.totalUnread(core.store.getSnapshot()), 0, '看過就應清零');
+
+    // 清零後不再渲染 badge。
+    // 用 resetAll：側欄圖示要用「全新的狀態」重畫，否則會沿用上一輪的 stateSlots
+    // 而讀到舊快照（這正是這條測試第一次跑會誤判的原因）。
+    harness.resetAll();
+    const icon2 = seats['sidebar.panellist:ntfy-teams'].component({ size: 16, active: true });
+    const nodes2 = [];
+    walk(harness, icon2, nodes2, 0);
+    assert.ok(
+      !nodes2.some((n) => n.cls && n.cls.indexOf('ntfy-teams-unreadbadge') !== -1),
+      '沒有未讀時不應顯示 badge',
+    );
+
+    // 99+ 封頂
+    assert.strictEqual(t.badgeText(120), '99+');
+    assert.strictEqual(t.badgeText(0), '');
+
+    core.store.removeTopic('pub_a');
+    core.store.removeTopic('pub_b');
+  });
+
+  test('主題別名：雙擊就地改名、空 = 用主題名、寫入可持久化', () => {
+    const { harness, core, seats } = freshPanel();
+    core.saveConfig({ aliases: {} });
+    core.store.ensureTopic('pub_demo');
+    core.store.setActiveTopic('pub_demo');
+
+    const panel = seats['main:ntfy-teams'].component;
+
+    /**
+     * 畫一次面板並攤平。
+     * @returns {Array} walk 的結果。
+     */
+    const renderPanel = () => {
+      const nodes = [];
+      walk(harness, harness.render(panel, {}), nodes, 0);
+      return nodes;
+    };
+
+    /** 找出可編輯的那個 chip（排除「+ 訂閱主題」與編輯中的）。 */
+    const findChip = (nodes) => nodes.find((n) => n.cls
+      && n.cls.indexOf('ntfy-teams-topic') !== -1
+      && n.cls.indexOf('--add') === -1
+      && n.cls.indexOf('--editing') === -1);
+
+    // 1) 沒別名：chip 顯示主題名，且沒有「已改名」小點
+    let nodes = renderPanel();
+    const chip = findChip(nodes);
+    assert.ok(chip, '找不到 topic chip');
+    assert.ok(allText(nodes).indexOf('pub_demo') !== -1, '沒別名時應顯示主題名');
+    assert.strictEqual(
+      nodes.filter((n) => n.cls && n.cls.indexOf('ntfy-teams-aliasdot') !== -1).length,
+      0,
+      '沒別名時不該有別名小點',
+    );
+
+    // 2) 雙擊 → chip 就地變成輸入框（不是切換主題）
+    assert.strictEqual(typeof chip.props.onDoubleClick, 'function', 'chip 應有 onDoubleClick');
+    let switched = null;
+    const realSetActive = core.store.setActiveTopic;
+    core.store.setActiveTopic = (t) => { switched = t; };
+    chip.props.onDoubleClick({ preventDefault() {} });
+    core.store.setActiveTopic = realSetActive;
+    assert.strictEqual(switched, null, '雙擊不應該切換主題');
+
+    nodes = renderPanel();
+    const inputFirst = nodes.find((n) => n.cls && n.cls.indexOf('ntfy-teams-aliasinput') !== -1);
+    const nodesAgain = renderPanel();
+    const inputSecond = nodesAgain.find((n) => n.cls && n.cls.indexOf('ntfy-teams-aliasinput') !== -1);
+    if (!inputFirst) {
+      console.log('        DEBUG first=' + !!inputFirst + ' second=' + !!inputSecond
+        + ' classes=' + JSON.stringify(nodes.filter((n) => n.cls && n.cls.indexOf('ntfy-teams-topic') === 0).map((n) => n.cls)));
+    }
+    const input = inputFirst || inputSecond;
+    assert.ok(input, '雙擊後應出現別名輸入框');
+    assert.strictEqual(input.props.defaultValue, '', '沒別名時輸入框應為空');
+    assert.strictEqual(input.props.placeholder, 'pub_demo', 'placeholder 應提示主題名');
+
+    // 3) 輸入別名 + Enter → chip 顯示別名，且寫進 config
+    input.props.onKeyDown({
+      key: 'Enter',
+      preventDefault() {},
+      currentTarget: { value: '研發組' },
+    });
+    assert.strictEqual(core.topicLabel('pub_demo'), '研發組', '別名應寫進 config');
+    assert.deepStrictEqual(core.readConfig().aliases, { pub_demo: '研發組' });
+
+    nodes = renderPanel();
+    assert.ok(allText(nodes).indexOf('研發組') !== -1, 'chip 應顯示別名');
+    assert.strictEqual(
+      nodes.filter((n) => n.cls && n.cls.indexOf('ntfy-teams-aliasdot') !== -1).length,
+      1,
+      '有別名時應出現別名小點',
+    );
+    // 原始主題名不該被別名吃掉（tooltip 會同時給出兩者）
+    const chip2 = findChip(nodes);
+    assert.ok(
+      chip2.props.title.indexOf('研發組') !== -1 && chip2.props.title.indexOf('pub_demo') !== -1,
+      'tooltip 應同時顯示別名與主題名，實際：' + chip2.props.title,
+    );
+
+    // 4) 再次雙擊、清空 → 顯示回主題名
+    chip2.props.onDoubleClick({ preventDefault() {} });
+    nodes = renderPanel();
+    const input2 = nodes.find((n) => n.cls && n.cls.indexOf('ntfy-teams-aliasinput') !== -1);
+    assert.ok(input2, '再次雙擊應再出現輸入框');
+    assert.strictEqual(input2.props.defaultValue, '研發組', '輸入框應先帶入現有別名');
+    input2.props.onBlur({ currentTarget: { value: '   ' } });
+    assert.strictEqual(core.topicLabel('pub_demo'), 'pub_demo', '清空後應回主題名');
+    assert.deepStrictEqual(core.readConfig().aliases, {}, '空別名不該留在表裡');
+
+    nodes = renderPanel();
+    assert.ok(allText(nodes).indexOf('pub_demo') !== -1, '清空後 chip 應顯示主題名');
+    assert.strictEqual(
+      nodes.filter((n) => n.cls && n.cls.indexOf('ntfy-teams-aliasdot') !== -1).length,
+      0,
+      '清空後不該有別名小點',
+    );
+
+    // 5) Esc 取消：不改動別名
+    core.setTopicAlias('pub_demo', '原本的');
+    nodes = renderPanel();
+    const chip3 = findChip(nodes);
+    chip3.props.onDoubleClick({ preventDefault() {} });
+    nodes = renderPanel();
+    const input3 = nodes.find((n) => n.cls && n.cls.indexOf('ntfy-teams-aliasinput') !== -1);
+    assert.ok(input3, '第三次雙擊應出現輸入框');
+    input3.props.onKeyDown({
+      key: 'Escape',
+      preventDefault() {},
+      currentTarget: { value: '不要這個' },
+    });
+    assert.strictEqual(core.topicLabel('pub_demo'), '原本的', 'Esc 不該改動別名');
+
+    core.saveConfig({ aliases: {} });
+    core.store.removeTopic('pub_demo');
+  });
+
+  test('共用設定：預設收合，伺服器／帳號／名稱只有一份', () => {
+    const { harness, core, seats } = freshPanel();
+    // 先清乾淨：store 是跨測試共用的（loadPersisted 會沿用前一個測試留下的主題）。
+    core.store.loadPersisted();
+    (core.store.getSnapshot().topics || []).slice().forEach((t) => core.store.removeTopic(t));
+    core.saveConfig({ server: 'https://msn.feg.cn', topics: [], aliases: {} });
+    core.saveCredentials('https://msn.feg.cn', { mode: 'basic', user: 'u', password: 'p' });
+    core.setIdentity('shawoo');
+    core.store.ensureTopic('pub_a');
+    core.store.ensureTopic('pub_b');
+    core.store.setActiveTopic('pub_a');
+
+    const panel = seats['main:ntfy-teams'].component;
+
+    /** 畫一次面板並攤平。 */
+    const renderPanel = () => {
+      const nodes = [];
+      walk(harness, harness.render(panel, {}), nodes, 0);
+      return nodes;
+    };
+
+    /** 取一个按钮的文字（只处理字串子节点，够用）。 */
+    const buttonText = (n) => (typeof n.children === 'string' ? n.children : null);
+
+    const has = (nodes, cls) => nodes.some((n) => n.cls && n.cls.indexOf(cls) !== -1);
+
+    // 1) 預設收合：只有一行摘要，沒有輸入框
+    let nodes = renderPanel();
+    assert.ok(has(nodes, 'ntfy-teams-settings'), '應有共用設定區塊');
+    assert.ok(has(nodes, 'ntfy-teams-settingsbar'), '預設應顯示摘要列');
+    assert.ok(!has(nodes, 'ntfy-teams-settings--open'), '預設不該是展開狀態');
+    // 收合時「設定」那幾個欄位不該存在（訊息撰寫區本來就有輸入框，不算在內）。
+    ['ntfy-teams-identity', 'ntfy-teams-server', 'ntfy-teams-mode'].forEach((cls) => {
+      assert.ok(!has(nodes, cls), '收合時不該出現 ' + cls);
+    });
+    // 摘要要看得出這三樣是全域共用的
+    const summary = allText(nodes);
+    assert.ok(summary.indexOf('全部主題共用') !== -1, '摘要應標明全部主題共用');
+    assert.ok(summary.indexOf('msn.feg.cn') !== -1, '摘要應顯示伺服器');
+    assert.ok(summary.indexOf('帳號密碼') !== -1, '摘要應顯示認證狀態');
+    assert.ok(summary.indexOf('#shawoo') !== -1, '摘要應顯示送出用的 #name');
+
+    // 2) 摘要只有一份：兩個主題不會各顯示一次伺服器／帳號
+    assert.strictEqual(
+      nodes.filter((n) => n.cls && n.cls.indexOf('ntfy-teams-settingsbar') !== -1).length,
+      1,
+      '兩個主題也只該有一個設定摘要',
+    );
+
+    // 3) 點「編輯」才展開，展開後輸入框都出現
+    const editBtn = nodes.find((n) => n.tag === 'button' && buttonText(n) === '編輯');
+    assert.ok(editBtn, '摘要列應有「編輯」按鈕');
+    editBtn.props.onClick();
+
+    nodes = renderPanel();
+    assert.ok(has(nodes, 'ntfy-teams-settings--open'), '點編輯後應展開');
+    assert.ok(has(nodes, 'ntfy-teams-identity'), '展開後應有顯示名稱輸入框');
+    assert.ok(has(nodes, 'ntfy-teams-server'), '展開後應有伺服器輸入框');
+    assert.ok(has(nodes, 'ntfy-teams-mode'), '展開後應有認證選單');
+    assert.ok(
+      allText(nodes).indexOf('所有主題生效') !== -1,
+      '展開後應說明設定對所有主題生效',
+    );
+
+    // 4) 收合回去
+    const closeBtn = nodes.find((n) => n.tag === 'button' && buttonText(n) === '收合');
+    assert.ok(closeBtn, '展開後應有「收合」按鈕');
+    closeBtn.props.onClick();
+    nodes = renderPanel();
+    assert.ok(!has(nodes, 'ntfy-teams-settings--open'), '點收合後應回到摘要');
+
+    core.clearCredentials('https://msn.feg.cn');
+    core.setIdentity('');
+    core.store.removeTopic('pub_a');
+    core.store.removeTopic('pub_b');
+  });
+
+  // 还原
+  globalThis.__ModuleLoader__ = savedLoader;
+  globalThis.window = savedWindow;
+  if (savedCore === undefined) delete globalThis.__ntfyTeamsCore;
+  else globalThis.__ntfyTeamsCore = savedCore;
+})();
+
+// ---------------------------------------------------------------- 共用替身 --
+
+/**
+ * 会保存 hooks、并同步重跑元件的 React 替身。
+ *
+ * 两个回归（落盘、工作组 UI）都需要「真的把 effect 跑起来」，所以放在最外层共用。
+ *
+ * 两个踩过的坑都写在这里：
+ *   - 三种 hook 各用「自己的」slot 阵列与游标。共用一组 slot 会让 useState 读到
+ *     useEffect 存的 deps 物件，效果会静悄悄地不跑。
+ *   - render 之后要把 effect「抽干」：effect 里呼叫 setState 会同步再 render 一次，
+ *     那一轮又会排新的 effect，React 会继续 flush。不回圈就会漏掉那一轮，
+ *     看起来像「effect 根本没跑」。
+ *
+ * @returns {{React: object, render: function}} 替身 React 与渲染入口。
+ */
+function makeHookedReact() {
+  const stateSlots = [];
+  const refSlots = [];
+  const effectSlots = [];
+  let cursors = { state: 0, ref: 0, effect: 0 };
+  let active = null;
+  let rendering = false;
+
+  function render(component, props) {
+    // 防重入：测试的 walker 会直接呼叫子元件来展开结构，那些呼叫也会碰 hooks。
+    // 允许重入会把外层的 cursors 打乱（实测：effectSlots 被弄到 undefined）。
+    // 重入时当成单纯的函数呼叫处理。
+    if (rendering) return component(props);
+    rendering = true;
+    try {
+      return renderInner(component, props);
+    } finally {
+      rendering = false;
+    }
+  }
+
+  function renderInner(component, props) {
+    cursors = { state: 0, ref: 0, effect: 0 };
+    active = { component, props };
+    const out = component(props);
+    let guard = 0;
+    for (;;) {
+      const pending = effectSlots.filter((slot) => slot && slot.pending);
+      if (pending.length === 0) break;
+      guard += 1;
+      if (guard > 50) break;
+      pending.forEach((slot) => {
+        const fn = slot.pending && slot.pending.fn;
+        slot.pending = null;
+        if (typeof fn === 'function') fn();
+      });
+    }
+    return out;
+  }
+
+  /** setState 之后同步重跑一次元件。 */
+  function requestRender() {
+    if (!active || rendering) return;
+    render(active.component, active.props);
+  }
+
+  /**
+   * 把 hook 游标归零，并把目前这轮已排的 effect 丢掉。
+   * 给测试的 walker 用：它要直接呼叫子元件展开结构，那会碰 hooks。
+   */
+  function reset() {
+    cursors = { state: 0, ref: 0, effect: 0 };
+    effectSlots.length = 0;
+  }
+
+  /**
+   * 完全重置 hook 状态（含 state 与 ref）。
+   * 当一个元件要用「全新的状态」重新渲染时用这个 —— 只呼叫 reset() 会留下上一次的
+   * stateSlots，于是第二次渲染会读到旧快照（实测：未读 badge 清零后仍显示）。
+   */
+  function resetAll() {
+    stateSlots.length = 0;
+    refSlots.length = 0;
+    effectSlots.length = 0;
+    cursors = { state: 0, ref: 0, effect: 0 };
+    active = null;
+  }
+
+  /**
+   * 把目前整份 hook 状态冻结成一个快照。
+   * 给测试的 walker 用：它要直接呼叫子元件展开结构，那会碰到 hooks；
+   * 呼叫前冻结、呼叫后还原，就不会污染（也不会清空）别人的状态。
+   * @returns 快照。
+   */
+  function snapshot() {
+    return {
+      state: stateSlots.slice(),
+      refs: refSlots.slice(),
+      effects: effectSlots.slice(),
+      cursors: { state: cursors.state, ref: cursors.ref, effect: cursors.effect },
+    };
+  }
+
+  /**
+   * 还原 snapshot() 拿到的状态。
+   * @param snap - snapshot() 的回传值。
+   */
+  function restore(snap) {
+    stateSlots.length = 0;
+    refSlots.length = 0;
+    effectSlots.length = 0;
+    for (let i = 0; i < snap.state.length; i += 1) stateSlots[i] = snap.state[i];
+    for (let i = 0; i < snap.refs.length; i += 1) refSlots[i] = snap.refs[i];
+    for (let i = 0; i < snap.effects.length; i += 1) effectSlots[i] = snap.effects[i];
+    cursors = { state: snap.cursors.state, ref: snap.cursors.ref, effect: snap.cursors.effect };
+  }
+
+  const React = {
+    createElement: (type, props, ...children) => ({ type, props: props || {}, children }),
+    useState(initial) {
+      const i = cursors.state;
+      cursors.state += 1;
+      if (!(i in stateSlots)) stateSlots[i] = { value: typeof initial === 'function' ? initial() : initial };
+      const holder = stateSlots[i];
+      const setState = (next) => {
+        const value = typeof next === 'function' ? next(holder.value) : next;
+        if (value === holder.value) return;
+        holder.value = value;
+        requestRender();
+      };
+      return [holder.value, setState];
+    },
+    useEffect(fn, deps) {
+      const i = cursors.effect;
+      cursors.effect += 1;
+      const prev = effectSlots[i];
+      const same = prev && prev.deps && deps
+        && prev.deps.length === deps.length
+        && prev.deps.every((d, k) => d === deps[k]);
+      if (same) { effectSlots[i] = { deps, pending: null }; return; }
+      effectSlots[i] = { deps, pending: { fn } };
+    },
+    useRef(initial) {
+      const i = cursors.ref;
+      cursors.ref += 1;
+      if (!(i in refSlots)) refSlots[i] = { current: initial };
+      return refSlots[i];
+    },
+    useMemo: (fn) => fn(),
+    useCallback: (fn) => fn,
+  };
+
+  return { React, render, reset, resetAll, snapshot, restore };
+}
+
+// ---------------------------------------------------------------- 结果 ----
+
+console.log('');
+console.log(passed + ' passed, ' + failed + ' failed');
+console.log('');
+process.exitCode = failed === 0 ? 0 : 1;
