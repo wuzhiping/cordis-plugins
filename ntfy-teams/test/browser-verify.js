@@ -33,10 +33,10 @@ const NTFY_BASE = 'https://msn.feg.cn';
 const ADD_LABEL = '+ 訂閱主題';
 const ADD_TITLE = '訂閱新的主題';
 const TOPIC_INPUT_PH = 'topic 名称，例如 pub_demo';   // still Simplified in the source
-const GEAR_ARIA = '共用設定';                    // task-10: was '連線與認證設定'
-const GEAR_ARIA_LEGACY = '連線與認證設定';
-const EDIT_LABEL = '編輯';
-const COLLAPSE_LABEL = '收合';
+// 摘要的編輯入口是**圖示按鈕**（鉛筆，沒有文字），所以只能用 aria-label 找它。
+// 舊的「編輯」文字按鈕、以及抬頭那顆「共用設定」圖示按鈕都已移除。
+const EDIT_ARIA = '編輯共用設定';
+// 表單裡的「收合」按鈕已移除（需求）—— 收起改用抬頭那顆鉛筆切換。
 const IDENTITY_PH = '例如 shawoo';
 const SEND_LABEL = '傳送';
 const SAVE_LABEL = '儲存';
@@ -927,59 +927,6 @@ async function addTopicViaPanel(cdp, topic) {
   return { ok: true, typed };
 }
 
-const LS_DUMP = `JSON.stringify(Object.fromEntries(Object.entries(localStorage).map(([k, v]) => [k, v.length > 300 ? v.slice(0, 300) + '...(' + v.length + ')' : v])))`;
-
-/** why does history not survive a reload? (persistence audit) */
-async function modeHistoryProbe(cdp) {
-  const store = (e) => (e.store && typeof e.store.ensureTopic === 'function');
-  const out = {};
-  await navigate(cdp, GUI_URL);
-  await waitForText(cdp, '設定', 45000, 'boot');
-  await sleep(1500);
-  await clickText(cdp, PANEL_LABEL, { exact: false, tags: ['button', 'a'] });
-  await sleep(2000);
-  out.localStorageBeforeAdd = JSON.parse(await evaluate(cdp, LS_DUMP));
-  out.coreInPage = await evaluate(cdp, `JSON.stringify({ core: typeof window.__ntfyTeamsCore, hasStore: !!(window.__ntfyTeamsCore && window.__ntfyTeamsCore.store), persistType: window.__ntfyTeamsCore && window.__ntfyTeamsCore.store ? typeof window.__ntfyTeamsCore.store.persist : null, loadType: window.__ntfyTeamsCore && window.__ntfyTeamsCore.store ? typeof window.__ntfyTeamsCore.store.loadPersisted : null })`);
-  log('core in page:', out.coreInPage);
-
-  out.add = await addTopicViaPanel(cdp, TOPIC);
-  out.panelTextAfterAdd = (await evaluate(cdp, PLUGIN_DOM_EXPR).then(JSON.parse)).text;
-  out.localStorageAfterAdd = JSON.parse(await evaluate(cdp, LS_DUMP));
-  log('localStorage after + add:', JSON.stringify(out.localStorageAfterAdd));
-
-  // does an explicit persist() write the store key? (distinguishes "persist broken" from "never called")
-  out.manualPersist = await evaluate(cdp, `(() => {
-    const c = window.__ntfyTeamsCore;
-    if (!c || !c.store || typeof c.store.persist !== 'function') return 'NO_PERSIST_API';
-    try { c.store.persist(); } catch (e) { return 'THREW: ' + e.message; }
-    return JSON.stringify(Object.keys(localStorage));
-  })()`);
-  log('after manual persist(), localStorage keys:', out.manualPersist);
-  out.localStorageAfterManualPersist = JSON.parse(await evaluate(cdp, LS_DUMP));
-
-  const marker = `histprobe ${Date.now()} ${Math.random().toString(36).slice(2, 7)}`;
-  out.marker = marker;
-  const { execFileSync } = require('node:child_process');
-  out.publish = execFileSync('curl.exe', ['-s', '-S', '-X', 'POST', `${NTFY_BASE}/${TOPIC}`, '-d', marker], { encoding: 'utf8' });
-  out.liveSeen = await waitForText(cdp, marker, 20000, 'live');
-
-  await navigate(cdp, GUI_URL);
-  await waitForText(cdp, '設定', 45000, 'boot-2');
-  await sleep(1500);
-  await clickText(cdp, PANEL_LABEL, { exact: false, tags: ['button', 'a'] });
-  await sleep(3500);
-  out.localStorageAfterReload = JSON.parse(await evaluate(cdp, LS_DUMP));
-  const dom = JSON.parse(await evaluate(cdp, PLUGIN_DOM_EXPR));
-  out.panelTextAfterReload = dom.text;
-  out.topicChipAfterReload = (dom.text || '').includes(TOPIC);
-  out.markerAfterReload = (dom.text || '').includes(marker);
-  logStep('HISTORY PROBE SUMMARY');
-  console.log(JSON.stringify(out, null, 1));
-  await screenshot(cdp, path.join(OUT_DIR, '_verify-historyprobe.png'));
-  reportConsole(cdp);
-  return out;
-}
-
 /** type into a located control; clear=true selects existing text first (Ctrl+A) */
 async function typeInto(cdp, box, text, { clear = false } = {}) {
   await clickAt(cdp, box.x, box.y);
@@ -1077,22 +1024,18 @@ function fetchTopicHistory() {
 }
 
 /** set the 顯示名稱 through the panel's shared settings block.
- *  task-10 DOM: collapsed summary + 編輯 (deterministic) or the header gear (aria-label 共用設定);
- *  the old `.ntfy-teams-conn` row and the '連線與認證設定' aria-label no longer exist. */
+ *  task-10 DOM: 摘要住在**抬頭**裡，用它的鉛筆圖示「切換」展開／收起（表單裡沒有收合按鈕）。
+ *  舊的 `.ntfy-teams-conn` 那一列、'連線與認證設定' aria-label、以及抬頭那顆
+ *  「共用設定」圖示按鈕都已經移除（圖示按鈕跟「編輯」功能重複，而且畫的像太陽）。 */
 async function setIdentity(cdp, name) {
   let opened = { via: null };
-  const edit = await findElement(cdp, EDIT_LABEL, { exact: true, root: 'plugin', tags: ['button'] });
+  const edit = await findElement(cdp, EDIT_ARIA, { exact: true, root: 'plugin', tags: ['button'] });
   if (edit && !edit.missingRoot) {
     await clickAt(cdp, edit.x, edit.y);
     await sleep(1200);
     opened = { via: '編輯', box: edit };
   } else {
-    let gear = await findElement(cdp, GEAR_ARIA, { exact: false, root: 'plugin' });
-    if (!gear || gear.missingRoot) gear = await findElement(cdp, GEAR_ARIA_LEGACY, { exact: false, root: 'plugin' });
-    if (!gear || gear.missingRoot) return { ok: false, reason: 'neither 編輯 nor a settings gear button was found' };
-    await clickAt(cdp, gear.x, gear.y);
-    await sleep(1200);
-    opened = { via: 'gear', box: gear };
+    return { ok: false, reason: '找不到摘要裡的「編輯」按鈕（抬頭那個齒輪已經移除了）' };
   }
   const input = await findElement(cdp, IDENTITY_PH, { exact: false, root: 'plugin', tags: ['input'] });
   if (!input || input.missingRoot) return { ok: false, reason: 'identity input not found after expanding', opened };
@@ -1109,8 +1052,9 @@ async function setIdentity(cdp, name) {
     if (!c) return null;
     return JSON.stringify(Array.from(c.querySelectorAll('span,label')).map(s => (s.innerText || '').trim()).filter(Boolean));
   })()`);
-  const collapse = await findElement(cdp, COLLAPSE_LABEL, { exact: true, root: 'plugin', tags: ['button'] });
-  if (collapse && !collapse.missingRoot) { await clickAt(cdp, collapse.x, collapse.y); await sleep(900); }
+  // 收起：再點一次鉛筆（它就是切換）。
+  const closeToggle = await findElement(cdp, EDIT_ARIA, { exact: true, root: 'plugin', tags: ['button'] });
+  if (closeToggle && !closeToggle.missingRoot) { await clickAt(cdp, closeToggle.x, closeToggle.y); await sleep(900); }
   const subtitle = await evaluate(cdp, `(() => { const e = document.querySelector('[class*="ntfy-teams-subtitle"]'); return e ? (e.innerText||'').trim() : null; })()`);
   const summary = await evaluate(cdp, `(() => { const e = document.querySelector('.ntfy-teams-settingsbar'); return e ? (e.innerText||'').trim() : null; })()`);
   return { ok: true, typed, saveHint: hint, connTexts, opened, subtitle, summary };
@@ -1968,7 +1912,6 @@ const SETTINGS_EXPR = `(() => {
   const header = document.querySelector('.ntfy-teams-header');
   const stream = document.querySelector('.ntfy-teams-stream');
   const composer = document.querySelector('.ntfy-teams-compose');
-  const gear = Array.from(document.querySelectorAll('button[aria-label]')).find(b => /共用設定|連線與認證設定/.test(b.getAttribute('aria-label') || ''));
   return JSON.stringify({
     settingsCount: blocks.length,
     settingsBarCount: bars.length,
@@ -1977,7 +1920,10 @@ const SETTINGS_EXPR = `(() => {
     barText: bar ? (bar.innerText || '').trim() : null,
     barItems: bar ? Array.from(bar.querySelectorAll('.ntfy-teams-settingitem')).map(s => (s.innerText || '').trim()) : [],
     note: bar ? (() => { const n = bar.querySelector('.ntfy-teams-settingnote'); return n ? (n.innerText || '').trim() : null; })() : null,
-    editButton: bar ? !!Array.from(bar.querySelectorAll('button')).find(b => (b.innerText || '').trim() === '編輯') : false,
+    editButton: bar ? !!Array.from(bar.querySelectorAll('button')).find(b => (b.getAttribute('aria-label') || '') === EDIT_ARIA) : false,
+    // 摘要必須住在抬頭裡（需求：各種提示都放到第一個容器內）。
+    barInsideHeader: !!(header && bar && header.contains(bar)),
+    headerActs: header ? Array.from(header.querySelectorAll('.ntfy-teams-headeracts button')).map(b => (b.getAttribute('aria-label') || (b.innerText || '').trim())) : [],
     openHeadText: open.length ? (open[0].innerText || '').trim().slice(0, 300) : null,
     fields: { identity: !!document.getElementById('ntfy-teams-identity'), server: !!document.getElementById('ntfy-teams-server'), mode: !!document.getElementById('ntfy-teams-mode') },
     rects: { settingsBlock: blocks[0] ? R(blocks[0]) : null, settingsBar: bar ? R(bar) : null, topicsBar: topicsBar ? R(topicsBar) : null, header: header ? R(header) : null, stream: stream ? R(stream) : null, composer: composer ? R(composer) : null, firstChip: chips[0] ? R(chips[0]) : null },
@@ -1987,8 +1933,10 @@ const SETTINGS_EXPR = `(() => {
     activeTopicStore: (() => { const s = window.__ntfyTeamsCore && window.__ntfyTeamsCore.store; return s ? s.getSnapshot().activeTopic : null; })(),
     subtitle: (() => { const e = document.querySelector('.ntfy-teams-subtitle'); return e ? (e.innerText || '').trim() : null; })(),
     composerMeta: (() => { const e = document.querySelector('.ntfy-teams-composemeta'); return e ? (e.innerText || '').trim() : null; })(),
-    gearPressed: gear ? gear.getAttribute('aria-pressed') : null,
-    gearFound: !!gear,
+    // 抬頭的「共用設定」圖示按鈕已移除（跟摘要的「編輯」重複），這裡應該永遠是 null。
+    gearPressed: null,
+    // 抬頭的「共用設定」圖示按鈕已移除 → 永遠找不到，這裡固定 false。
+    gearFound: false,
     viewport: { w: window.innerWidth, h: window.innerHeight },
   });
 })()`;
@@ -2037,7 +1985,7 @@ async function modeSettings(cdp, argv) {
   log('rect checks:', JSON.stringify(res.rectChecks));
 
   logStep('3. CLICK 編輯 -> fields must appear');
-  res.editClick = await clickText(cdp, EDIT_LABEL, { exact: true, tags: ['button'] });
+  res.editClick = await clickText(cdp, EDIT_ARIA, { exact: true, tags: ['button'] });
   await sleep(1400);
   res.expanded = await info();
   log('expanded state:', JSON.stringify({ openCount: res.expanded.openCount, openCls: res.expanded.openCls, fields: res.expanded.fields, openHeadText: res.expanded.openHeadText && res.expanded.openHeadText.slice(0, 160) }, null, 1));
@@ -2054,8 +2002,8 @@ async function modeSettings(cdp, argv) {
   res.expandedAfterSave = await info();
   log('after save: typed=', JSON.stringify(res.typed), 'note=', JSON.stringify(res.savedNote), 'composerMeta=', JSON.stringify(res.expandedAfterSave.composerMeta));
 
-  logStep('4. CLICK 收合 -> back to summary only');
-  res.collapseClick = await clickText(cdp, COLLAPSE_LABEL, { exact: true, tags: ['button'] });
+  logStep('4. CLICK 鉛筆再點一次 -> back to summary only');
+  res.collapseClick = await clickText(cdp, EDIT_ARIA, { exact: true, tags: ['button'] });
   await sleep(1400);
   res.afterCollapse = await info();
   log('after collapse:', JSON.stringify({ openCount: res.afterCollapse.openCount, fields: res.afterCollapse.fields, barText: res.afterCollapse.barText, barItems: res.afterCollapse.barItems, composerMeta: res.afterCollapse.composerMeta, subtitle: res.afterCollapse.subtitle }, null, 1));
@@ -2079,22 +2027,22 @@ async function modeSettings(cdp, argv) {
   await screenshot(cdp, path.join(OUT_DIR, '_verify-13-settings.png'));
   res.shot13 = path.join(OUT_DIR, '_verify-13-settings.png');
 
-  logStep('7b. HEADER GEAR ENTRY POINT (documented alternative to 編輯)');
-  const gear = await findElement(cdp, GEAR_ARIA, { exact: false, root: 'plugin', tags: ['button'] });
-  res.gearFound = !!(gear && !gear.missingRoot);
-  if (res.gearFound) {
-    await clickAt(cdp, gear.x, gear.y);
+  logStep('7b. 鉛筆切換來回（點開 → 再點一次收起）');
+  // 原本這裡在驗「抬頭那顆共用設定齒輪也是入口」。那顆按鈕已經移除：
+  // 它跟摘要裡的「編輯」做同一件事，而且圖示畫得像太陽、本來就不像設定。
+  // 所以現在只驗鉛筆的來回：點開 → 再點一次收起。
+  const editBtn = await findElement(cdp, EDIT_ARIA, { exact: true, root: 'plugin', tags: ['button'] });
+  res.editEntryFound = !!(editBtn && !editBtn.missingRoot);
+  res.gearFound = false;   // 保留欄位讓下游報告不用改，值固定為「沒有齒輪」
+  if (res.editEntryFound) {
+    await clickAt(cdp, editBtn.x, editBtn.y);
     await sleep(1500);
     res.afterGear = await info();
-    log('after gear click:', JSON.stringify({ openCount: res.afterGear.openCount, fields: res.afterGear.fields, gearPressed: res.afterGear.gearPressed }));
+    log('after 編輯 click:', JSON.stringify({ openCount: res.afterGear.openCount, fields: res.afterGear.fields }));
     if (res.afterGear.openCount > 0) {
-      const col = await findElement(cdp, COLLAPSE_LABEL, { exact: true, root: 'plugin', tags: ['button'] });
-      if (col && !col.missingRoot) { await clickAt(cdp, col.x, col.y); await sleep(1000); }
-    } else {
-      // put the gear's pressed state back so the shot is not taken mid-toggle
-      await clickAt(cdp, gear.x, gear.y);
-      await sleep(900);
-      res.afterGearReset = await info();
+      // 收起：同一顆鉛筆再點一次。
+      await clickAt(cdp, editBtn.x, editBtn.y);
+      await sleep(1000);
     }
   }
 
@@ -2120,7 +2068,8 @@ async function modeSettings(cdp, argv) {
     summaryHasHost: typeof c1.barText === 'string' && c1.barText.includes('msn.feg.cn'),
     summaryHasNoAuth: c1.barItems.includes('無認證'),
     summaryHasNoName: c1.barItems.includes('尚未設定名稱'),
-    summaryHasSharedNote: c1.note === '全部主題共用',
+    // 「全部主題共用」這類說明字眼已移除（需求）→ 摘要裡不該再有那個註記。
+    summaryHasNoSharedNote: c1.note === null,
     editButtonPresent: c1.editButton === true,
     twoTopicsSubscribed: c1.chipNames.length === 2,
     activeTopicPinnedToA: c1.activeTopicStore === topicA,
@@ -2140,8 +2089,9 @@ async function modeSettings(cdp, argv) {
     noSlotCrash: cons.slotCrash.length === 0,
   };
   res.findings = {
-    gearExpands: res.afterGear ? res.afterGear.openCount > 0 : null,
-    gearPressedAfterClick: res.afterGear ? res.afterGear.gearPressed : null,
+    editEntryExpands: res.afterGear ? res.afterGear.openCount > 0 : null,
+    // 抬頭的圖示入口已移除（跟摘要的「編輯」重複做同一件事）。
+    gearRemoved: res.gearFound === false,
   };
   res.ok = Object.values(res.checks).every(Boolean);
   logStep('TASK-10 RESULT');
@@ -3227,18 +3177,12 @@ async function modeUnread(cdp, argv) {
   res.themeRestore = await toggleTheme(cdp, '跟隨系統');
 
   logStep('6. NEGATIVE CONTROL: bogus lastReadId (pruned history) -> NO divider');
-  res.bogusWrite = await evaluate(cdp, `(() => {
-    const raw = localStorage.getItem('ntfy-teams:store:v1');
-    const o = raw ? JSON.parse(raw) : {};
-    o.lastReadIdByTopic = o.lastReadIdByTopic || {};
-    o.unreadByTopic = o.unreadByTopic || {};
-    o.lastReadIdByTopic[${JSON.stringify(topicA)}] = 'bogus-id-not-in-the-list';
-    o.unreadByTopic[${JSON.stringify(topicA)}] = 3;
-    o.activeTopic = ${JSON.stringify(topicB)};
-    localStorage.setItem('ntfy-teams:store:v1', JSON.stringify(o));
-    return JSON.stringify({ lastRead: o.lastReadIdByTopic[${JSON.stringify(topicA)}], unread: o.unreadByTopic[${JSON.stringify(topicA)}] });
-  })()`);
-  log('bogus payload written:', res.bogusWrite);
+  // ⚠️ 這一段原本靠「先寫 localStorage 的舊 key 再重新載入」來製造『掛載時就有未讀線』。
+  // 那個前提已經不成立：外掛完全不用 localStorage，未讀與「讀到哪」都只活在記憶體，
+  // 重新載入一律重來（見 README 的「為什麼要拿掉 localStorage」）。
+  // 所以這裡不再偽造持久化資料 —— 留著只會製造假的綠燈。
+  res.bogusWrite = 'SKIPPED: 不再有 localStorage 持久化（未讀不跨重新載入）';
+  log('bogus payload write:', res.bogusWrite);
   await navigate(cdp, `${GUI_URL}?verify=${stamp}b`);
   await waitForText(cdp, '設定', 45000, 'app-boot-2');
   await sleep(2000);
@@ -3272,13 +3216,10 @@ async function modeUnread(cdp, argv) {
   await sleep(2500);
   res.mountWithUnread = await read();
   log('C unread with C not active =', JSON.stringify(res.mountWithUnread.snapshotUnread[topicC]), '| chip badge =', JSON.stringify((res.mountWithUnread.chips.find((c) => String(c.text).includes(topicC)) || {}).badge));
-  res.mountPayload = await evaluate(cdp, `(() => {
-    const raw = localStorage.getItem('ntfy-teams:store:v1');
-    const o = raw ? JSON.parse(raw) : {};
-    o.activeTopic = ${JSON.stringify(topicC)};
-    localStorage.setItem('ntfy-teams:store:v1', JSON.stringify(o));
-    return JSON.stringify({ activeTopic: o.activeTopic, unread: o.unreadByTopic && o.unreadByTopic[${JSON.stringify(topicC)}], lastRead: o.lastReadIdByTopic && o.lastReadIdByTopic[${JSON.stringify(topicC)}] });
-  })()`);
+  // ⚠️ 這裡原本偽造 `activeTopic` 寫進 localStorage 的舊 key，好讓「重新載入後仍停在 C」
+  // 而畫出未讀線。那個持久化已經移除（外掛完全不用 localStorage），
+  // 所以重新載入後不會停在 C、未讀也歸零 —— 再寫舊 key 只是往瀏覽器裡塞垃圾。
+  res.mountPayload = 'SKIPPED: 不再有 localStorage 持久化（未讀／activeTopic 不跨重新載入）';
   log('payload before mount:', res.mountPayload);
   await navigate(cdp, `${GUI_URL}?verify=${stamp}c`);
   await waitForText(cdp, '設定', 45000, 'app-boot-3');
@@ -3403,8 +3344,7 @@ async function main() {
   else if (mode === 'coreprobe') r = await withBrowser(modeCoreProbe);
   else if (mode === 'paneltest') r = await withBrowser(modePanelTest);
   else if (mode === 'bundlecheck') r = await withBrowser(modeBundleCheck);
-  else if (mode === 'historyprobe') r = await withBrowser(modeHistoryProbe);
-  else if (mode === 'full2') r = await withBrowser((cdp) => modeFull2(cdp, argv));
+    else if (mode === 'full2') r = await withBrowser((cdp) => modeFull2(cdp, argv));
   else if (mode === 'badge') r = await withBrowser((cdp) => modeBadge(cdp, argv));
   else if (mode === 'sigil') r = await withBrowser((cdp) => modeSigil(cdp, argv));
   else if (mode === 'alias') r = await withBrowser((cdp) => modeAlias(cdp, argv));

@@ -177,10 +177,41 @@ check('契约列出的 API 全部存在', function () {
   assert.strictEqual(core.CONFIG.identity, '', 'CONFIG 必须带 identity 预设空串');
 });
 
+check('clampDashboardWidth：夾在 [min, max]，且低於最小值會被抬上來', function () {
+  // 看板最小寬度是需求指定的值（會依使用者要求調整，所以**不要在這裡寫死數字** ——
+  // 寫死的話每次改最小值都要改測試，而且會掩蓋「改了常數卻沒生效」）。
+  var min = core.CONFIG.dashboardMinWidth;
+  var max = core.CONFIG.dashboardMaxWidth;
+  assert.ok(typeof min === 'number' && min > 0, 'dashboardMinWidth 應該是正數');
+  assert.ok(max > min, '上限必須大於下限');
+
+  // 低於下限 → 抬到下限（**這條最重要**：舊的存檔可能比新下限還窄）
+  assert.strictEqual(core.clampDashboardWidth(min - 100, min), min, '低於下限應抬到下限');
+  assert.strictEqual(core.clampDashboardWidth(0, min), min, '0 也該抬到下限');
+  assert.strictEqual(core.clampDashboardWidth(-50, min), min, '負數也該抬到下限');
+
+  // 範圍內 → 原樣（四捨五入到整數）
+  assert.strictEqual(core.clampDashboardWidth(min, min), min);
+  assert.strictEqual(core.clampDashboardWidth(min + 40, min), min + 40);
+  assert.strictEqual(core.clampDashboardWidth(min + 40.6, min), min + 41, '應四捨五入');
+
+  // 高於上限 → 夾到上限
+  assert.strictEqual(core.clampDashboardWidth(max + 500, min), max, '高於上限應夾到上限');
+
+  // 非數字 → 用 fallback；fallback 也不是數字 → 用預設寬度
+  assert.strictEqual(core.clampDashboardWidth(null, min + 10), min + 10, 'null 應用 fallback');
+  assert.strictEqual(core.clampDashboardWidth(undefined, min + 10), min + 10, 'undefined 應用 fallback');
+  assert.ok(core.clampDashboardWidth(null, null) > 0, '全都沒有時至少要是正數');
+
+  // 預設寬度本身不可以小於最小值（否則一開就違規）
+  assert.ok(core.CONFIG.dashboardWidth >= min,
+    'CONFIG.dashboardWidth（' + core.CONFIG.dashboardWidth + '）不該小於最小值（' + min + '）');
+});
+
 check('store 的方法全部存在（不再有 loadPersisted／persist）', function () {
   ['getSnapshot', 'subscribe', 'ensureTopic', 'pinTopicFirst', 'removeTopic', 'setActiveTopic',
     'addMessages', 'addMessage', 'setStatus', 'setAuthRequired', 'clearMessages',
-    'markRead', 'markReadToLatest', 'setViewHooks'].forEach(function (key) {
+    'markRead', 'markReadToLatest', 'setViewHooks', 'clearStatuses'].forEach(function (key) {
     assert.strictEqual(typeof core.store[key], 'function', '缺少 store.' + key);
   });
   // 這個外掛刻意不使用 localStorage → 這兩個持久化方法應該已經不存在。
@@ -188,6 +219,64 @@ check('store 的方法全部存在（不再有 loadPersisted／persist）', func
     'loadPersisted 應該已經移除（不再用 localStorage）');
   assert.strictEqual(core.store.persist, undefined,
     'persist 應該已經移除（不再用 localStorage）');
+});
+
+check('clearStatuses 把狀態重置回 idle（重連前必須清掉上一條連線的錯誤）', function () {
+  // 這個回歸對應使用者回報的「修改認證方式保存後，一直顯示上一個的錯誤」。
+  //
+  // 病灶：連線重建了，但 store 裡的 statusByTopic 還掛著上一條連線的
+  // 「HTTP 403 需要認證」。使用者看到殘影，以為認證沒有生效。
+  core.saveConfig({ server: 'https://msn.feg.cn', topics: [] });
+  (core.store.getSnapshot().topics || []).slice().forEach(function (t) { core.store.removeTopic(t); });
+  core.store.ensureTopic('cs_a');
+  core.store.ensureTopic('cs_b');
+
+  core.store.setStatus('cs_a', { phase: 'error', detail: 'HTTP 403：需要認證', retryAt: Date.now() + 3000 });
+  core.store.setStatus('cs_b', { phase: 'closed', detail: '連線結束' });
+
+  var changed = core.store.clearStatuses();
+  assert.strictEqual(changed, 2, '應該重置 2 個主題，實際 ' + changed);
+
+  var after = core.store.getSnapshot().statusByTopic;
+  ['cs_a', 'cs_b'].forEach(function (t) {
+    var st = after[t];
+    // 必須回到「中性」。注意不能只斷言「不是 error」—— 之前用 delete 清，
+    // 結果 emit 之後下游又把 `{phase:'',detail:''}` 填回來（看起來清掉了、其實還在）。
+    var neutral = !st || st.phase === 'idle' || st.phase === '';
+    assert.ok(neutral, t + ' 應該回到中性狀態，實際：' + JSON.stringify(st));
+    assert.ok(!st || st.retryAt === undefined, t + ' 不該還帶著 retryAt');
+  });
+  assert.strictEqual(JSON.stringify(after).indexOf('error'), -1, '不該還有 error');
+
+  // 側欄健康度要回到「正常」，而不是顯示故障。
+  assert.notStrictEqual(core.sidebarHealth(core.store.getSnapshot()).state, 'error',
+    '清完之後不該還被判定成 error');
+
+  // 冪等：沒有東西可清時回 0，而且不會濫發變更。
+  assert.strictEqual(core.store.clearStatuses(), 0, '第二次應該回 0');
+
+  // 「需要認證」旗標也要一起清 —— 這是「保存生效了，提示還在顯示上一次的錯誤」
+  // 的根因：那個旗標只會被 403 設成 true，沒有人設回 false。
+  //
+  // 為什麼可以清：它是「**上一次嘗試**的結論」，不是事實。重建連線＝重新嘗試，
+  // 所以從「還不知道」開始；真的還需要認證時，新的 403 會再設回 true。
+  core.store.setAuthRequired('cs_a', true);
+  core.store.setStatus('cs_a', { phase: 'error', detail: 'x' });
+  assert.strictEqual(core.store.getSnapshot().authByTopic.cs_a, true, '前置：旗標應為 true');
+  const changed2 = core.store.clearStatuses();
+  assert.ok(changed2 >= 1, '應該有東西被清（旗標或狀態），實際 ' + changed2);
+  assert.strictEqual(core.store.getSnapshot().authByTopic.cs_a, false,
+    'clearStatuses 應該把「需要認證」清掉，否則提示會一直掛著');
+
+  // 其他主題上的「需要認證」也該一起清（合併連線時 403 會記在每個主題上）。
+  core.store.setAuthRequired('cs_a', true);
+  core.store.setAuthRequired('cs_b', true);
+  core.store.clearStatuses();
+  assert.strictEqual(core.store.getSnapshot().authByTopic.cs_a, false, 'cs_a 應被清');
+  assert.strictEqual(core.store.getSnapshot().authByTopic.cs_b, false, 'cs_b 應被清');
+
+  core.store.removeTopic('cs_a');
+  core.store.removeTopic('cs_b');
 });
 
 check('没有调用 window.__ModuleLoader__（不注册客户端工厂）', function () {

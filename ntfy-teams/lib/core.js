@@ -36,10 +36,13 @@
     historyLimit: 300,
     identity: '', // 发送者显示名称（群聊约定：ntfy title 形如 '@shawoo'）
     // 右側面板（看板佔位）的寬度。
-    // 最小值 = 使用者要求「不少於 240px」；上限 = 1300 是為了不讓它把訊息串
+    // 最小值 = 使用者要求「不少於 300px」；上限 = 1300 是為了不讓訊息串
     // 擠到看不見（面板本身寬度有限，實際還會再依可用寬度夾一次）。
-    dashboardWidth: 260,
-    dashboardMinWidth: 240,
+    //
+    // 預設值必須 >= 最小值，否則「全新的使用者」一開就違反自己的下限
+    // （實測：預設 260 + 最小值 280 就是這種自相矛盾，測試會直接抓到）。
+    dashboardWidth: 360,
+    dashboardMinWidth: 300,
     dashboardMaxWidth: 1300
   };
 
@@ -1682,6 +1685,54 @@
       if (created || changed) emit();
     }
 
+    /**
+     * 把所有主題的連線狀態重置回 `idle`（尚未連線），並清掉「需要認證」旗標。
+     *
+     * 為什麼需要：狀態是**上一條連線**留下的，重連之前必須先重置，
+     * 否則畫面會一直顯示上一次的錯誤。
+     *
+     * 實際踩到的情況（兩次回報）：
+     *   1. 改了認證方式並儲存之後，連線確實重建了，但舊的「HTTP 403 需要認證」
+     *      還掛在主題上；
+     *   2. **保存生效了，提示還在顯示上一次的錯誤** —— `authByTopic` 這個旗標
+     *      只會被 403 設成 true，沒有任何地方設回 false，所以連線成功之後
+     *      「此主題需要認證，請在共用設定裡輸入帳號與密碼」永遠掛著。
+     *
+     * 為什麼這裡可以放心清掉 `authByTopic`：它是「**上一次嘗試**的結論」，不是
+     * 事實。重建連線＝重新嘗試，所以應該從「還不知道」開始；真的還需要認證時，
+     * 新的 403 會再把它設回 true（而且那時連線層的錯誤訊息也在）。
+     *
+     * 為什麼是「設成 idle」而不是 `delete`：snapshot 的 `statusByTopic` 是
+     * **同一顆物件**，`delete` 之後 emit 會讓下游再把它填回來
+     * （實測：刪掉後變成 `{phase:'',detail:''}`，看起來像清掉了、其實還在）。
+     * 明確設成 idle 才是穩定的。
+     *
+     * `idle` 在 `sidebarHealth()` 裡不計入錯誤／離線／連線中，所以側欄會回到
+     * 「尚未連線」而不是顯示故障。
+     *
+     * @returns 實際被重置的主題數。
+     */
+    function clearStatuses() {
+      var changed = 0;
+      for (var i = 0; i < state.topics.length; i += 1) {
+        var name = state.topics[i];
+        // 「需要認證」也要清 —— 它跟連線狀態一樣是「上一條連線的結論」。
+        if (state.authByTopic[name] === true) {
+          state.authByTopic[name] = false;
+          changed += 1;
+        }
+        var previous = state.statusByTopic[name];
+        // 已經是 idle（或本來就沒有）就不必動。
+        var phase = typeof previous === 'string' ? previous
+          : (previous && typeof previous === 'object' && typeof previous.phase === 'string') ? previous.phase : '';
+        if (previous === undefined || phase === 'idle') continue;
+        state.statusByTopic[name] = { phase: 'idle', detail: '' };
+        changed += 1;
+      }
+      if (changed > 0) emit();
+      return changed;
+    }
+
     function setAuthRequired(topic, required) {
       var name = normalizeTopic(topic);
       if (!name) return;
@@ -1729,6 +1780,7 @@
       addMessages: addMessages,
       addMessage: addMessage,
       setStatus: setStatus,
+      clearStatuses: clearStatuses,
       setAuthRequired: setAuthRequired,
       clearMessages: clearMessages,
       markRead: markRead,

@@ -88,10 +88,13 @@ window.__ModuleLoader__.load({
         historyLimit: 300,
         identity: '', // 发送者显示名称（群聊约定：ntfy title 形如 '@shawoo'）
         // 右側面板（看板佔位）的寬度。
-        // 最小值 = 使用者要求「不少於 240px」；上限 = 1300 是為了不讓它把訊息串
+        // 最小值 = 使用者要求「不少於 300px」；上限 = 1300 是為了不讓訊息串
         // 擠到看不見（面板本身寬度有限，實際還會再依可用寬度夾一次）。
-        dashboardWidth: 260,
-        dashboardMinWidth: 240,
+        //
+        // 預設值必須 >= 最小值，否則「全新的使用者」一開就違反自己的下限
+        // （實測：預設 260 + 最小值 280 就是這種自相矛盾，測試會直接抓到）。
+        dashboardWidth: 360,
+        dashboardMinWidth: 300,
         dashboardMaxWidth: 1300
       };
 
@@ -1734,6 +1737,54 @@ window.__ModuleLoader__.load({
           if (created || changed) emit();
         }
 
+        /**
+         * 把所有主題的連線狀態重置回 `idle`（尚未連線），並清掉「需要認證」旗標。
+         *
+         * 為什麼需要：狀態是**上一條連線**留下的，重連之前必須先重置，
+         * 否則畫面會一直顯示上一次的錯誤。
+         *
+         * 實際踩到的情況（兩次回報）：
+         *   1. 改了認證方式並儲存之後，連線確實重建了，但舊的「HTTP 403 需要認證」
+         *      還掛在主題上；
+         *   2. **保存生效了，提示還在顯示上一次的錯誤** —— `authByTopic` 這個旗標
+         *      只會被 403 設成 true，沒有任何地方設回 false，所以連線成功之後
+         *      「此主題需要認證，請在共用設定裡輸入帳號與密碼」永遠掛著。
+         *
+         * 為什麼這裡可以放心清掉 `authByTopic`：它是「**上一次嘗試**的結論」，不是
+         * 事實。重建連線＝重新嘗試，所以應該從「還不知道」開始；真的還需要認證時，
+         * 新的 403 會再把它設回 true（而且那時連線層的錯誤訊息也在）。
+         *
+         * 為什麼是「設成 idle」而不是 `delete`：snapshot 的 `statusByTopic` 是
+         * **同一顆物件**，`delete` 之後 emit 會讓下游再把它填回來
+         * （實測：刪掉後變成 `{phase:'',detail:''}`，看起來像清掉了、其實還在）。
+         * 明確設成 idle 才是穩定的。
+         *
+         * `idle` 在 `sidebarHealth()` 裡不計入錯誤／離線／連線中，所以側欄會回到
+         * 「尚未連線」而不是顯示故障。
+         *
+         * @returns 實際被重置的主題數。
+         */
+        function clearStatuses() {
+          var changed = 0;
+          for (var i = 0; i < state.topics.length; i += 1) {
+            var name = state.topics[i];
+            // 「需要認證」也要清 —— 它跟連線狀態一樣是「上一條連線的結論」。
+            if (state.authByTopic[name] === true) {
+              state.authByTopic[name] = false;
+              changed += 1;
+            }
+            var previous = state.statusByTopic[name];
+            // 已經是 idle（或本來就沒有）就不必動。
+            var phase = typeof previous === 'string' ? previous
+              : (previous && typeof previous === 'object' && typeof previous.phase === 'string') ? previous.phase : '';
+            if (previous === undefined || phase === 'idle') continue;
+            state.statusByTopic[name] = { phase: 'idle', detail: '' };
+            changed += 1;
+          }
+          if (changed > 0) emit();
+          return changed;
+        }
+
         function setAuthRequired(topic, required) {
           var name = normalizeTopic(topic);
           if (!name) return;
@@ -1781,6 +1832,7 @@ window.__ModuleLoader__.load({
           addMessages: addMessages,
           addMessage: addMessage,
           setStatus: setStatus,
+          clearStatuses: clearStatuses,
           setAuthRequired: setAuthRequired,
           clearMessages: clearMessages,
           markRead: markRead,
@@ -4005,7 +4057,9 @@ window.__ModuleLoader__.load({
 
       // ---- 顶栏：工作组标识 + 状态 + 动作 ----
       '.ntfy-teams-header{display:flex;align-items:center;gap:10px;flex:0 0 auto;padding:12px 18px;',
-      'border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);}',
+      // 使用者指定：抬頭底線 1px solid #ddd（不是主題令牌）。
+      // 這是刻意的例外（見「已知例外」測試）—— 他要的是一個固定的淺灰。
+      'border-bottom:1px solid #ddd;background:var(--dsw-alias-bg-layer-1);}',
       '.ntfy-teams-grouplogo{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;',
       'width:34px;height:34px;border-radius:10px;background:var(--dsw-alias-brand-primary);',
       'color:var(--dsw-alias-bg-base);}',
@@ -4130,6 +4184,12 @@ window.__ModuleLoader__.load({
       'background:var(--dsw-alias-bg-layer-2);}',
       '.ntfy-teams-settingsbar{display:flex;align-items:center;gap:7px;padding:7px 18px;font-size:11.5px;',
       'color:var(--dsw-alias-label-secondary);}',
+      // 摘要那一行現在住在**抬頭**裡（需求：各種提示都要在第一個容器內），
+      // 所以它在抬頭內不該再有自己的 padding —— 否則會把抬頭撐高、也對不齊。
+      '.ntfy-teams-header .ntfy-teams-settingsbar{padding:0;min-width:0;flex:0 1 auto;font-size:11.5px;}',
+      // 摘要裡的項目在抬頭內要能縮（窄面板時才不會把齒輪擠掉）。
+      '.ntfy-teams-header .ntfy-teams-settingitem{max-width:22ch;}',
+      '.ntfy-teams-header .ntfy-teams-settingsbar .ntfy-teams-btn{height:24px;padding:0 9px;font-size:11.5px;}',
       '.ntfy-teams-settingitem{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:30%;}',
       '.ntfy-teams-settingnote{font-size:11px;color:var(--dsw-alias-label-secondary);opacity:.85;}',
       '.ntfy-teams-settings--open{padding-bottom:12px;display:flex;flex-direction:column;gap:9px;}',
@@ -4155,6 +4215,15 @@ window.__ModuleLoader__.load({
       '.ntfy-teams-input:focus,.ntfy-teams-select:focus{outline:2px solid var(--dsw-alias-brand-primary);',
       'outline-offset:-1px;}',
       '.ntfy-teams-input::placeholder{color:var(--dsw-alias-label-secondary);}',
+
+      // 連線那一列（認證／帳號／密碼／測試連線／儲存／清除憑證）盡量排成一行。
+      //
+      // 為什麼需要這條：`--grow` 的 flex-basis 是 200px，兩個輸入框就先要 400px，
+      // 加上選單與三顆按鈕會超出可用寬度（實測 825px 的列裡需要約 875px），
+      // 於是 flex-wrap 把「清除憑證」擠到第二行。
+      // 把 basis 縮小並允許低於輸入框的預設 min-width，輸入框就會自己讓出空間；
+      // 面板真的很窄時仍然會換行（wrap 留著，不會擠壞）。
+      '.ntfy-teams-connrow .ntfy-teams-input{flex:1 1 90px;min-width:0;}',
 
       // ---- 工作组卡：群名 + 话题 ----
       '.ntfy-teams-groupbar{display:flex;align-items:center;gap:8px;flex:0 0 auto;padding:9px 18px;',
@@ -4224,8 +4293,27 @@ window.__ModuleLoader__.load({
       // 雙擊就地改名：chip 換成輸入框，維持同樣高度避免整列跳動。
       '.ntfy-teams-topic--editing{padding:0 6px;border-color:var(--dsw-alias-brand-primary);',
       'background:var(--dsw-alias-bg-layer-2);}',
+      // ⚠️ 編輯中的 chip 一定要**蓋掉反色**。
+      //
+      // 病灶：`.ntfy-teams-topic--editing` 與 `.ntfy-teams-topic--active` 特異度相同，
+      // 而反色那條寫在後面 → 正在編輯的**聚焦主題**拿到 `background: label-primary`
+      // ＋ `color: bg-base`（淺色主題下就是「深底＋白字」），偏偏輸入框自己又是
+      // `background: transparent`，於是文字變成白配深底卻又繼承到不該有的顏色，
+      // 使用者看到的就是「黑黑的反色背景，文字看不清楚」。
+      //
+      // 編輯狀態優先於「聚焦」狀態：正在打字時，可讀性比「我在哪個主題」重要。
+      '.ntfy-teams-topic--editing,.ntfy-teams-topic--editing:hover{',
+      'background:var(--dsw-alias-bg-layer-2);border-color:var(--dsw-alias-brand-primary);',
+      'color:var(--dsw-alias-label-primary);}',
+      '.ntfy-teams-topic--editing .ntfy-teams-topic-x{color:var(--dsw-alias-label-primary);}',
+      '.ntfy-teams-topic--editing .ntfy-teams-topic-x:hover{background:var(--dsw-alias-bg-base);',
+      'color:var(--dsw-alias-label-primary);}',
       '.ntfy-teams-aliasinput{height:22px;min-width:90px;max-width:220px;border:0;background:transparent;',
       'padding:0 2px;font-size:12.5px;}',
+      // 輸入框的文字色**明確指定**，不要靠繼承 —— 父層一旦是反色就會變成白字。
+      '.ntfy-teams-aliasinput,.ntfy-teams-topic--editing .ntfy-teams-input{',
+      'color:var(--dsw-alias-label-primary);}',
+      '.ntfy-teams-aliasinput::placeholder{color:var(--dsw-alias-label-secondary);}',
       '.ntfy-teams-aliasinput:focus{outline:0;}',
 
       // ---- 訊息串 ----
@@ -4487,15 +4575,25 @@ window.__ModuleLoader__.load({
       );
     }
 
-    /** @returns 齿轮图示。 */
-    function GearGlyph() {
+    /**
+     * 鉛筆圖示（「編輯共用設定」的入口）。
+     *
+     * 用鉛筆而不是齒輪：齒輪代表的是「打開設定」，而這個入口做的是
+     * **編輯一份共用設定**（帳號／顯示名稱），鉛筆直接對應「編輯」這個動作。
+     * 原本那顆齒輪畫成「圓 + 八條放射線」，看起來像太陽、語意也不對，已移除。
+     *
+     * @returns 圖示元素。
+     */
+    function EditGlyph() {
       return e('svg', {
         width: 15, height: 15, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor',
         strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round',
         'aria-hidden': 'true', focusable: 'false'
       },
-        e('circle', { cx: 8, cy: 8, r: 2.1 }),
-        e('path', { d: 'M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2' })
+        // 筆身
+        e('path', { d: 'M11.1 2.6a1.6 1.6 0 0 1 2.3 2.3L5.6 12.7 2.6 13.4l.7-3z' }),
+        // 筆尖那一段的分隔線
+        e('path', { d: 'M9.9 3.8 12.2 6.1' })
       );
     }
 
@@ -5050,8 +5148,55 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * 共用設定的**一行摘要**（收合狀態）。
+     *
+     * 為什麼獨立成一個元件：這一行「帳號密碼 · 以 #Jinbe 傳送 · 全部主題共用 · 編輯」
+     * 屬於**抬頭**，要跟標題、連線狀態排在同一個容器裡（需求：「以上各種提示，
+     * 都應該放到 UI 的第一個容器內」）。原本它被包在 SettingsPanel 裡面，
+     * 於是佔掉了標題底下整整一列的高度。
+     *
+     * 現在：抬頭放這個（只讀），編輯表單由 MainPanel 放到 body（可寫）。
+     * 兩者共用同一份資料來源（core.loadCredentials / currentIdentity）——
+     * 不是兩份 state，所以不會出現「摘要跟表單不一致」。
+     *
+     * @param props - { onEdit }。
+     * @returns 摘要列元素。
+     */
+    function SettingsSummary(props) {
+      var cfg = core && typeof core.readConfig === 'function' ? core.readConfig() : { server: '' };
+      var cred = (core && typeof core.loadCredentials === 'function')
+        ? core.loadCredentials(cfg.server || '')
+        : { mode: 'none', user: '', password: '', token: '' };
+      var name = currentIdentity();
+      var hasCred = (cred.mode === 'basic' && (cred.user || cred.password))
+        || (cred.mode === 'token' && cred.token);
+
+      return e('div', { className: 'ntfy-teams-settingsbar' },
+        e('span', { className: 'ntfy-teams-settingitem' },
+          hasCred ? authLabel(cred.mode) : '無認證'),
+        e('span', { className: 'ntfy-teams-sepdot' }, '·'),
+        e('span', { className: 'ntfy-teams-settingitem' },
+          name ? '以 ' + mention(name) + ' 傳送' : '尚未設定名稱'),
+        e('span', { className: 'ntfy-teams-spacer' }),
+        // 這裡原本還有一個「全部主題共用」的註記 —— 需求要拿掉這類字眼。
+        // 它本來就是冗字：這些設定只有一份，而「共用」這件事在使用者按進編輯
+        // 表單時已經由表單的說明交代了，摘要列只需要講「現在的狀態是什麼」。
+        //
+        // 編輯入口：圖示按鈕（鉛筆）。
+        // 保留 aria-label 與 title —— 圖示沒有文字，讀屏與 tooltip 都要靠它們。
+        e('button', {
+          type: 'button',
+          className: 'ntfy-teams-iconbtn',
+          title: '編輯共用設定（帳號、顯示名稱）',
+          'aria-label': '編輯共用設定',
+          onClick: function () { if (props && typeof props.onEdit === 'function') props.onEdit(); }
+        }, e(EditGlyph))
+      );
+    }
+
+    /**
      * 共用設定區塊：收合時只有一行摘要，展開才編輯。
-     * @param props - { onSaved, defaultOpen }。
+     * @param props - { onSaved, defaultOpen, onRequestClose }。
      * @returns 設定區塊元素。
      */
     function SettingsPanel(props) {
@@ -5079,23 +5224,24 @@ window.__ModuleLoader__.load({
       var name = nameState[0];
       var setName = nameState[1];
 
-      // 收合／展開。
+      // 收合／展開 —— **由外面控制**（受控元件）。
       //
-      // 不能只靠 `useState(!!props.defaultOpen)`：外部（抬头那颗齿轮）改变的
-      // defaultOpen 对已经挂载的元件没有作用 —— useState 只认第一次的值。
-      // 实测的后果是齿轮按下去 aria-pressed 变 true、但面板没有展开。
-      // 所以这里额外用 effect 把「prop 的变化」同步进来；而面板自己的「编辑／收合」
-      // 仍然可以直接改 open。
-      var openState = React.useState(!!(props && props.defaultOpen));
+      // 為什麼改成受控：抬頭那顆鉛筆現在是唯一的切換入口，而它同時負責開與關，
+      // 所以「開著還是關著」必須是**單一來源**，由 MainPanel 持有；
+      // 元件自己再存一份就會出現兩邊不同步（實測：齒輪的 aria-pressed
+      // 變 true 但面板沒展開）。
+      //
+      // defaultOpen 只在外面沒給 open 時當初始值（讓測試仍能單獨驅動它）。
+      var openState = React.useState(!!(props && (props.open !== undefined ? props.open : props.defaultOpen)));
       var open = openState[0];
       var setOpen = openState[1];
-      var lastDefaultRef = React.useRef(!!(props && props.defaultOpen));
+      var lastPropRef = React.useRef(!!(props && (props.open !== undefined ? props.open : props.defaultOpen)));
       React.useEffect(function () {
-        var next = !!(props && props.defaultOpen);
-        if (lastDefaultRef.current === next) return;
-        lastDefaultRef.current = next;
+        var next = !!(props && (props.open !== undefined ? props.open : props.defaultOpen));
+        if (lastPropRef.current === next) return;
+        lastPropRef.current = next;
         setOpen(next);
-      }, [props && props.defaultOpen]);
+      }, [props && (props.open !== undefined ? props.open : props.defaultOpen)]);
 
       /** 改一个憑證欄位。 @param key - 欄位名。 @param value - 新值。 */
       function patchCred(key, value) {
@@ -5124,6 +5270,20 @@ window.__ModuleLoader__.load({
         if (props && typeof props.onSaved === 'function') props.onSaved(target, stored);
         // 落成 YAML（宿主）。憑證整份送去，因為 secrets 是一份完整的對應表。
         pushSettingsToHost({ secrets: collectSecrets() });
+        // 憑證變了 → 立刻請即時連線重比指紋並**重建連線**。
+        //
+        // 為什麼一定要主動叫：改認證只動憑證快取，不會觸發 store 變更，
+        // 所以 startLiveSync 那條「store 一變就重連」的路不會跑 ——
+        // 連線還是用舊憑證，畫面一直顯示上一次的 403／401。
+        recheckConnection();
+        // 存好就收合。
+        //
+        // 為什麼：編輯這一區的目的就是「把帳密／名稱填好並存起來」，存完就沒有
+        // 繼續開著的必要；留著展開會一直佔掉面板上方的高度（看板與訊息串都因此
+        // 變矮）。收合後抬頭那一行摘要仍會顯示認證狀態與 #name，資訊沒有不見。
+        setOpen(false);
+        // 同步通知外面（抬頭的摘要與齒輪的 aria-pressed 由 MainPanel 持有）。
+        if (props && typeof props.onRequestClose === 'function') props.onRequestClose();
       }
 
       /** 清除這個伺服器的憑證。 */
@@ -5160,45 +5320,20 @@ window.__ModuleLoader__.load({
         { value: 'token', label: '存取權杖' }
       ];
 
-      var hasCred = (cred.mode === 'basic' && (cred.user || cred.password))
-        || (cred.mode === 'token' && cred.token);
-
-      // 收合：一行摘要。這些都是全域的，所以標明「全部主題共用」。
-      //
-      // **不再顯示伺服器**：伺服器位址由外掛設定決定，使用者不能改、也不需要知道。
-      // （原本顯示「預設伺服器」，但那仍然是一個「伺服器」欄位 —— 移除才徹底。）
-      if (!open) {
-        return e('div', { className: 'ntfy-teams-settings' },
-          e('div', { className: 'ntfy-teams-settingsbar' },
-            e('span', { className: 'ntfy-teams-settingitem' },
-              hasCred ? authLabel(cred.mode) : '無認證'),
-            e('span', { className: 'ntfy-teams-sepdot' }, '·'),
-            e('span', { className: 'ntfy-teams-settingitem' },
-              name ? '以 ' + mention(name) + ' 傳送' : '尚未設定名稱'),
-            e('span', { className: 'ntfy-teams-spacer' }),
-            e('span', { className: 'ntfy-teams-settingnote' }, '全部主題共用'),
-            e('button', {
-              type: 'button',
-              className: 'ntfy-teams-btn ntfy-teams-btn--ghost',
-              onClick: function () { setOpen(true); }
-            }, '編輯')
-          ),
-          props && props.hint ? e('div', { className: 'ntfy-teams-hint' }, props.hint) : null
-        );
-      }
+      // 收合時**不渲染任何東西**：那一行摘要已經搬到抬頭（見 SettingsSummary）。
+      // 這裡只負責展開的編輯表單，所以收合就回 null，不再佔用 body 一列高度。
+      if (!open) return null;
 
       // 展開：編輯表單。
+      //
+      // 表單標頭那一列整個拿掉了：
+      //   * 說明文字「以下設定對所有主題生效…」→ 需求要去掉這類字眼；
+      //   * 「收合」按鈕 → 需求要去掉。
+      // 收起改用抬頭那顆鉛筆圖示（它就是同一顆、同一個位置的切換：
+      // 沒開就開、開著就收），所以不需要再一顆專門的「收合」。
+      //
+      // 這裡只留「顯示名稱 / 認證方式」兩個欄位與它們的操作按鈕。
       return e('div', { className: 'ntfy-teams-settings ntfy-teams-settings--open' },
-        e('div', { className: 'ntfy-teams-settingshead' },
-          e('span', { className: 'ntfy-teams-settingnote' },
-            '以下設定對所有主題生效（帳號與顯示名稱只有一份）'),
-          e('span', { className: 'ntfy-teams-spacer' }),
-          e('button', {
-            type: 'button',
-            className: 'ntfy-teams-btn ntfy-teams-btn--ghost',
-            onClick: function () { setOpen(false); }
-          }, '收合')
-        ),
         e('div', { className: 'ntfy-teams-connrow' },
           e('label', { className: 'ntfy-teams-field', htmlFor: 'ntfy-teams-identity' }, '顯示名稱'),
           e('input', {
@@ -5215,7 +5350,7 @@ window.__ModuleLoader__.load({
             '送出訊息時顯示為 ' + (titleFor(name) || '#…'))
         ),
         e('div', { className: 'ntfy-teams-connrow' },
-          e('label', { className: 'ntfy-teams-field', htmlFor: 'ntfy-teams-mode' }, '認證'),
+          e('label', { className: 'ntfy-teams-field', htmlFor: 'ntfy-teams-mode' }, '認證方式'),
           e('select', {
             id: 'ntfy-teams-mode',
             className: 'ntfy-teams-select',
@@ -5801,9 +5936,18 @@ window.__ModuleLoader__.load({
         msg.message ? renderMarkdown(msg.message) : null
       );
 
-      return sender.isSelf
-        ? e('div', { className: cls }, body, avatarBox)
-        : e('div', { className: cls }, avatarBox, body);
+      // 頭像與內文的**順序永远一致**（頭像在前、內文在後），靠不靠右交给 CSS。
+      //
+      // ⚠️ 踩過的坑：這裡原本對「自己的訊息」額外把兩者**對調**：
+      //     sender.isSelf ? e('div', cls, body, avatarBox)   // 內文在前
+      //                   : e('div', cls, avatarBox, body);
+      // 而 CSS 又對 `--self` 下了 `flex-direction:row-reverse` —— **兩次翻轉互相抵消**，
+      // 結果自己的頭像落在內文**左邊**（實測：avatarLeft 929、bodyLeft 978），
+      // 完全沒有「靠右」。
+      //
+      // 現在只翻一次：DOM 一律「頭像 → 內文」，CSS 的 row-reverse 把整列鏡射，
+      // 於是自己的頭像自然跑到右邊。
+      return e('div', { className: cls }, avatarBox, body);
     }
 
     /**
@@ -5915,7 +6059,7 @@ window.__ModuleLoader__.load({
         syncSeenToViewport();
       }, [count, props.topic]);
 
-      // ---- 切換主題：捲到上次讀到的那一則 ----
+      // ---- 切換主題：捲到「上次讀到的那一則」----
       //
       // 這個元件的 key 是「每個主題一個」——切換主題時它是**重掛**的，所以一出生
       // ref 就會等於新主題。用「ref 和目前主題不同」當條件會永遠不成立（實測整個
@@ -5935,11 +6079,27 @@ window.__ModuleLoader__.load({
         var box = boxRef.current;
         if (!box) return;
         stickRef.current = !hasUnreadMark;
-        var anchor = hasUnreadMark && box.querySelector('.ntfy-teams-newline')
-          ? box.querySelector('.ntfy-teams-newline')
-          : null;
-        if (anchor && typeof anchor.scrollIntoView === 'function') {
-          anchor.scrollIntoView({ block: 'start' });
+        var line = hasUnreadMark ? box.querySelector('.ntfy-teams-newline') : null;
+        if (line) {
+          // 捲到「已讀的最新一則」＝未讀線**上面**那一則訊息。
+          //
+          // 未讀線畫在「第一則未讀」前面，所以它上面那一則就是上次讀到的地方。
+          // 把**線對齊到視窗底部**，上面那一則就會完整落在視窗裡 ——
+          // 使用者一打開就看到「我讀到哪」＋「下面還有幾則新的」。
+          //
+          // 為什麼不用 `line.scrollIntoView({block:'start'})`：那會把線釘在最上面，
+          // 於是「已讀的最新一則」被推到視窗上緣之外，看不到（實測就是這樣）。
+          // 也不用 block:'end'：那要線剛好是最後一個 child 才成立。
+          var anchorMsg = line.previousElementSibling;
+          if (anchorMsg && typeof anchorMsg.getBoundingClientRect === 'function') {
+            var boxRect = box.getBoundingClientRect();
+            var msgRect = anchorMsg.getBoundingClientRect();
+            // 把那一則的底端對到視窗底端（留 8px 讓它不貼死）。
+            box.scrollTop += (msgRect.bottom - boxRect.bottom) + 8;
+          } else {
+            // 找不到前一則（理論上不會）：退回把線對齊底部。
+            box.scrollTop += (line.getBoundingClientRect().bottom - box.getBoundingClientRect().bottom);
+          }
         } else {
           box.scrollTop = box.scrollHeight;
         }
@@ -6619,6 +6779,16 @@ window.__ModuleLoader__.load({
                 if (core.store && typeof core.store.setAuthRequired === 'function') {
                   core.store.setAuthRequired(topic, true);
                 }
+              } else if (core.store && typeof core.store.setAuthRequired === 'function') {
+                // ⚠️ 成功時必須把「需要認證」**清掉**。
+                //
+                // 這個旗標原本只會被設成 true（403 時），沒有任何人設回 false ——
+                // 於是使用者補上帳密、連線也真的成功了，畫面卻還一直掛著
+                // 「此主題需要認證，請在共用設定裡輸入帳號與密碼」
+                // （就是回報的「保存生效了，它還在顯示上一次的錯誤」）。
+                //
+                // 只有在**真的拿到回應**時才清 —— 網路錯誤不該被當成「認證沒問題」。
+                core.store.setAuthRequired(topic, false);
               }
               if (result && result.messages && result.messages.length && core.store
                 && typeof core.store.addMessages === 'function') {
@@ -6779,6 +6949,25 @@ window.__ModuleLoader__.load({
         ),
         e('span', { className: 'ntfy-teams-spacer' }),
         active ? e(StatusChip, { topic: active, status: activeStatus }) : null,
+        // 共用設定的一行摘要（認證狀態 · 以 #name 傳送 · 全部主題共用 · 編輯）
+        // 就放在抬頭裡 —— 需求：「以上各種提示都應該放到第一個容器內」。
+        // 它只讀不寫；編輯表單仍由 MainPanel 掛在 body（展開時才出現）。
+        e(SettingsSummary, {
+          key: 'summary',
+          // 鉛筆是**切換**：沒開就開、開著就收。
+          // 表單裡那顆「收合」按鈕已移除（需求），所以收起只能靠這裡 ——
+          // 而且它就在同一個位置，切換比「展開用一顆、收起用另一顆」直覺。
+          open: showConn || authRequired,
+          onEdit: function () { setShowConn(function (v) { return !v; }); }
+        }),
+        // 抬頭的動作區只留「重新載入」。
+        //
+        // 為什麼拿掉那顆「共用設定」圖示按鈕：它跟摘要裡的「編輯」**做的是同一件事**
+        // （都只是把共用設定展開／收合），而收合又有表單裡的「收合」——
+        // 三個入口做兩件事。留文字按鈕就好：語意清楚、也吃得到主題令牌。
+        //
+        // 另外那個圖示畫的是一個圓加八條放射線（看起來像太陽），本來就不像設定，
+        // 拿掉之後也不會再有人誤解它代表「設定」。
         e('div', { className: 'ntfy-teams-headeracts' },
           e('button', {
             type: 'button',
@@ -6786,15 +6975,7 @@ window.__ModuleLoader__.load({
             title: '重新載入歷史並重連',
             'aria-label': '重新載入歷史並重連',
             onClick: refresh
-          }, e(RefreshGlyph)),
-          e('button', {
-            type: 'button',
-            className: 'ntfy-teams-iconbtn',
-            title: '共用設定（帳號、顯示名稱）— 對所有主題生效',
-            'aria-label': '共用設定',
-            'aria-pressed': showConn ? 'true' : 'false',
-            onClick: function () { setShowConn(function (v) { return !v; }); }
-          }, e(GearGlyph))
+          }, e(RefreshGlyph))
         )
       );
 
@@ -6812,12 +6993,19 @@ window.__ModuleLoader__.load({
       // 抬頭只能存在於一個地方。
       var body = [];
 
-      // 共用設定區塊：齒輪按鈕或「需要認證」時展開，否則只顯示一行摘要。
+      // 共用設定的**編輯表單**（展開時才出現；收合時它回 null）。
+      // 那一行摘要在抬頭裡（SettingsSummary）—— 兩者共用同一份資料來源。
       // 帳號只有一份，所以這裡不會隨主題數量變多而重複。
+      //
+      // open 由這裡（MainPanel）持有，因為抬頭那顆鉛筆是唯一的切換入口 ——
+      // 表單裡原本的「收合」按鈕已經移除，收起也走同一顆鉛筆。
       body.push(e(SettingsPanel, {
         key: 'settings',
-        defaultOpen: showConn || authRequired,
+        open: showConn || authRequired,
         hint: hint,
+        // 存檔後由表單自己收合：通知外面把展開狀態收掉
+        // （不然摘要與表單會不同步）。
+        onRequestClose: function () { setShowConn(false); },
         onSaved: function (next, storedName) {
           setServer(next);
           setIdentity(storedName || currentIdentity());
@@ -6981,6 +7169,46 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * 清掉舊版殘留在瀏覽器裡的 key（**一次性**）。
+     *
+     * 之前這個外掛把設定、憑證、訊息快取都存在 localStorage，於是使用者的
+     * DevTools 裡會看到一堆 `ntfy-teams:*`：
+     *
+     *   * `ntfy-teams:config:v1`  —— 舊的設定（伺服器／主題／身分／別名）
+     *   * `ntfy-teams:store:v1`   —— 舊的訊息快取（未讀與已載入訊息）
+     *   * `ntfy-teams:cred:<server>` —— 舊的憑證
+     *
+     * 現在的程式碼**不讀也不寫**它們，但舊版留下的那些 key 還會躺在瀏覽器裡，
+     * 看起來就像「這個外掛還在用 localStorage」，而且一旦哪天有人不小心讀到
+     * 就會變成第二份真相（那正是之前一堆「刪掉又出現」的來源）。
+     *
+     * 所以這裡主動把它們刪乾淨。這是本外掛唯一會碰 localStorage 的地方，
+     * 而且只做 `removeItem` —— 不讀內容、不寫任何東西。
+     *
+     * @returns 清掉了幾個 key。
+     */
+    function purgeLegacyStorage() {
+      var removed = 0;
+      try {
+        if (typeof localStorage === 'undefined' || !localStorage) return 0;
+        if (typeof localStorage.key !== 'function' || typeof localStorage.removeItem !== 'function') return 0;
+        var doomed = [];
+        // 先收集再刪：邊走訪邊刪會讓索引位移，漏掉後面的 key。
+        for (var i = 0; i < localStorage.length; i += 1) {
+          var k = localStorage.key(i);
+          if (typeof k === 'string' && k.indexOf('ntfy-teams') === 0) doomed.push(k);
+        }
+        for (var j = 0; j < doomed.length; j += 1) {
+          try { localStorage.removeItem(doomed[j]); removed += 1; } catch (err) { /* 個別失敗不影響其他 */ }
+        }
+      } catch (err) {
+        // 隱私模式／被停用／配額問題都不該影響外掛運作。
+        return removed;
+      }
+      return removed;
+    }
+
+    /**
      * 把訂閱清單從 config 還原進 store（可重複呼叫，第二次之後沒有效果）。
      *
      * host 與面板都會呼叫：host 那一邊先跑（面板可能永遠不會被打開），
@@ -7063,6 +7291,33 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * 即時同步的「重新檢查」入口（由 startLiveSync 註冊）。
+     *
+     * 為什麼需要它：`startLiveSync` 是**靠 store 變更**去比對訂閱指紋的，
+     * 而「改認證方式／帳密」只動了憑證快取，**不會**觸發 store 變更 ——
+     * 於是連線不會重建，畫面就一直掛著上一條連線的 403／401。
+     * 設定面板存檔後呼叫 `recheckConnection()`，就會強制比一次指紋並重連。
+     *
+     * 模組層（不是 state）：面板與 host 可能各有元件實例，但即時連線只有一條。
+     *
+     * @type {?function():boolean}
+     */
+    var liveSyncRecheck = null;
+
+    /**
+     * 請即時連線重比一次指紋（憑證變了就會重建連線）。
+     * @returns 是否真的重建了。
+     */
+    function recheckConnection() {
+      if (typeof liveSyncRecheck !== 'function') return false;
+      try {
+        return liveSyncRecheck() === true;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    /**
      * 開始即時同步：每兩個主題一條 SSE，**活在 host 這一層，不隨面板被卸載**。
      *
      * 為什麼一定要搬出來：面板是由 host 的 `main` 座位提供的，切到別的頁面時
@@ -7093,7 +7348,43 @@ window.__ModuleLoader__.load({
       function syncKey() {
         var snap = core.store.getSnapshot();
         var server = typeof core.readConfig === 'function' ? core.readConfig().server : '';
-        return server + '\u0001' + (snap.topics || []).join('\u0000');
+        // 憑證也要算進去。
+        //
+        // 為什麼：`resubscribe()` 用的是「當下」的憑證，但這裡原本只看
+        // 伺服器＋主題清單 —— 於是**改了認證方式或帳密之後，指紋沒變，
+        // 連線不會重建**，畫面就一直掛著上一次的 403／401。
+        // 使用者看到的是「改了認證、存了，但錯誤還在」，於是以為沒生效。
+        return server + '\u0001' + (snap.topics || []).join('\u0000') + '\u0001' + credKey();
+      }
+
+      /**
+       * 憑證的**指紋**（只取足以判斷「有沒有變」的欄位）。
+       *
+       * 刻意不回傳明碼：這個字串會進 currentKey，錯誤訊息或 log 若不小心帶到
+       * 就會漏出密碼。長度就足夠判斷有沒有換過。
+       *
+       * @returns 指紋字串。
+       */
+      function credKey() {
+        var c = credOf();
+        return [c.mode || 'none', c.user || '', (c.password || '').length, (c.token || '').length].join('\u0002');
+      }
+
+      /**
+       * 重連之前把「上一條連線留下的錯誤」清掉。
+       *
+       * 不清的話，使用者改完認證、連線也確實重建了，畫面上卻還是舊的
+       * 「HTTP 403 需要認證」—— 看起來像認證沒生效（實際上是殘影）。
+       *
+       * 兩份都要清：
+       *   * store.statusByTopic —— 主題列的狀態（側欄／抬頭都讀它）
+       *   * 面板自己的 failures  —— 歷史抓取失敗的記錄
+       */
+      function clearStaleErrors() {
+        if (core && core.store && typeof core.store.clearStatuses === 'function') {
+          try { core.store.clearStatuses(); } catch (err) { /* 清不掉不影響重連 */ }
+        }
+        if (typeof setFailures === 'function') setFailures({});
       }
 
       /** 關掉目前的即時連線（含待重試的 timer）。 */
@@ -7122,6 +7413,9 @@ window.__ModuleLoader__.load({
        */
       function resubscribe() {
         disposeConn();
+        // 重建連線＝進入全新的連線狀態，先把上一條留下的錯誤清掉。
+        // 否則「改了認證 → 連線重建 → 畫面還是舊的 403」。
+        clearStaleErrors();
         if (stopped) return;
         if (typeof core.subscribeTopics !== 'function') return;
         var cfg = typeof core.readConfig === 'function' ? core.readConfig() : null;
@@ -7167,6 +7461,18 @@ window.__ModuleLoader__.load({
                 // —— 使用者只看得到「未連線」，看不出真正原因是 429。
                 if (phase === 'closed' && retryPending) return;
                 if (phase === 'open') retryPending = false;   // 連上了，重試狀態結束
+                // 連線真的開起來了 → 把「需要認證」清掉。
+                //
+                // 這個旗標只會被 403 設成 true，沒有任何人設回 false，
+                // 所以使用者補上帳密、連線也成功了，提示卻還掛著
+                // （回報的「保存生效了，它還在顯示上一次的錯誤」）。
+                // 連線能開＝認證沒問題，這裡是清掉它最直接的時機。
+                if (phase === 'open' && core.store
+                  && typeof core.store.setAuthRequired === 'function') {
+                  for (var ai = 0; ai < topics.length; ai += 1) {
+                    core.store.setAuthRequired(topics[ai], false);
+                  }
+                }
                 // open／close 是整條連線的階段，要記在每個主題上；
                 // live 只發生在真的有訊息進來的那個主題。
                 if (phase === 'live' && status.topic) {
@@ -7264,6 +7570,26 @@ window.__ModuleLoader__.load({
         resubscribe();
       }
 
+      /**
+       * 重比一次指紋；憑證變了就重建連線。
+       *
+       * 給「設定面板存檔」用：改認證只動憑證快取、不會觸發 store 變更，
+       * 所以光靠 onStoreChange 那條路永遠不會重連（實測：改了認證方式、存了，
+       * 畫面還是上一條連線的 403）。
+       *
+       * @returns 是否真的重建了。
+       */
+      function recheck() {
+        var key = syncKey();
+        if (key === currentKey) return false;
+        currentKey = key;
+        resubscribe();
+        return true;
+      }
+
+      // 註冊給設定面板用（模組層只留一個）。
+      liveSyncRecheck = recheck;
+
       // 訂閱清單改變 → 重連；同時把狀態寫進 localStorage。
       // 面板沒開的時候沒有人幫忙落盤，未讀數量就會只留在記憶體裡。
       var lastPersistKey = '';
@@ -7305,10 +7631,15 @@ window.__ModuleLoader__.load({
       lastHostTopicsKey = (typeof core.readConfig === 'function' ? core.readConfig().server : '')
         + '\u0001' + (core.store.getSnapshot().topics || []).join('\u0000');
 
+      // 清掉舊版留在瀏覽器裡的 key（只刪、不讀、不寫）。
+      // 放在 bootStore() 之後：現在 store 已經從 YAML 起好了，就算舊 key 還在
+      // 也已經沒有任何程式碼會讀它們；這裡只是把痕跡清乾淨。
+      purgeLegacyStorage();
+
       // 再問宿主要設定（YAML 是持久層）。
       //
-      // 順序刻意如此：先 bootStore() 從 localStorage 起一份**可用**的狀態，
-      // 畫面與訂閱立刻能動；宿主那份回來之後再覆蓋，然後重建連線。
+      // 順序刻意如此：先 bootStore() 讓畫面與訂閱立刻能動（YAML 讀不到時也還有
+      // 一份可用狀態），宿主那份回來之後再覆蓋，然後重建連線。
       // 反過來（等宿主才 boot）會讓宿主慢或不可用時整個面板發呆。
       syncSettingsFromHost().then(function (result) {
         if (stopped) return;
@@ -7517,6 +7848,10 @@ window.__ModuleLoader__.load({
       CSS_TEXT: NTFY_TEAMS_CSS,
       // 讓測試能模擬「首次同步已完成」（那之後才准寫回宿主）。
       markInitialSyncDone: function () { initialSyncDone = true; },
+      // 讓測試能驗「舊版 localStorage 痕跡會被清乾淨」。
+      purgeLegacyStorage: purgeLegacyStorage,
+      // 讓測試能驗「改了認證之後連線會被重建」（即時連線的重新檢查入口）。
+      recheckConnection: recheckConnection,
       ensureDefaultTopic: ensureDefaultTopic,
       backoffFor: backoffFor,
       apply: apply,
@@ -7527,6 +7862,7 @@ window.__ModuleLoader__.load({
       //   「保留元件自己的状态」两个要求，实测踩过）。
       TopicBar: TopicBar,
       SettingsPanel: SettingsPanel,
+      SettingsSummary: SettingsSummary,
       Composer: Composer,
       MessageList: MessageList,
       MessageRow: MessageRow,

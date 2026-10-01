@@ -312,17 +312,98 @@ test('样式表只用主题令牌，不写死颜色（SVG 图稿除外）', () =
   const css = documentStub.__head[0].textContent;
   const hex = css.match(/#[0-9a-fA-F]{3,8}\b/g) || [];
   const rgb = css.match(/\brgba?\(/g) || [];
-  // 已知且刻意的例外：看板的虛線邊框是使用者指定的固定極淺灰 #ddd。
+  // 已知且刻意的例外：都是使用者明確指定的固定灰階邊框。
+  //   #ddd —— 看板的虛線左緣、以及抬頭的底線（1px solid）
   // 這裡用「扣掉已知例外後必須為空」而不是直接放寬成「允許 hex」——
   // 這樣新加的任何寫死顏色仍然會被擋下（這條規則的價值就在這裡）。
-  const KNOWN_HEX = ['#ddd'];
+  const KNOWN_HEX = ['#ddd', '#333'];
   const unexpectedHex = hex.filter((h) => KNOWN_HEX.indexOf(h) === -1);
   assert.deepStrictEqual(unexpectedHex, [],
     'CSS 里出现写死的十六进制颜色: ' + unexpectedHex.join(', '));
   // 例外必須真的存在 —— 否則它會變成一個永遠沒人用的白名單。
-  assert.ok(hex.indexOf('#ddd') !== -1, '看板的 #ddd 例外應該還在（若已改回令牌，請一併移除白名單）');
+  assert.ok(hex.indexOf('#ddd') !== -1,
+    '看板／抬頭的 #ddd 例外應該還在（若已改回令牌，請一併從白名單移除）');
   assert.deepStrictEqual(rgb, [], 'CSS 里出现写死的 rgb()/rgba() 颜色');
   assert.ok(css.includes('var(--dsw-alias-'), 'CSS 没有使用任何主题令牌');
+});
+
+test('連線那一列：輸入框要能被壓縮，否則「清除憑證」會被擠到第二行', () => {
+  // 需求：認證／帳號／密碼／測試連線／儲存／清除憑證**排成一行**。
+  //
+  // 為什麼會換行：`--grow` 的 flex-basis 是 200px，兩個輸入框就先要 400px，
+  // 加上選單與三顆按鈕會超出可用寬度（實測 825px 的列需要約 875px），
+  // flex-wrap 於是把最後一顆（清除憑證）擠到下一行。
+  //
+  // 這條測試在 CSS 層面守住那個覆寫：輸入框必須是「可以縮到很小」的
+  // （basis 小 + min-width:0，因為表單元件的預設 min-width 是 auto，
+  // 不覆寫的話它會撐在 209px 左右不讓）。
+  const { context } = makeCtx();
+  documentStub.__head.length = 0;
+  built.exports.apply(context);
+  const css = documentStub.__head[0].textContent;
+
+  // 覆寫必須存在，而且要在 `.ntfy-teams-connrow` 之內（才不會影響其他地方的輸入框）。
+  const m = css.match(/\.ntfy-teams-connrow \.ntfy-teams-input\{([^}]*)\}/);
+  assert.ok(m, 'CSS 應該有 `.ntfy-teams-connrow .ntfy-teams-input` 這條覆寫（否則清除憑證會換行）');
+  const body = m[1];
+  // basis 要比原本的 200px 小很多，讓三顆按鈕有位置
+  const basis = (body.match(/flex:1 1 (\d+)px/) || [])[1];
+  assert.ok(basis, '覆寫裡應該有 flex basis，實際：' + body);
+  assert.ok(Number(basis) <= 120,
+    'flex basis 應該縮小（<=120px）才排得下一行，實際 ' + basis + 'px');
+  // min-width:0 是關鍵：表單元素預設 min-width:auto 會拒絕縮小
+  assert.ok(body.indexOf('min-width:0') !== -1,
+    '必須覆寫 min-width:0（表單元素預設 min-width:auto，不覆寫就縮不下去），實際：' + body);
+
+  // 換行本身要留著：面板真的很窄時還是要能換，不能改成 nowrap 擠壞版面。
+  //
+  // 注意要用「行首就是 .ntfy-teams-connrow{」去比對：檔案裡還有一條
+  // `.ntfy-teams-settings--open .ntfy-teams-connrow{padding:…}`，
+  // 用寬鬆的比對會先命中那一條（實測踩過），於是永遠找不到 flex-wrap。
+  const rowMatches = css.match(/(?:^|\})\.ntfy-teams-connrow\{([^}]*)\}/g) || [];
+  assert.ok(rowMatches.length > 0, '應該有 .ntfy-teams-connrow 規則');
+  const hasWrap = rowMatches.some((r) => r.indexOf('flex-wrap:wrap') !== -1);
+  assert.ok(hasWrap,
+    '窄面板時仍要能換行，所以 flex-wrap 必須保留 wrap，實際：' + JSON.stringify(rowMatches));
+});
+
+test('編輯中的主題：文字必須看得清（不能被聚焦的反色蓋掉）', () => {
+  // 使用者回報：「topic 編輯模式，黑黑的反色背景無法看清文字」。
+  //
+  // 病灶：`.ntfy-teams-topic--editing`（淺底）與 `.ntfy-teams-topic--active`（反色）
+  // 特異度**相同**，而反色那條寫在後面 → 正在編輯的聚焦主題變成
+  // `background: label-primary` ＋ `color: bg-base`（深底＋白字），
+  // 偏偏輸入框自己又是 `background: transparent`，文字就與底色同色了。
+  //
+  // 這裡在 CSS 層面守住兩件事：
+  //   1. 有一條編輯狀態的覆寫把反色壓回去（而且包含 :hover 與輸入框的文字色）；
+  //   2. 輸入框的文字色是**明確指定**的，不靠繼承（父層一旦反色就會變白字）。
+  const { context } = makeCtx();
+  documentStub.__head.length = 0;
+  built.exports.apply(context);
+  const css = documentStub.__head[0].textContent;
+
+  // 1) 編輯狀態必須明確蓋掉反色的底色與字色
+  const editingRules = css.match(/\.ntfy-teams-topic--editing[^{]*\{[^}]*\}/g) || [];
+  assert.ok(editingRules.length > 0, '應該有 .ntfy-teams-topic--editing 規則');
+  const overridesInverse = editingRules.some((r) => r.indexOf('color:var(--dsw-alias-label-primary)') !== -1
+    && r.indexOf('background:var(--dsw-alias-bg-layer-2)') !== -1);
+  assert.ok(overridesInverse,
+    '編輯狀態必須把底色與字色都設回淺底／深字（否則被 --active 的反色蓋掉就看不清），實際：'
+    + JSON.stringify(editingRules));
+
+  // 也要蓋掉 hover —— 反色那條有 `:hover`，不比它明確就會在滑過時又變回反色。
+  const hoverOverride = editingRules.some((r) => r.indexOf(':hover') !== -1
+    && r.indexOf('color:var(--dsw-alias-label-primary)') !== -1);
+  assert.ok(hoverOverride, '編輯狀態的 :hover 也要一起覆寫，否則滑過又變反色');
+
+  // 2) 輸入框的文字色不該靠繼承
+  assert.ok(/\.ntfy-teams-aliasinput[,{][^}]*color:var\(--dsw-alias-label-primary\)/.test(css)
+    || /\.ntfy-teams-topic--editing \.ntfy-teams-input[^{]*\{[^}]*color:var\(--dsw-alias-label-primary\)/.test(css),
+    '別名輸入框的文字色必須明確指定（不要靠繼承：父層是反色時會變白字）');
+  // placeholder 才用次要色（它本來就該淡一點）
+  assert.ok(/\.ntfy-teams-aliasinput::placeholder\{[^}]*color:/.test(css),
+    'placeholder 應該有自己的顏色');
 });
 
 test('侧栏图示点一下会切换面板（active 时回 null）', () => {
@@ -1226,18 +1307,59 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     // 設定欄位用的是 id，不是 class（一開始看錯，白追了一陣）。
     const byId = (nodes, id) => nodes.filter((n) => n.props && n.props.id === id);
 
-    // 1) 預設收合：只有一行摘要，設定欄位都不在
+    // 0) 摘要現在是**獨立元件**（需求：各種提示都要放到抬頭那個第一個容器內），
+    //    收合的 SettingsPanel 只回 null。所以摘要要用 SettingsSummary 來驗。
+    const SettingsSummary = mod.__test.SettingsSummary;
+    assert.strictEqual(typeof SettingsSummary, 'function', '應匯出 SettingsSummary 供測試');
+    /**
+     * 畫一次摘要列並攤平。同理用閉包傳 props。
+     * @returns 節點。
+     */
+    const drawSummary = () => {
+      const nodes = [];
+      const node = harness.render(function summaryUnderTest() {
+        return SettingsSummary({ onEdit: () => {} });
+      }, undefined);
+      walk(harness, node, nodes, 0);
+      return nodes;
+    };
+
+    // 1) 收合：SettingsPanel 什麼都不畫（那一行摘要已經搬到抬頭）
     let nodes = draw(false);
-    assert.ok(has(nodes, 'ntfy-teams-settings'), '應有共用設定區塊');
-    assert.ok(has(nodes, 'ntfy-teams-settingsbar'), '預設應顯示摘要列');
-    assert.ok(!has(nodes, 'ntfy-teams-settings--open'), '預設不該是展開狀態');
-    ['ntfy-teams-identity', 'ntfy-teams-mode'].forEach((id) => {
-      assert.strictEqual(byId(nodes, id).length, 0, '收合時不該出現 #' + id);
-    });
-    const summary = allText(nodes);
-    assert.ok(summary.indexOf('全部主題共用') !== -1, '摘要應標明全部主題共用');
+    assert.strictEqual(nodes.filter((n) => n.cls && n.cls.indexOf('ntfy-teams-settings') !== -1).length, 0,
+      '收合時 SettingsPanel 不該再自己畫一列（摘要已搬到抬頭）');
+
+    // 1a) 摘要列本身：內容與「編輯」入口
+    const summaryNodes = drawSummary();
+    assert.ok(has(summaryNodes, 'ntfy-teams-settingsbar'), '摘要應有 settingsbar');
+    const summary = allText(summaryNodes);
+    // 摘要只講「現在的狀態是什麼」：認證方式 + 傳送身分。
+    // 「全部主題共用」這類說明字眼已經移除（需求），所以不該再出現。
+    assert.ok(summary.indexOf('全部主題共用') === -1,
+      '摘要不該再有「全部主題共用」這類字眼，實際：' + summary);
     assert.ok(summary.indexOf('帳號密碼') !== -1, '摘要應顯示認證狀態，實際：' + summary);
     assert.ok(summary.indexOf('#shawoo') !== -1, '摘要應顯示送出用的 #name');
+
+    // 編輯入口現在是**圖示按鈕**（鉛筆），所以認的是 aria-label 而不是文字；
+    // 圖示沒有文字，aria-label 與 title 就是它唯一的可讀名稱。
+    const summaryEditBtn = summaryNodes.find((n) => n.tag === 'button'
+      && n.props && n.props['aria-label'] === '編輯共用設定');
+    assert.ok(summaryEditBtn, '摘要應有「編輯共用設定」圖示按鈕（aria-label）');
+    assert.strictEqual(typeof summaryEditBtn.props.onClick, 'function', '編輯入口應可點擊');
+    // 圖示按鈕必須帶 title，否則滑過去看不出來它是什麼。
+    assert.ok(summaryEditBtn.props.title && summaryEditBtn.props.title.indexOf('編輯') !== -1,
+      '編輯圖示按鈕應有說明用的 title，實際：' + summaryEditBtn.props.title);
+    // 而且不該再有「編輯」這兩個字的文字按鈕（已改成圖示）。
+    assert.ok(!summaryNodes.some((n) => n.tag === 'button' && collectText(n.children) === '編輯'),
+      '不該還有文字「編輯」按鈕（已改成圖示）');
+
+    // 1a) 「認證方式」那個欄位標籤要是完整的四個字（不是只有「認證」）。
+    //     需求原文：「認證」改成「認證方式」。用「認證方式」而不是「認證」，
+    //     是因為下面那個 select 選的是**方式**（無認證／帳號密碼／存取權杖）。
+    //
+    // 為什麼不寫在這裡：這個 harness 的 hook 槽位會**沿用**（上面先 draw(false)
+    // 把 open 定成 false 了），同一個 harness 再 draw(true) 也叫不回展開狀態。
+    // 展開狀態的斷言放在「儲存成功後自動收合」那條測試裡（它一開始就是展開的）。
 
     // 1b) 伺服器相關 UI **完全不存在**（連「預設伺服器」這種欄位都不要）。
     //     需求：使用者不能改伺服器，也不需要知道是哪一台。
@@ -1256,23 +1378,167 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     //     就會讓 SettingsPanel 的 useState 讀到錯位的槽位（本檔上面早已寫了這個警告）。
     //     與其做一個會誤導人的斷言，不如交給能真正展開的環境。
 
-    // 2) 收合的摘要只有一份，不隨主題數量重複
+    // 2) 摘要只有一份，不隨主題數量重複
     assert.strictEqual(
-      nodes.filter((n) => n.cls && n.cls.indexOf('ntfy-teams-settingsbar') !== -1).length,
+      summaryNodes.filter((n) => n.cls && n.cls.indexOf('ntfy-teams-settingsbar') !== -1).length,
       1,
       '摘要列只該有一個',
     );
 
-    // 3) 摘要列有「編輯」入口（點下去的行為由瀏覽器端到端驗證負責：
-    //    這個測試替身很難同時滿足「元件互相隔離」與「保留元件自身狀態」，
-    //    與其硬做一個會誤導人的斷言，不如把展開/收合交給真實瀏覽器驗證）。
-    const editBtn = nodes.find((n) => n.tag === 'button'
-      && collectText(n.children) === '編輯');
-    assert.ok(editBtn, '摘要列應有「編輯」按鈕');
-    assert.strictEqual(typeof editBtn.props.onClick, 'function', '「編輯」應可點擊');
+    // 3) 摘要的「編輯」入口（點下去的行為由瀏覽器端到端驗證負責：
+    //    這個測試替身很難同時滿足「元件互相隔離」與「保留元件自身狀態」）。
+    //    （「編輯」按鈕本身在 1a 已經驗過。）
 
     core.clearCredentials('https://msn.feg.cn');
     core.setIdentity('');
+  });
+
+  test('儲存成功後自動收合（不留著展開佔高度）', () => {
+    const { harness, exports: mod, core } = freshPanel();
+    core.saveConfig({ server: 'https://msn.feg.cn', topics: [], aliases: {} });
+    core.saveCredentials('https://msn.feg.cn', { mode: 'basic', user: 'u', password: 'p' });
+    core.setIdentity('Jinbe');
+
+    const SettingsPanel = mod.__test.SettingsPanel;
+    /**
+     * 畫一次設定區塊並攤平（open=true 展開）。
+     * 用閉包傳 props —— 傳給 harness.render 的第二個參數會被游標歸零吃掉。
+     * @returns 節點。
+     */
+    const drawOpen = () => {
+      const props = { defaultOpen: true };
+      const nodes = [];
+      walk(harness, harness.render(function settingsUnderTest() {
+        return SettingsPanel(props);
+      }, undefined), nodes, 0);
+      return nodes;
+    };
+    const isOpen = (nodes) => nodes.some((n) => n.cls && String(n.cls).indexOf('ntfy-teams-settings--open') !== -1);
+
+    let nodes = drawOpen();
+    assert.ok(isOpen(nodes), '起點應是展開的（才能測收合）');
+
+    // 展開狀態下順便驗欄位標籤：需求是「認證」改成「認證方式」。
+    // （放在這裡是因為這個測試的 harness 一開始就是展開的；上面那條「共用設定」
+    //   測試的 harness 先畫了收合狀態，hook 槽位會沿用，叫不回展開。）
+    const modeLabel = nodes.find((n) => n.tag === 'label'
+      && n.props && n.props.htmlFor === 'ntfy-teams-mode');
+    assert.ok(modeLabel, '展開時應有認證方式的 label');
+    assert.strictEqual(collectText(modeLabel.children), '認證方式',
+      '欄位標籤應為「認證方式」，實際：' + collectText(modeLabel.children));
+
+    const saveBtn = nodes.find((n) => n.tag === 'button'
+      && collectText(n.children) === '儲存');
+    assert.ok(saveBtn, '展開時應有「儲存」按鈕');
+    assert.strictEqual(typeof saveBtn.props.onClick, 'function', '「儲存」應可點擊');
+
+    // 按下儲存 → setOpen(false) → harness 的 setState 會同步重繪
+    saveBtn.props.onClick();
+
+    nodes = drawOpen();
+    // drawOpen 帶 defaultOpen:true，但元件的 open 狀態已經被 setOpen(false) 改掉；
+    // 收合與否看的是元件自己的 state，所以這裡應該要是收合的。
+    assert.ok(!isOpen(nodes),
+      '儲存成功後應該自動收合（否則會一直佔掉面板上方高度）');
+
+    core.clearCredentials('https://msn.feg.cn');
+    core.setIdentity('');
+  });
+
+  test('共用設定：鉛筆是切換（open 由外面控制），表單裡沒有「收合」按鈕', () => {
+    // 需求：「收合」按鈕去掉 —— 收起改用抬頭那顆鉛筆（同一顆、同一個位置切換）。
+    // 所以 open 必須是**受控**的（MainPanel 持有），元件不能再自己存一份。
+    //
+    // ⚠️ 每個狀態都要用**全新的 harness**：hook 槽位會沿用，
+    // 同一個 harness 先畫 open=true 再畫 open=false 還是會拿到前一棵樹
+    // （實測：closed.length 變成 25 而不是 0）。
+    /**
+     * 用受控的 open 畫一次並攤平。
+     * @param isOpen - 是否展開。
+     * @returns { nodes, texts }。
+     */
+    const drawControlled = (isOpen) => {
+      const { harness, exports: mod, core } = freshPanel();
+      core.saveConfig({ server: 'https://msn.feg.cn', topics: [], aliases: {} });
+      core.saveCredentials('https://msn.feg.cn', { mode: 'basic', user: 'u', password: 'p' });
+      const SettingsPanel = mod.__test.SettingsPanel;
+      const props = { open: isOpen };
+      const nodes = [];
+      walk(harness, harness.render(function panelUnderTest() {
+        return SettingsPanel(props);
+      }, undefined), nodes, 0);
+      const texts = nodes.filter((n) => n.tag === 'button').map((b) => collectText(b.children));
+      core.clearCredentials('https://msn.feg.cn');
+      return { nodes, texts };
+    };
+
+    // 受控 open=true → 展開
+    const open = drawControlled(true);
+    assert.ok(open.nodes.some((n) => n.cls && String(n.cls).indexOf('ntfy-teams-settings--open') !== -1),
+      'open=true 時應該展開');
+    // 展開時不該有「收合」按鈕（需求）
+    assert.ok(open.texts.indexOf('收合') === -1,
+      '表單裡不該再有「收合」按鈕，實際按鈕：' + JSON.stringify(open.texts));
+    // 該有的操作還在
+    ['儲存', '測試連線', '清除憑證'].forEach((label) => {
+      assert.ok(open.texts.indexOf(label) !== -1,
+        '展開時應有「' + label + '」，實際：' + JSON.stringify(open.texts));
+    });
+    // 表單標頭那一列（說明文字 + 收合）整個拿掉了
+    assert.ok(!open.nodes.some((n) => n.cls
+      && String(n.cls).split(/\s+/).indexOf('ntfy-teams-settingshead') !== -1),
+      '已經沒有 settingshead 那一列了');
+
+    // 受控 open=false → 完全不渲染
+    const closed = drawControlled(false);
+    assert.strictEqual(closed.nodes.length, 0,
+      'open=false 時應該什麼都不畫，實際 ' + closed.nodes.length + ' 個節點');
+  });
+
+  test('改認證並儲存後：立刻重比連線指紋（不然會一直顯示上一條連線的錯誤）', () => {
+    const { exports: mod, core } = freshPanel();
+    // 這個回歸對應使用者回報的「修改認證方式保存後，ntfy 連線要重置，
+    // 一直顯示上一個的錯誤」。
+    //
+    // 病灶：改認證只動**憑證快取**，不會觸發 store 變更；而 startLiveSync
+    // 是靠 store 變更去比對指紋的 —— 所以連線不會重建，畫面一直掛著舊的 403。
+    // 修法有兩半，這裡都把契約釘住：
+    //   1. 指紋要含憑證（不然「憑證變了」這件事看不出來）；
+    //   2. 設定面板存檔後要主動叫一次 recheckConnection()。
+    assert.strictEqual(typeof mod.__test.recheckConnection, 'function',
+      '應匯出 recheckConnection 供測試與內部使用');
+
+    // —— 1. 憑證的變化必須反映在指紋上 ——
+    const srv = 'https://msn.feg.cn';
+    core.saveConfig({ server: srv, topics: [] });
+    core.saveCredentials(srv, { mode: 'basic', user: 'u1', password: 'p1' });
+    /** 指紋（與 client 的 credKey() 同一組欄位）。 @returns 字串。 */
+    const fp = () => {
+      const c = core.loadCredentials(srv);
+      return [c.mode, c.user, (c.password || '').length, (c.token || '').length].join('|');
+    };
+    const before = fp();
+    core.saveCredentials(srv, { mode: 'basic', user: 'u1', password: 'p2-更長' });
+    const after = fp();
+    assert.notStrictEqual(after, before,
+      '換了密碼之後指紋必須不同（否則連線不會重建）');
+
+    // 換模式也要看得出來
+    core.saveCredentials(srv, { mode: 'token', token: 'tk_abcdef' });
+    assert.notStrictEqual(fp(), after, '換了認證方式之後指紋必須不同');
+
+    // —— 2. recheckConnection 是「有變化才重建」——
+    //   * 回傳值是布林（不是 undefined／拋錯）；
+    //   * 指紋沒變時回 false（不會每次都白重建一條連線）。
+    // 注意：這個測試環境的 freshPanel() 已經跑過 apply()，所以即時連線是**活的**
+    // —— 不能斷言「沒有連線時回 false」，那條路徑只有在 host 還沒掛上時才會走。
+    const r1 = mod.__test.recheckConnection();
+    assert.strictEqual(typeof r1, 'boolean', '應該回布林，實際 ' + typeof r1);
+    const r2 = mod.__test.recheckConnection();
+    assert.strictEqual(r2, false,
+      '指紋沒變時第二次呼叫應該回 false（不能每次白重建一條連線）');
+
+    core.clearCredentials(srv);
   });
   test('沒有 # 發送者的訊息：留白不標示，且非 # 的 title 當內文顯示', () => {
     const { harness, exports: mod } = freshPanel();
@@ -1362,10 +1628,21 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     assert.strictEqual(others[0], 'ntfy-teams-msgav', '別人的頭像塊應排第一（實際：' + others[0] + '）');
     assert.strictEqual(others[1], 'ntfy-teams-msgbody', '別人的內文應排第二');
 
-    // 自己的：內文在前、頭像塊在後 —— CSS 的 row-reverse 會把它畫到右邊
+    // 自己的：**順序也一樣**（頭像在前、內文在後）—— 靠右完全交給 CSS 的 row-reverse。
+    //
+    // ⚠️ 這裡原本斷言「自己的內文排第一」：那表示 JS 把兩者對調，而 CSS 又
+    // row-reverse 一次 —— 兩次翻轉互相抵消，頭像反而落在內文**左邊**
+    // （實測：avatarLeft 929、bodyLeft 978），根本沒有靠右。
+    // 現在只翻一次，所以 DOM 順序必須與別人一致。
     const mine = children({ id: 'b', time: 1790756821, title: '#me', message: 'my own' }, 'me');
-    assert.strictEqual(mine[0], 'ntfy-teams-msgbody', '自己的內文應排第一（實際：' + mine[0] + '）');
-    assert.strictEqual(mine[1], 'ntfy-teams-msgav', '自己的頭像塊應排最後');
+    assert.strictEqual(mine[0], 'ntfy-teams-msgav',
+      '自己的頭像塊也應排第一（DOM 順序與別人一致，只翻一次），實際：' + mine[0]);
+    assert.strictEqual(mine[1], 'ntfy-teams-msgbody', '自己的內文應排第二，實際：' + mine[1]);
+    assert.deepStrictEqual(mine, others, '自己的與別人的 DOM 順序必須相同 —— 差別只在 CSS');
+
+    // 靠右是靠 CSS 的 row-reverse：少了它，自己的頭像就會留在左邊。
+    // （下面本來就有一段在驗那條 CSS，這裡不再重複取一次樣式 —— 重複宣告會
+    //   直接把測試檔弄成語法錯誤，實測踩過。）
 
     // 行本身要帶上 --self，CSS 才會鏡射
     const selfRow = harness.render(function rowUnderTest() {
@@ -1539,8 +1816,23 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
       && (n.cls === 'ntfy-teams-msg' || n.cls.indexOf('ntfy-teams-msg ') === 0)).length;
 
     // 三個不同的日子：前天、昨天、今天
-    const now = Math.floor(Date.now() / 1000);
-    const day = (offset, hh) => now - offset * 86400 - (12 - hh) * 3600;
+    //
+    // ⚠️ 這裡原本是「now 減掉幾小時」，於是**會依執行時刻而壞掉**：
+    // 原本的 `now - offset*86400 - (12-hh)*3600` 假設「現在」在中午之後，
+    // 一旦在凌晨執行（例如 00:02），`day(0, 8)` 算出來會是**未來**的時間，
+    // 落到別的日曆天，分組就變成 0 則今天（實測：10/02 00:02 時失敗）。
+    //
+    // 改成「以本地午夜為錨，再往前推 offset 天，最後指定當天的 hh 點」：
+    // 這樣不管幾點跑，三個時間一定分別落在前天／昨天／今天。
+    /** 本地某一天的午夜（秒）。 @param ts - 任一時間（秒）。 @returns 那天 00:00 的秒數。 */
+    const localMidnight = (ts) => {
+      const d = new Date(ts * 1000);
+      d.setHours(0, 0, 0, 0);
+      return Math.floor(d.getTime() / 1000);
+    };
+    const midnight = localMidnight(Math.floor(Date.now() / 1000));
+    /** 第 offset 天前的 hh 點（本地時間）。 @param offset - 幾天前。 @param hh - 幾點。 @returns 秒。 */
+    const day = (offset, hh) => midnight - offset * 86400 + hh * 3600;
     const msgs = [
       { id: 'd2a', time: day(2, 9), topic: 'pub_days', title: '#ann', message: '前天第一則' },
       { id: 'd2b', time: day(2, 10), topic: 'pub_days', title: '#ann', message: '前天第二則' },
@@ -1548,6 +1840,22 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
       { id: 'd0a', time: day(0, 8), topic: 'pub_days', title: '#bob', message: '今天第一則' },
       { id: 'd0b', time: day(0, 9), topic: 'pub_days', title: '#cid', message: '今天第二則' },
     ];
+    // 自我檢查：日曆天必須真的是「前天／昨天／今天」——不然下面全部沒意義。
+    //
+    // 注意 dayKeyOf 收的是**訊息物件**（不是時間戳）：餵它一個數字會得到
+    // NO_DAY_KEY，於是每個比較都變成「相等」，自我檢查就形同虛設（實測踩過）。
+    const dayKeyOf = mod.__test.dayKeyOf;
+    const isTodayKey = mod.__test.isTodayKey;
+    assert.strictEqual(typeof dayKeyOf, 'function', '應該匯出 dayKeyOf 供測試');
+    assert.strictEqual(typeof isTodayKey, 'function', '應該匯出 isTodayKey 供測試');
+    /** 把時間戳包成訊息物件再取日鍵。 @param ts - 秒。 @returns 日鍵。 */
+    const keyAt = (ts) => dayKeyOf({ time: ts });
+    assert.strictEqual(keyAt(day(0, 8)), keyAt(midnight), 'day(0) 應該就是今天');
+    assert.strictEqual(isTodayKey(keyAt(day(0, 8))), true, '今天那組應被認成今天');
+    assert.strictEqual(isTodayKey(keyAt(day(1, 9))), false, 'day(1) 不該落在今天');
+    assert.strictEqual(isTodayKey(keyAt(day(2, 9))), false, 'day(2) 不該落在今天');
+    assert.notStrictEqual(keyAt(day(1, 9)), keyAt(day(2, 9)), '前天與昨天要是不同天');
+    assert.notStrictEqual(keyAt(day(0, 8)), keyAt(day(1, 9)), '今天與昨天要是不同天');
 
     // 1) 預設：只有「今天」展開，其他日子一律折起來（不被幾百則舊訊息淹沒）
     let nodes = draw(msgs);
@@ -1685,6 +1993,52 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     assert.ok(cssText.indexOf('.ntfy-teams-newline{') !== -1, '樣式應定義未讀線');
     assert.ok(cssText.indexOf('.ntfy-teams-topic--unread{') !== -1,
       '主題 chip 也該有未讀樣式（角標之外的第二層提示）');
+  });
+
+  test('未讀線的「前一則」必須是訊息列（切換主題時靠它捲到已讀的最新一則）', () => {
+    // 需求：「切換 topic 要滾動到已讀的最新 message」。
+    //
+    // 做法是：未讀線畫在「第一則未讀」前面，所以它**上面那一則**就是上次讀到的地方。
+    // 切換主題時把那一則的底端對到視窗底端（見 MessageList 的捲動 effect）。
+    //
+    // 這個契約唯一會壞的方式是：未讀線前面不是訊息列（例如前面多插了日期抬頭
+    // 或別的裝飾），那樣 `line.previousElementSibling` 就不是訊息，
+    // 捲動就會錨在錯的東西上。所以這裡把它釘住。
+    const { harness, exports: mod } = freshPanel();
+    const MessageList = mod.__test.MessageList;
+    const msgs = [];
+    for (let i = 1; i <= 6; i += 1) {
+      msgs.push({ id: 'm' + i, time: 1790756800 + i * 60, topic: 'pub_anchor', title: '#ann', message: 'msg ' + i });
+    }
+    const props = {
+      topic: 'pub_anchor', messages: msgs, selfName: '', loading: false,
+      unread: 2, lastReadId: 'm4'
+    };
+    const nodes = [];
+    walk(harness, harness.render(function listUnderTest() {
+      return MessageList(props);
+    }, undefined), nodes, 0);
+
+    // 找到未讀線，以及**在走訪順序上**緊接在它前面的節點。
+    // 注意 walker 是前序（pre-order），`nodes[i-1]` 不一定等於 DOM 的前一個兄弟，
+    // 但「線之前最後一個訊息列」在哪裡是一樣的，所以往前找第一個訊息列。
+    const lineIdx = nodes.findIndex((n) => n.cls === 'ntfy-teams-newline');
+    assert.ok(lineIdx > 0, '應該畫出未讀線（unread=2、lastReadId=m4）');
+    let before = null;
+    for (let i = lineIdx - 1; i >= 0; i -= 1) {
+      if (nodes[i].cls === 'ntfy-teams-msgslot') { before = nodes[i]; break; }
+    }
+    assert.ok(before, '未讀線前面應該找得到訊息列（切換主題時要捲到它）');
+    assert.strictEqual(before.props['data-mid'], 'm4',
+      '而且必須是「已讀的最新那一則」(m4)，實際：' + before.props['data-mid']);
+    // 中間不該夾著另一個訊息列（否則捲動會錨在更舊的那一則）
+    const between = nodes.slice(nodes.indexOf(before) + 1, lineIdx)
+      .filter((n) => n.cls === 'ntfy-teams-msgslot');
+    assert.deepStrictEqual(between, [], '線與那一則之間不該還有其他訊息列');
+
+    // 而且它**不是**最後一則 —— 後面還有未讀（否則線本來就不該畫）
+    const after = nodes.slice(lineIdx + 1).filter((n) => n.cls === 'ntfy-teams-msgslot');
+    assert.ok(after.length > 0, '未讀線後面應該還有未讀訊息');
   });
   test('markdown 表格渲染成真正的 table，且不注入 HTML', () => {
     const { harness, exports: mod } = freshPanel();
@@ -1844,6 +2198,42 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     // store 也不再提供持久化方法。
     assert.strictEqual(core.store.loadPersisted, undefined, 'loadPersisted 應該已經移除');
     assert.strictEqual(core.store.persist, undefined, 'persist 應該已經移除');
+  });
+
+  test('舊版留在瀏覽器裡的 ntfy-teams key 會被清乾淨（只刪不寫）', () => {
+    const { exports: mod } = freshPanel();
+    const purge = mod.__test.purgeLegacyStorage;
+    assert.strictEqual(typeof purge, 'function', '應匯出 purgeLegacyStorage 供測試');
+
+    // 模擬舊版留下的痕跡（這三種 key 以前真的會被寫進去）。
+    const storage = globalThis.localStorage;
+    storage.setItem('ntfy-teams:config:v1', '{"server":"https://old.example"}');
+    storage.setItem('ntfy-teams:store:v1', '{"version":2,"unreadByTopic":{"pub_x":3}}');
+    storage.setItem('ntfy-teams:cred:https://old.example', '{"mode":"basic","user":"u"}');
+    // 別的外掛／DSH 自己的 key 不可以被動到。
+    storage.setItem('dsh.sessions.current', 'keep-me');
+    storage.setItem('other-plugin:thing', 'keep-me-too');
+
+    const removed = purge();
+    assert.ok(removed >= 3, '應至少清掉 3 個舊 key，實際 ' + removed);
+
+    // 清完之後，任何 ntfy-teams 的 key 都不該存在。
+    const left = [];
+    for (let i = 0; i < storage.length; i += 1) {
+      const k = storage.key(i);
+      if (typeof k === 'string' && k.indexOf('ntfy-teams') === 0) left.push(k);
+    }
+    assert.deepStrictEqual(left, [], '不該還有 ntfy-teams 的 key，實際：' + JSON.stringify(left));
+
+    // 別人的 key 必須完好無損 —— 這個清理不能變成「清空 localStorage」。
+    assert.strictEqual(storage.getItem('dsh.sessions.current'), 'keep-me', '別的 key 不該被刪');
+    assert.strictEqual(storage.getItem('other-plugin:thing'), 'keep-me-too', '別的 key 不該被刪');
+
+    // 重複呼叫是安全的（第二次沒有東西可刪）。
+    assert.strictEqual(purge(), 0, '第二次應該沒東西可刪');
+
+    storage.removeItem('dsh.sessions.current');
+    storage.removeItem('other-plugin:thing');
   });
 
   test('退避節奏就是 1s,2s,4s,8s,16s,30s（而且是永不放棄）', () => {
@@ -2269,15 +2659,29 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     const row = find('ntfy-teams-row');
     assert.ok(row, '應有 .ntfy-teams-row（抬頭底下的並排列）');
     const iHeader = idxOf('ntfy-teams-header');
-    const iSettings = idxOf('ntfy-teams-settings');
     const iLeftcol = idxOf('ntfy-teams-leftcol');
     const iRow = idxOf('ntfy-teams-row');
 
     assert.ok(iHeader !== -1, '應有 .ntfy-teams-header（抬頭）');
     assert.ok(iHeader < iRow, '抬頭必須排在並排列之前（否則看板會蓋到連線狀態）');
     assert.ok(iRow < iLeftcol, '左欄應在並排列之內');
-    assert.ok(iLeftcol < iSettings, '順序應為：左欄 → 共用設定');
-    assert.ok(iSettings < iStream, '順序應為：共用設定 → 訊息串');
+    assert.ok(iLeftcol < iStream, '順序應為：左欄 → 訊息串');
+
+    // ---- 摘要那一行必須住在**抬頭**裡（需求：各種提示都放到第一個容器內）----
+    //
+    // 收合時 SettingsPanel 回 null（只負責展開的表單），摘要由 SettingsSummary
+    // 畫在抬頭內 —— 所以這裡不再找 .ntfy-teams-settings，而是確認摘要的位置。
+    const iBar = idxOf('ntfy-teams-settingsbar');
+    assert.ok(iBar !== -1, '應有摘要列（.ntfy-teams-settingsbar）');
+    assert.ok(iHeader < iBar, '摘要應排在抬頭之後（＝在抬頭裡面，前序順序就是文件順序）');
+    assert.ok(iBar < iLeftcol,
+      '摘要必須排在左欄之前 —— 那才代表它在抬頭裡，而不是又變成獨立一列：'
+      + 'header=' + iHeader + ' bar=' + iBar + ' leftcol=' + iLeftcol);
+    // 摘要只能有一份（曾經出現過「抬頭一份、左欄又一份」）
+    assert.strictEqual(
+      nodes.filter((n) => n.cls && String(n.cls).split(/\s+/).indexOf('ntfy-teams-settingsbar') !== -1).length,
+      1,
+      '摘要列在整棵樹裡只該有一份');
     // 看板在並排列之內、且排在左欄之後 —— 它與左欄同高，於是直通到底
     assert.ok(iLeftcol < iDash, '看板應排在左欄之後（同一列）');
     // 最關鍵：抬頭在看板之前 → 看板上緣不會高過抬頭

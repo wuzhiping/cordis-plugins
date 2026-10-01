@@ -361,7 +361,9 @@ async function main() {
     const { ctx, routes } = makeCtx({ webServer: {}, agentLoop: {} });
     mod.apply(ctx);
     const ex = makeExchange('PUT', {
-      config: { server: 'https://msn.feg.cn', topics: ['pub_demo'], dashboardWidth: 260 },
+      // dashboardWidth 用一個**保證不可能合法**的哨兵值（遠超上限），
+      // 這樣下面的「測試污染」守門可以認出它，而不會跟真實設定撞號。
+      config: { server: 'https://msn.feg.cn', topics: ['pub_demo'], dashboardWidth: 108300 },
       secrets: { 'https://msn.feg.cn': { mode: 'basic', user: 'u', password: 'p' } }
     });
     await routeAt(routes, t.SETTINGS_PATH).handler(ex.req, ex.res);
@@ -475,8 +477,11 @@ async function main() {
       const text = fs.readFileSync(cfgPath, 'utf8');
       assert.strictEqual(text.indexOf('pub_team') === -1, true,
         '測試用的 pub_team 不該出現在使用者的設定裡（那是測試污染）');
-      assert.strictEqual(text.indexOf('dashboardWidth: 280') === -1, true,
-        '測試寫的寬度 280 不該出現在使用者的設定裡（那是測試污染）');
+      // 哨兵要用**保證不可能合法**的值（超過上限），不要用某個碰巧寫到的數字。
+      // 實測踩過：原本寫死 280，等使用者要求「最小寬度 280」之後，
+      // 真實設定裡合法出現 280 → 這條守門變成誤報。
+      assert.strictEqual(text.indexOf('dashboardWidth: 108300') === -1, true,
+        '測試寫的哨兵寬度不該出現在使用者的設定裡（那是測試污染）');
     }
     const secPath = path.join(pluginDir, 'secrets.yml');
     if (fs.existsSync(secPath)) {
