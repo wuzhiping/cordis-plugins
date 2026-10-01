@@ -17,6 +17,7 @@
     "build.js",
     "cordis.patch.yml",
     "README.md",
+    "HANDOFF.md",
     "test",
     "package.json"
   ],

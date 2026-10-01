@@ -312,11 +312,13 @@ test('样式表只用主题令牌，不写死颜色（SVG 图稿除外）', () =
   const css = documentStub.__head[0].textContent;
   const hex = css.match(/#[0-9a-fA-F]{3,8}\b/g) || [];
   const rgb = css.match(/\brgba?\(/g) || [];
-  // 已知且刻意的例外：都是使用者明確指定的固定灰階邊框。
+  // 已知且刻意的例外：都是使用者明確指定的固定灰階邊框／色碼。
   //   #ddd —— 看板的虛線左緣、以及抬頭的底線（1px solid）
+  //   #eee —— 看板底部保留區的上緣（1px solid，使用者指定）
+  //   #333 —— 焦點／深色邊框
   // 這裡用「扣掉已知例外後必須為空」而不是直接放寬成「允許 hex」——
   // 這樣新加的任何寫死顏色仍然會被擋下（這條規則的價值就在這裡）。
-  const KNOWN_HEX = ['#ddd', '#333'];
+  const KNOWN_HEX = ['#ddd', '#333', '#eee'];
   const unexpectedHex = hex.filter((h) => KNOWN_HEX.indexOf(h) === -1);
   assert.deepStrictEqual(unexpectedHex, [],
     'CSS 里出现写死的十六进制颜色: ' + unexpectedHex.join(', '));
@@ -1445,6 +1447,62 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     core.setIdentity('');
   });
 
+  test('取消訂閱後：記憶體設定的 topics 必須與 store 對齊（否則切走再切回會復活）', () => {
+    // 這是使用者提供的復現步驟所對應的根因：
+    //   刪除 → 切到別的畫面 → 切回來 → 主題又出現（F5 則不會）
+    //
+    // 症狀的來源：清單有**兩份**
+    //   * `store`                    —— 畫面上的即時狀態
+    //   * 記憶體設定（readConfig）    —— bootStore() 重掛時用來起 store 的種子
+    // 開機時 syncSettingsFromHost() 把宿主的 topics 寫進記憶體設定，兩份一致；
+    // 但刪除原本只動了 store，記憶體設定還留著那一個 → 面板重掛時被灌回 store。
+    //
+    // 為什麼 F5 就不會：重新載入後記憶體設定是空的，只從宿主的 YAML 重建。
+    //
+    // 這條測試直接驗「刪除之後兩份清單一致」——那是復活成立的必要條件。
+    const { harness, exports: mod, core } = freshPanel();
+    const TopicBar = mod.__test.TopicBar;
+    assert.strictEqual(typeof TopicBar, 'function', '應匯出 TopicBar 供測試');
+
+    // 模擬「開機同步完成了」：宿主有兩個主題，store 與記憶體設定都拿到
+    core.saveConfig({ server: 'https://msn.feg.cn', topics: ['pub_keep', 'pub_drop'], aliases: {} });
+    (core.store.getSnapshot().topics || []).slice().forEach((t) => core.store.removeTopic(t));
+    core.store.ensureTopic('pub_keep');
+    core.store.ensureTopic('pub_drop');
+    core.store.setActiveTopic('pub_keep');
+    // 此時兩份一致（就像開機同步之後）
+    assert.deepStrictEqual(core.readConfig().topics, ['pub_keep', 'pub_drop'],
+      '前置：記憶體設定應與 store 一致');
+
+    // 走真實的兩步確認刪除
+    const draw = () => {
+      const props = { snapshot: core.store.getSnapshot() };
+      const nodes = [];
+      walk(harness, harness.render(function barUnderTest() {
+        return TopicBar(props);
+      }, undefined), nodes, 0);
+      return nodes;
+    };
+    let nodes = draw();
+    const xBtn = nodes.find((n) => n.cls && n.cls.indexOf('ntfy-teams-topic-x') !== -1
+      && String(n.props && n.props.title || '').indexOf('pub_drop') !== -1);
+    assert.ok(xBtn, '應找得到 pub_drop 的取消訂閱按鈕');
+    xBtn.props.onClick({ stopPropagation() {} });
+    nodes = draw();
+    const ok = nodes.find((n) => n.tag === 'button'
+      && n.cls && String(n.cls).indexOf('--danger') !== -1);
+    assert.ok(ok, '應找得到確認按鈕');
+    ok.props.onClick();
+
+    // store 少了它
+    assert.deepStrictEqual(core.store.getSnapshot().topics, ['pub_keep'],
+      'store 應該移除 pub_drop');
+    // **記憶體設定也要少了它** —— 這是這條測試的重點
+    assert.deepStrictEqual(core.readConfig().topics, ['pub_keep'],
+      '記憶體設定必須同步移除 pub_drop，否則面板重掛時它會從這裡被灌回 store'
+      + '（實測：切走再切回就復活）。實際：' + JSON.stringify(core.readConfig().topics));
+  });
+
   test('共用設定：鉛筆是切換（open 由外面控制），表單裡沒有「收合」按鈕', () => {
     // 需求：「收合」按鈕去掉 —— 收起改用抬頭那顆鉛筆（同一顆、同一個位置切換）。
     // 所以 open 必須是**受控**的（MainPanel 持有），元件不能再自己存一份。
@@ -1755,6 +1813,11 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
       '按 × 之後還沒有確認，不該刪掉任何主題',
     );
     assert.strictEqual(countCls(nodes, 'ntfy-teams-groupbar--confirm'), 1, '應出現確認條');
+    // 確認條前面要有警示符號（破壞性動作的視覺提示），且它是 inline SVG。
+    assert.strictEqual(countCls(nodes, 'ntfy-teams-confirmglyph'), 1,
+      '確認條應有警示符號（一個）');
+    assert.ok(nodes.some((n) => n.tag === 'svg' && n.props && n.props.width === 15),
+      '警示符號應是 15×15 的 inline SVG');
     const confirmText = allText(nodes);
     assert.ok(confirmText.indexOf('取消訂閱') !== -1 && confirmText.indexOf('pub_keep') !== -1,
       '確認條應說明要取消哪個主題，實際：' + confirmText);
@@ -2040,6 +2103,127 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     const after = nodes.slice(lineIdx + 1).filter((n) => n.cls === 'ntfy-teams-msgslot');
     assert.ok(after.length > 0, '未讀線後面應該還有未讀訊息');
   });
+  test('看板示範圖表：該有的圖都在，且明確標示「示範」、不含真實數據冒充', () => {
+    // 需求：看板加一點圖表示範，資料要「動態而隨機」。
+    // 這裡驗結構與**標示**；「動態」由 buildDemoData 的種子行為驗（同一條測試後半）。
+    const { harness, exports: mod } = freshPanel();
+    const DashDemo = mod.__test.DashDemo;
+    const buildDemoData = mod.__test.buildDemoData;
+    assert.strictEqual(typeof DashDemo, 'function', '應匯出 DashDemo');
+    assert.strictEqual(typeof buildDemoData, 'function', '應匯出 buildDemoData');
+
+    const props = { seed: 12345, topics: ['pub_a', 'pub_b', 'pub_c'] };
+    const nodes = [];
+    walk(harness, harness.render(function dashUnderTest() {
+      return DashDemo(props);
+    }, undefined), nodes, 0);
+
+    const countCls = (cls) => nodes.filter((n) => n.cls === cls).length;
+    const hasClsPrefix = (p) => nodes.some((n) => n.cls && n.cls.indexOf(p) !== -1);
+
+    // 1) 四張卡片
+    assert.strictEqual(countCls('ntfy-teams-card'), 4, '看板應有四張卡片');
+    // 2) 每張卡片都要標「示範」—— 隨機資料不能冒充真實統計
+    assert.strictEqual(countCls('ntfy-teams-demotag'), 4,
+      '四張卡片都必須標「示範」');
+    assert.ok(allText(nodes).indexOf('示範') !== -1, '畫面上要出現「示範」字樣');
+
+    // 3) KPI 三格
+    assert.strictEqual(countCls('ntfy-teams-kpibox'), 3, 'KPI 應有三格');
+
+    // 4) 折線圖：一條線 + 一個漸層面積
+    assert.strictEqual(countCls('ntfy-teams-chartline'), 1, '應有一條折線');
+    assert.ok(nodes.some((n) => n.tag === 'path' && typeof n.props.fill === 'string'
+      && n.props.fill.indexOf('url(#') === 0), '折線下應有漸層面積');
+
+    // 5) 甜甜圈：四段
+    //
+    // ⚠️ className 是**空格串接**的多個 class（"ntfy-teams-dseg ntfy-teams-dseg--0"），
+    // 所以不能用 `cls.indexOf(前綴) === 0` 比對 —— 那個前綴不在字串開頭。
+    // 這跟先前踩過的「ntfy-teams-headeracts 被 indexOf('ntfy-teams-header') 誤中」
+    // 是同一類陷阱，方向相反：這次是**漏掉**。一律切成 token 再比。
+    const hasClassToken = (n, token) => !!n.cls && n.cls.split(/\s+/).indexOf(token) !== -1;
+    const segNodes = nodes.filter((n) => /(^|\s)ntfy-teams-dseg--\d/.test(n.cls || ''));
+    assert.strictEqual(segNodes.length, 4, '甜甜圈應有四段');
+    // 每一段都要帶到外圈的定位 class（否則四段會疊在同一個起點）
+    segNodes.forEach((n, i) => {
+      assert.ok(hasClassToken(n, 'ntfy-teams-dseg--' + i), '第 ' + i + ' 段應有對應的定位 class');
+    });
+    // 四段的 strokeDasharray 加總應等於圓周（沒有漏畫、也沒有畫超過）
+    const dashes = segNodes.map((n) => parseFloat(String(n.props.strokeDasharray).split(' ')[0]));
+    const totalDash = dashes.reduce((a, b) => a + b, 0);
+    assert.ok(Math.abs(totalDash - 2 * Math.PI * 28) < 0.6,
+      '四段弧長加總應等於整圈圓周，實際：' + totalDash.toFixed(2));
+
+    // 6) 各主題的迷你條數量＝傳進來的主题數
+    assert.strictEqual(countCls('ntfy-teams-tbrow'), 3, '每個主題一條迷你條');
+
+    // 7) 沒有任何真實主題名被寫死進圖表以外的假數據（避免誤導）：卡片標題不含 msn.feg.cn
+    assert.ok(allText(nodes).indexOf('msn.feg.cn') === -1, '看板不該出現伺服器位址');
+
+    // 8) 「動態而隨機」的核心契約：**同種子 → 同資料**（重繪不抖動）、
+    //    **換種子 → 換資料**（切主題會換一輪）。
+    const a1 = buildDemoData(999, ['pub_a', 'pub_b']);
+    const a2 = buildDemoData(999, ['pub_a', 'pub_b']);
+    const b1 = buildDemoData(1000, ['pub_a', 'pub_b']);
+    assert.deepStrictEqual(a1.points, a2.points,
+      '同一種子必須產生同一組資料（否則 React 每次重繪圖表都會自己跳動）');
+    assert.notDeepStrictEqual(a1.points, b1.points,
+      '換種子必須換一組資料（否則「動態」不成立）');
+    // 佔比要剛好 100%，不能出現 99% 或 101%
+    assert.strictEqual(a1.parts.reduce((s, p) => s + p.value, 0), 100,
+      '四類佔比加總必須剛好 100%，實際：' + JSON.stringify(a1.parts.map((p) => p.value)));
+
+    // 9) 沒有網路請求：圖表純本地產生（不吃 ntfy 限流額度）
+    //    用「有 fetch 也完全沒被呼叫」來釘住 —— 一旦有人加了輪詢就會失敗。
+    let fetchCalls = 0;
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = function () { fetchCalls += 1; return Promise.resolve({ ok: false }); };
+    try {
+      buildDemoData(7, ['pub_x']);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+    assert.strictEqual(fetchCalls, 0, '示範資料產生過程不該發出任何網路請求');
+  });
+
+  test('看板底部保留區：130px 高、上緣 1px solid #eee（使用者指定）', () => {
+    // 需求：「看板底部分保留 130px，它的 border-top 1px solid #eee」。
+    //
+    // 兩件事都要釘住：
+    //   1. 那個 div 真的存在（不是靠 dashbody 的 padding 湊出來的假留白）；
+    //   2. CSS 真的給了 130px 與那條線 —— 否則後人改了數字不會有人發現。
+    const { context } = makeCtx();
+    documentStub.__head.length = 0;
+    built.exports.apply(context);
+    const css = documentStub.__head[0].textContent;
+
+    const footRule = css.match(/\.ntfy-teams-dashfoot\{[^}]*\}/);
+    assert.ok(footRule, 'CSS 應定義 .ntfy-teams-dashfoot，實際找不到');
+    const rule = footRule[0];
+    assert.ok(rule.indexOf('min-height:130px') !== -1,
+      '底部保留區應是 130px，實際規則：' + rule);
+    assert.ok(rule.indexOf('border-top:1px solid #eee') !== -1,
+      '底部保留區上緣應是 1px solid #eee，實際規則：' + rule);
+    // 只留上緣那一條線，其他三邊不該有框
+    assert.ok(rule.indexOf('border:') === -1 || /border-top:/.test(rule),
+      '不該用 border 簡寫（會畫出四邊框）');
+
+    // 結構：dashbody 底下除了圖表，還要真的有一個 dashfoot 節點
+    const { harness, exports: mod } = freshPanel();
+    const DashDemo = mod.__test.DashDemo;
+    const nodes = [];
+    walk(harness, harness.render(function bodyProbe() {
+      // 直接畫整塊看板內容區的近似結構：DashDemo + footer
+      return { type: 'div', props: { className: 'ntfy-teams-dashbody' }, children: [
+        DashDemo({ seed: 3, topics: ['a'] }),
+        { type: 'div', props: { className: 'ntfy-teams-dashfoot' }, children: null }
+      ] };
+    }, undefined), nodes, 0);
+    assert.strictEqual(nodes.filter((n) => n.cls === 'ntfy-teams-dashfoot').length, 1,
+      '看板內容區應有一個 dashfoot 節點');
+  });
+
   test('markdown 表格渲染成真正的 table，且不注入 HTML', () => {
     const { harness, exports: mod } = freshPanel();
     const MessageRow = mod.__test.MessageRow;

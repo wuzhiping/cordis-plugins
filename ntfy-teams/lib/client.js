@@ -4084,6 +4084,31 @@ window.__ModuleLoader__.load({
       '.ntfy-teams-iconbtn[aria-pressed="true"]{color:var(--dsw-alias-brand-primary);',
       'border-color:var(--dsw-alias-border-l2);}',
       '.ntfy-teams-iconbtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
+      // 齒輪按鈕：**帶顏色**（需求）。
+      //
+      // ⚠️ 為什麼不用 `--dsw-alias-brand-primary`：這個主題把它定義成**跟 label-primary
+      // 一樣的墨色**（實測兩者都是 #0f1115）——連「儲存」主按鈕都是黑白。用它畫齒輪
+      // 永遠是灰黑的，達不到「帶顏色」。
+      //
+      // 改用 `--dsw-static-blue-500`（#3b82f6）：它是「設計平台」層的**固定色票**，
+      // 定義在 `body` 上、不隨主題變（淺色／深色都是同一個值），所以不會有
+      // 「深色主題下某個 alias 解析不到」的風險。
+      //
+      // 藍色是設定類入口的通用語意（不像綠／紅／琥珀帶有成功／錯誤／警告的含意）。
+      // 底色用 color-mix 混得很淡：淺色主題是一層淡藍，深色主題也不會刺眼
+      // （直接給不透明色會在深色主題上變成一塊突兀的色塊）。
+      '.ntfy-teams-iconbtn--gear{color:var(--dsw-static-blue-500);',
+      'background:color-mix(in srgb, var(--dsw-static-blue-500) 12%, transparent);',
+      'border-color:color-mix(in srgb, var(--dsw-static-blue-500) 26%, transparent);}',
+      '.ntfy-teams-iconbtn--gear:hover{color:var(--dsw-static-blue-600);',
+      'background:color-mix(in srgb, var(--dsw-static-blue-500) 22%, transparent);',
+      'border-color:color-mix(in srgb, var(--dsw-static-blue-500) 40%, transparent);}',
+      // 展開時（aria-pressed=true）：底色再深一階，表示「表單正開著」。
+      '.ntfy-teams-iconbtn--gear[aria-pressed="true"]{color:var(--dsw-static-blue-600);',
+      'background:color-mix(in srgb, var(--dsw-static-blue-500) 26%, transparent);',
+      'border-color:var(--dsw-static-blue-500);}',
+      // 展開時焦點框也用藍色，跟齒輪一致（別回到品牌墨色）。
+      '.ntfy-teams-iconbtn--gear:focus-visible{outline-color:var(--dsw-static-blue-500);}',
       '.ntfy-teams-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:0 0 auto;',
       'height:30px;padding:0 13px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;cursor:pointer;',
       'background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);',
@@ -4192,10 +4217,23 @@ window.__ModuleLoader__.load({
       '.ntfy-teams-header .ntfy-teams-settingsbar .ntfy-teams-btn{height:24px;padding:0 9px;font-size:11.5px;}',
       '.ntfy-teams-settingitem{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:30%;}',
       '.ntfy-teams-settingnote{font-size:11px;color:var(--dsw-alias-label-secondary);opacity:.85;}',
-      '.ntfy-teams-settings--open{padding-bottom:12px;display:flex;flex-direction:column;gap:9px;}',
-      '.ntfy-teams-settingshead{display:flex;align-items:center;padding:7px 18px 0;}',
-      '.ntfy-teams-settings--open .ntfy-teams-connrow{padding:0 18px;}',
-      '.ntfy-teams-settings--open .ntfy-teams-hint{padding:0 18px;}',
+      // 展開的編輯表單：需求「加一點背景色、素雅一點、padding 也多一些」。
+      //
+      // 做法：不是把整個區塊染色（那會跟下方的 topic 列擠成一片），而是把表單
+      // **收成一張淡色卡片** —— 四周留邊、內部給足內距、圓角、一層很淡的邊框。
+      // 底色用「墨色混 3%」而不是 bg-layer-*：淺色主題的 layer-1／layer-2 都是純白，
+      // 疊上去等於沒變化（這個坑在本檔的隔行底色已經踩過一次）。
+      //
+      // 內距分兩層：卡片本身 padding 給上下留白，左右的 18px 對齊其他區塊。
+      '.ntfy-teams-settings--open{margin:10px 18px 14px;padding:12px 14px 13px;',
+      'display:flex;flex-direction:column;gap:10px;border-radius:10px;',
+      'border:1px solid var(--dsw-alias-border-l1);',
+      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 3.5%, transparent);}',
+      // 表單內部**不再**各自撐 18px —— 內距已經由卡片負責，否則會多縮一層。
+      '.ntfy-teams-settings--open .ntfy-teams-connrow{padding:0;}',
+      '.ntfy-teams-settings--open .ntfy-teams-hint{padding:0;}',
+      // 標籤固定一個寬度，讓「顯示名稱」「認證方式」兩列的輸入框左緣對齊。
+      '.ntfy-teams-settings--open .ntfy-teams-field{flex:0 0 auto;min-width:4.5em;}',
 
       // ---- 連線設定 ----
       '.ntfy-teams-conn{flex:0 0 auto;padding:12px 18px;border-bottom:1px solid var(--dsw-alias-border-l1);',
@@ -4278,11 +4316,32 @@ window.__ModuleLoader__.load({
       '.ntfy-teams-limitnote{flex:1 1 100%;font-size:11.5px;line-height:1.5;',
       'color:var(--dsw-alias-state-warn-primary);}',
       // 取消訂閱的確認條：取代群組列，等明確決定才動手。
-      '.ntfy-teams-groupbar--confirm{gap:9px;padding:0 18px;background:var(--dsw-alias-bg-layer-2);',
-      'border-bottom:1px solid var(--dsw-alias-border-l1);}',
+      //
+      // 美化（跟展開的設定表單用同一套語言）：收成一張**淡紅色的卡片** ——
+      // 四周留邊、圓角、淡邊框、足夠內距，並且用 error 色調的底色暗示「這是破壞性動作」。
+      // 底色用 color-mix 混得很淡（8%），淺色／深色主題都不刺眼；
+      // groupbar 的 18px 左右內距在這裡歸零，改由卡片自己給。
+      //
+      // 用 `border`（不是 `border-bottom`）覆蓋掉 groupbar 那條底線 —— 卡片不吃底線。
+      '.ntfy-teams-groupbar--confirm{gap:9px;margin:10px 18px 12px;padding:11px 14px;',
+      'border:1px solid color-mix(in srgb, var(--dsw-alias-state-error-primary) 28%, transparent);',
+      'border-radius:10px;',
+      'background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 8%, transparent);',
+      'animation:ntfy-teams-in .18s ease-out;}',
+      // 確認條裡的按鈕略高一點，跟卡片的內距配起來比較穩。
+      '.ntfy-teams-groupbar--confirm .ntfy-teams-btn{height:32px;}',
+      // 警示符號：跟文字同色系。
+      '.ntfy-teams-confirmglyph{display:inline-flex;align-items:center;flex:0 0 auto;',
+      'color:var(--dsw-alias-state-error-primary);}',
       '.ntfy-teams-confirmtext{font-size:12.5px;color:var(--dsw-alias-label-primary);}',
       // 破壞性動作只靠「狀態色 + 淡底」表達，不去猜對比色令牌存不存在
       // （寫死 #fff 會被「只用主題令牌」那條測試擋下來，而且深色主題下本來就該跟著變）。
+      // 破壞性動作只靠「狀態色 + 淡底」表達，不去猜對比色令牌存不存在
+      // （寫死 #fff 會被「只用主題令牌」那條測試擋下來，而且深色主題下本來就該跟著變）。
+      //
+      // 用 alias 的 state-error（實測 #ec1313）而不是 static-red-500（#ef4444）：
+      // 前者是**語意**令牌、會跟著主題走，後者是固定色票。兩者色相一致，
+      // 所以選語意那個 —— 深色主題下有機會被調成更適合的紅。
       '.ntfy-teams-btn--danger{color:var(--dsw-alias-state-error-primary);',
       'border-color:var(--dsw-alias-state-error-primary);',
       'background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, transparent);}',
@@ -4343,12 +4402,84 @@ window.__ModuleLoader__.load({
       'background:color-mix(in srgb, var(--dsw-alias-brand-primary) 35%, transparent);outline:0;}',
       '.ntfy-teams-dashgrip:focus-visible{background:var(--dsw-alias-brand-primary);}',
       '.ntfy-teams-dashbody{flex:1 1 auto;min-width:0;overflow:auto;padding:14px 14px 18px;}',
-      // 佔位內容：淡、居中、說明「這是預留的」而不是「壞掉了」。
-      '.ntfy-teams-dashph{height:100%;display:flex;flex-direction:column;align-items:center;',
-      'justify-content:center;gap:6px;text-align:center;color:var(--dsw-alias-label-secondary);}',
-      '.ntfy-teams-dashphglyph{opacity:.45;color:var(--dsw-alias-label-secondary);}',
-      '.ntfy-teams-dashphtitle{font-size:13px;font-weight:600;color:var(--dsw-alias-label-primary);}',
-      '.ntfy-teams-dashphsub{font-size:11.5px;opacity:.8;letter-spacing:.08em;}',
+
+      // ---- 看板：示範圖表 ----
+      //
+      // ⚠️ 這一整塊是**示範（demo）**：資料是本地用種子隨機產生的，不是真的統計，
+      //    畫面上明確標示「示範」，不讓它冒充真實數據。
+      //    也**沒有任何網路請求**（只是本機換一組種子），所以不吃 ntfy 的限流額度。
+      '.ntfy-teams-charts{display:flex;flex-direction:column;gap:12px;}',
+      // 看板底部保留區：使用者指定 **130px** 高、上方一條 `1px solid #eee`。
+      //
+      // 用 min-height 而不是 height，並且靠 `margin-top:auto` 讓它在內容不足時
+      // 也貼到最底下；min-height 是**內容高度**（不計 border），所以整個區塊
+      // 佔 130px + 1px 的線。
+      //
+      // #eee 是使用者指定的色碼（跟抬頭的 #ddd、看板的 #ddd 一樣刻意不用令牌）——
+      // 這幾處是「使用者欽定的視覺規格」，不是可以隨主題漂移的語意色。
+      '.ntfy-teams-dashfoot{flex:0 0 auto;margin-top:auto;min-height:130px;',
+      'border-top:1px solid #eee;}',
+      // 有了自己的底部保留區之後，dashbody 的底部內距要收掉，
+      // 否則會變成「130px 空白 + 18px 內距」兩段留白疊在一起。
+      '.ntfy-teams-dash .ntfy-teams-dashbody{padding-bottom:0;display:flex;flex-direction:column;}',
+      // 卡片外觀沿用展開設定表單／確認條那一套（淡墨底 + 圓角 + 細邊），
+      // 整個面板的卡片才會是同一種視覺語言。
+      '.ntfy-teams-card{border:1px solid var(--dsw-alias-border-l1);border-radius:10px;',
+      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 3.5%, transparent);',
+      'padding:10px 12px 11px;min-width:0;}',
+      '.ntfy-teams-cardhead{display:flex;align-items:center;gap:6px;margin-bottom:8px;min-width:0;}',
+      '.ntfy-teams-cardtitle{font-size:11.5px;font-weight:600;letter-spacing:.04em;',
+      'color:var(--dsw-alias-label-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      // 「示範」標籤：淡琥珀底，一眼看出不是真數據。
+      '.ntfy-teams-demotag{flex:0 0 auto;font-size:10px;font-weight:600;padding:1px 6px;border-radius:999px;',
+      'color:var(--dsw-static-amber-600);',
+      'background:color-mix(in srgb, var(--dsw-static-amber-500) 16%, transparent);',
+      'border:1px solid color-mix(in srgb, var(--dsw-static-amber-500) 30%, transparent);}',
+      '.ntfy-teams-chartwrap{display:block;width:100%;height:auto;overflow:visible;}',
+      // 格線／軸標：極淡，只當閱讀輔助，不搶走折線。
+      '.ntfy-teams-gridline{stroke:color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);}',
+      '.ntfy-teams-axislabel{font-size:8.5px;fill:var(--dsw-alias-label-secondary);}',
+      '.ntfy-teams-chartline{fill:none;stroke:var(--dsw-static-blue-500);stroke-width:2;',
+      'stroke-linejoin:round;stroke-linecap:round;}',
+      '.ntfy-teams-bar{fill:color-mix(in srgb, var(--dsw-static-blue-500) 70%, transparent);}',
+      '.ntfy-teams-bar--hi{fill:var(--dsw-static-blue-500);}',
+      '.ntfy-teams-doughnuttrack{fill:none;stroke:color-mix(in srgb, var(--dsw-alias-label-primary) 9%, transparent);}',
+      '.ntfy-teams-dseg{stroke-width:14;stroke-linecap:butt;}',
+      // 四段用四個色相。這個主題的固定色票只有 6 個家族
+      // （amber/blue/deepseek/green/neutral/red，實測沒有 violet/purple），
+      // 所以第 4 段用 neutral（灰）—— 它在圖表裡讀作「其他」，而且不像
+      // 紅／琥珀會帶有錯誤／警告的語意。
+      '.ntfy-teams-dseg--0{stroke:var(--dsw-static-blue-500);}',
+      '.ntfy-teams-dseg--1{stroke:var(--dsw-static-amber-500);}',
+      '.ntfy-teams-dseg--2{stroke:var(--dsw-static-green-500);}',
+      '.ntfy-teams-dseg--3{stroke:var(--dsw-static-neutral-400);}',
+      '.ntfy-teams-doughnutmid{text-align:center;}',
+      // KPI 三格
+      '.ntfy-teams-kpi{display:flex;gap:10px;align-items:flex-start;}',
+      '.ntfy-teams-kpibox{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:1px;}',
+      '.ntfy-teams-kpival{font-size:18px;font-weight:650;letter-spacing:-.01em;',
+      'color:var(--dsw-alias-label-primary);font-variant-numeric:tabular-nums;line-height:1.15;}',
+      '.ntfy-teams-kpilabel{font-size:10px;color:var(--dsw-alias-label-secondary);',
+      'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '.ntfy-teams-kpidelta{font-size:10.5px;font-weight:600;font-variant-numeric:tabular-nums;}',
+      '.ntfy-teams-kpidelta--up{color:var(--dsw-alias-state-success-primary);}',
+      '.ntfy-teams-kpidelta--down{color:var(--dsw-alias-state-error-primary);}',
+      // 各主題的迷你條
+      '.ntfy-teams-topicbars{display:flex;flex-direction:column;gap:7px;}',
+      '.ntfy-teams-tbrow{display:flex;align-items:center;gap:8px;min-width:0;}',
+      '.ntfy-teams-tbname{flex:0 1 auto;max-width:40%;font-size:11px;color:var(--dsw-alias-label-secondary);',
+      'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '.ntfy-teams-tbtrack{flex:1 1 auto;min-width:0;height:7px;border-radius:999px;',
+      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);overflow:hidden;}',
+      '.ntfy-teams-tbfill{display:block;height:100%;border-radius:999px;',
+      'background:var(--dsw-static-blue-500);transition:width .35s ease;}',
+      '.ntfy-teams-tbval{flex:0 0 auto;font-size:10.5px;color:var(--dsw-alias-label-secondary);',
+      'font-variant-numeric:tabular-nums;min-width:2.4em;text-align:right;}',
+      // 圖例
+      '.ntfy-teams-legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:9px;}',
+      '.ntfy-teams-lgleaf{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;',
+      'color:var(--dsw-alias-label-secondary);}',
+      '.ntfy-teams-lgdot{width:8px;height:8px;border-radius:999px;flex:0 0 auto;}',
 
       // 訊息串（在並排版面裡自己撐開；本身仍可垂直捲動）
       '.ntfy-teams-stream{flex:1 1 auto;min-height:0;overflow-y:auto;padding:16px 44px 20px 26px;',
@@ -4576,24 +4707,73 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * 鉛筆圖示（「編輯共用設定」的入口）。
+     * 警示三角圖示（取消訂閱的確認條用）。
      *
-     * 用鉛筆而不是齒輪：齒輪代表的是「打開設定」，而這個入口做的是
-     * **編輯一份共用設定**（帳號／顯示名稱），鉛筆直接對應「編輯」這個動作。
-     * 原本那顆齒輪畫成「圓 + 八條放射線」，看起來像太陽、語意也不對，已移除。
+     * 破壞性動作在前面放一個警示符號，比只靠文字更快讓人停下來看一眼。
+     * 線稿跟著 `currentColor`，顏色由 `.ntfy-teams-confirmglyph` 決定（用 state-error）。
+     *
+     * @returns 圖示元素。
+     */
+    function WarnGlyph() {
+      return e('svg', {
+        width: 15, height: 15, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor',
+        strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round',
+        'aria-hidden': 'true', focusable: 'false'
+      },
+        // 三角形外框
+        e('path', { d: 'M8 2.2 14.3 13H1.7z' }),
+        // 中間的驚嘆號
+        e('line', { x1: 8, y1: 6.4, x2: 8, y2: 9.4 }),
+        e('line', { x1: 8, y1: 11.2, x2: 8, y2: 11.25 })
+      );
+    }
+
+    /**
+     * 齒輪圖示（「編輯共用設定」的入口），**帶顏色**。
+     *
+     * 語意：齒輪 = 「開啟／調整設定」，這正是這個入口做的事（帳號、顯示名稱）。
+     *
+     * ⚠️ 畫法刻意避開「太陽」：之前那顆被退回，是因為它畫成
+     * 「**小圓 + 八條放射線**」—— 線從中心往外散開，視覺上就是太陽。
+     *
+     * 這裡改成真正的齒輪構造：
+     *   1. 齒輪**本體是一個環**（外圓 r=7.2、內圓 r=3.2 的實心輪廓），
+     *      環讓它看起來是「有厚度的機械件」而不是一條線；
+     *   2. 齒是**從外圓再往外**的 8 段粗短線（r=7.2 → 8.9），
+     *      方向朝外但**不從中心出發**，所以不會形成放射狀；
+     *   3. 中心是一個**軸孔**（r=2.2，填底色），孔被環包住。
+     *
+     * 顏色用 `currentColor`，由按鈕 CSS 指定（.ntfy-teams-iconbtn--gear）——
+     * hover／展開狀態可以獨立換色，不必改這裡。
      *
      * @returns 圖示元素。
      */
     function EditGlyph() {
+      // 8 顆齒的角度與座標（每 45° 一顆）。用實際三角函式算，不寫死近似值。
+      var teeth = [];
+      for (var ti = 0; ti < 8; ti += 1) {
+        var ang = (Math.PI / 4) * ti;
+        var cos = Math.cos(ang);
+        var sin = Math.sin(ang);
+        teeth.push(e('line', {
+          key: 'tooth' + ti,
+          x1: 12 + cos * 7.1, y1: 12 + sin * 7.1,
+          x2: 12 + cos * 8.9, y2: 12 + sin * 8.9
+        }));
+      }
       return e('svg', {
-        width: 15, height: 15, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor',
-        strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round',
+        width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+        strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round',
         'aria-hidden': 'true', focusable: 'false'
       },
-        // 筆身
-        e('path', { d: 'M11.1 2.6a1.6 1.6 0 0 1 2.3 2.3L5.6 12.7 2.6 13.4l.7-3z' }),
-        // 筆尖那一段的分隔線
-        e('path', { d: 'M9.9 3.8 12.2 6.1' })
+        // 齒輪本體：一個有厚度的環（不是一條細線）
+        e('circle', { cx: 12, cy: 12, r: 5.2, strokeWidth: 4 }),
+        // 8 顆齒：從外圓往外，但不從中心出發
+        teeth,
+        // 軸孔：填成「透明」讓按鈕自己的底色透出來，看起來就是一個洞。
+        // 不用 bg-base —— 那假設了底色一定是不透明的表面色，而這裡的按鈕底色是
+        // 一層帶色調的半透明（color-mix），用 surface 色反而會在深色主題下變白點。
+        e('circle', { cx: 12, cy: 12, r: 2, fill: 'transparent', stroke: 'none' })
       );
     }
 
@@ -5182,13 +5362,15 @@ window.__ModuleLoader__.load({
         // 它本來就是冗字：這些設定只有一份，而「共用」這件事在使用者按進編輯
         // 表單時已經由表單的說明交代了，摘要列只需要講「現在的狀態是什麼」。
         //
-        // 編輯入口：圖示按鈕（鉛筆）。
+        // 編輯入口：**帶顏色的齒輪**圖示按鈕（需求）。
         // 保留 aria-label 與 title —— 圖示沒有文字，讀屏與 tooltip 都要靠它們。
+        // aria-pressed 反映「表單是不是正開著」，CSS 據此把底色加深一階。
         e('button', {
           type: 'button',
-          className: 'ntfy-teams-iconbtn',
+          className: 'ntfy-teams-iconbtn ntfy-teams-iconbtn--gear',
           title: '編輯共用設定（帳號、顯示名稱）',
           'aria-label': '編輯共用設定',
+          'aria-pressed': props && props.open ? 'true' : 'false',
           onClick: function () { if (props && typeof props.onEdit === 'function') props.onEdit(); }
         }, e(EditGlyph))
       );
@@ -5329,7 +5511,7 @@ window.__ModuleLoader__.load({
       // 表單標頭那一列整個拿掉了：
       //   * 說明文字「以下設定對所有主題生效…」→ 需求要去掉這類字眼；
       //   * 「收合」按鈕 → 需求要去掉。
-      // 收起改用抬頭那顆鉛筆圖示（它就是同一顆、同一個位置的切換：
+      // 收起改用抬頭那顆**齒輪**（它就是同一顆、同一個位置的切換：
       // 沒開就開、開著就收），所以不需要再一顆專門的「收合」。
       //
       // 這裡只留「顯示名稱 / 認證方式」兩個欄位與它們的操作按鈕。
@@ -5399,6 +5581,37 @@ window.__ModuleLoader__.load({
     // =========================================================================
     // 5. 面板：topic 列
     // =========================================================================
+
+    /**
+     * 讓**記憶體設定**（`core.readConfig().topics`）與 **store** 的訂閱清單對齊。
+     *
+     * 為什麼需要：清單有**兩份**，而它們的用途不同 ——
+     *   * `store`       —— 畫面上的即時狀態（權威）；
+     *   * 記憶體設定     —— `bootStore()` 在面板重掛時用來起一份 store 的種子。
+     *
+     * 開機時 `syncSettingsFromHost()` 會把宿主的 topics 寫進記憶體設定，所以
+     * 兩份一開始是一致的。但**刪除只動了 store**，記憶體設定裡還留著那一個 ——
+     * 於是「刪掉 → 切到別的畫面 → 切回來」時，`bootStore()` 從記憶體設定又把
+     * 剛刪掉的主題灌回 store（實測就是這個復現步驟：切走再切回必現）。
+     *
+     * 為什麼 F5 就不會重現：重新載入後記憶體設定是空的（模組重跑），
+     * 只從宿主的 YAML 重建，而 YAML 已經沒有那一個了。
+     *
+     * 為什麼以前的測試抓不到：探針主題常常只進了 store、**沒進記憶體設定**
+     * （因為探針是直接呼叫 `store.ensureTopic`），少了這一步自然不會復活 ——
+     * 看起來像「已經修好了」。要復現必須先讓記憶體設定也有那個主題。
+     *
+     * 兩份清單從此在任何變更後都保持一致。
+     */
+    function syncTopicListToConfig() {
+      if (!core || !core.store || typeof core.saveConfig !== 'function') return;
+      if (typeof core.store.getSnapshot !== 'function') return;
+      try {
+        core.saveConfig({ topics: (core.store.getSnapshot().topics || []).slice() });
+      } catch (err) {
+        // 對齊失敗不該影響主要動作（刪除／新增本身已經做完了）。
+      }
+    }
 
     /**
      * 把訂閱清單立刻寫回**宿主**（不再有 localStorage）。
@@ -5553,6 +5766,10 @@ window.__ModuleLoader__.load({
         if (core && core.store && typeof core.store.ensureTopic === 'function') {
           core.store.ensureTopic(name);
           if (typeof core.store.setActiveTopic === 'function') core.store.setActiveTopic(name);
+          // 新增也要對齊記憶體設定 —— 否則「新增 → 切走 → 切回」時，
+          // bootStore() 會從記憶體設定起一份**還沒有這個主題**的 store，它就消失了。
+          // （跟刪除是同一類問題，方向相反。）
+          syncTopicListToConfig();
           saveSubscriptions();
         }
         setLimitNote('');
@@ -5591,6 +5808,8 @@ window.__ModuleLoader__.load({
         }
         if (core && core.store && typeof core.store.removeTopic === 'function') {
           core.store.removeTopic(topic);
+          // ⚠️ **記憶體設定（core.readConfig().topics）也要一起更新**，見 syncTopicListToConfig()。
+          syncTopicListToConfig();
           saveSubscriptions();
           // 取消訂閱是破壞性動作 → **立刻**寫回宿主，不等 400ms debounce。
           // 使用者「刪完馬上重新整理」時 debounce 會被卸載吃掉，刪除就遺失了
@@ -5789,6 +6008,8 @@ window.__ModuleLoader__.load({
         // 綁進閉包後，兩種時序都拿到同一個值。
         var pending = confirming;
         return e('div', { className: 'ntfy-teams-groupbar ntfy-teams-groupbar--confirm' },
+          // 警示符號：破壞性動作前面放一個，比只靠文字更快讓人停一下。
+          e('span', { className: 'ntfy-teams-confirmglyph' }, e(WarnGlyph)),
           e('span', { className: 'ntfy-teams-confirmtext' },
             '取消訂閱「' + labelOf(pending) + '」？'),
           labelOf(pending) !== pending
@@ -6354,13 +6575,311 @@ window.__ModuleLoader__.load({
       return e('div', { className: 'ntfy-teams-stream', ref: boxRef, onScroll: onScroll }, body);
     }
 
+    // =========================================================================
+    // 看板：示範圖表
+    // =========================================================================
+
     /**
-     * 右側面板：目前是佔位，未來放看板之類的東西。
+     * mulberry32：小、快、無相依的**種子**偽隨機數產生器。
      *
-     * 這一格刻意先做成「可以拖寬、寬度會記住」的**空位**：以後換內容時不必再動版面，
-     * 直接把佔位換掉即可。最小寬度是需求（見 core.CONFIG.dashboardMinWidth）；拖動時同時夾住上限，免得把訊息串擠到看不見。
+     * 為什麼不用 `Math.random()`：每次重繪都要拿到同一組數字，否則 React 一重繪
+     * 圖表就會自己跳動（那不是「動態」，那是閃爍）。給定種子 → 給定序列，
+     * 所以「同一輪」的圖形是穩定的；要換一輪就換種子。
      *
-     * @param props - { width, onResize, onResizeEnd }。
+     * @param seed - 32 位元整數種子。
+     * @returns 每次呼叫回傳 [0,1) 的函式。
+     */
+    function mulberry32(seed) {
+      var a = seed >>> 0;
+      return function next() {
+        a = (a + 0x6D2B79F5) >>> 0;
+        var t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t = (t ^ (t + Math.imul(t ^ (t >>> 7), t | 61))) >>> 0;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    /**
+     * 產生一組示範資料（**不是真實統計**）。
+     *
+     * 形狀刻意做成「有趨勢的隨機漫步 + 一點雜訊」而不是均勻亂數：
+     * 均勻亂數畫成折線看起來像雜訊，不像儀表板；有趨勢才像話。
+     *
+     * @param seed - 種子（同一輪固定）。
+     * @param topicNames - 目前的主題名清單（迷你條要用）。
+     * @returns { points, kpis, topics, parts }。
+     */
+    function buildDemoData(seed, topicNames) {
+      var rnd = mulberry32(seed);
+      // 24 個時間點（近 24 小時）的活動量
+      var points = [];
+      var level = 30 + rnd() * 20;
+      for (var i = 0; i < 24; i += 1) {
+        level += (rnd() - 0.46) * 9;            // 隨機漫步，略微上偏
+        level = Math.max(6, Math.min(100, level));
+        points.push(Math.round(level));
+      }
+      var last = points[points.length - 1];
+      var prev = points[points.length - 2] || last;
+      var total = points.reduce(function (a, b) { return a + b; }, 0);
+
+      // 四個分類的佔比（甜甜圈）
+      var raw = [rnd() * 10 + 6, rnd() * 8 + 3, rnd() * 7 + 2, rnd() * 5 + 1];
+      var rawSum = raw.reduce(function (a, b) { return a + b; }, 0);
+      var parts = raw.map(function (v, idx) {
+        return { label: ['已讀', '未讀', '待辦', '其他'][idx], value: Math.round((v / rawSum) * 100) };
+      });
+      // 讓四段加起來剛好 100（把誤差補到第一段，避免顯示 99% 或 101%）
+      var drift = 100 - parts.reduce(function (a, p) { return a + p.value; }, 0);
+      parts[0].value += drift;
+
+      // 各主題的活動量（迷你條）—— 用主題名當一部分種子，換主題時比例也會變
+      var names = (topicNames && topicNames.length) ? topicNames.slice() : ['pub_dsh'];
+      var topics = names.slice(0, 6).map(function (name) {
+        return { name: name, value: Math.round(rnd() * 70 + 25) };
+      });
+
+      return {
+        points: points,
+        kpis: [
+          { label: '訊息', value: total, delta: Math.round(((last - prev) / Math.max(1, prev)) * 100) },
+          { label: '活躍主題', value: names.length, delta: Math.round((rnd() - 0.5) * 40) },
+          { label: '待辦', value: Math.round(parts[2].value / 4), delta: Math.round((rnd() - 0.5) * 60) }
+        ],
+        topics: topics,
+        parts: parts
+      };
+    }
+
+    /**
+     * 活動量折線圖（含面積）。
+     *
+     * 座標系固定 240×64，再用 CSS `width:100%` 撐滿卡片 —— 這樣圖形永遠不會
+     * 因為面板拖寬而變形，也不需要量 DOM（量 DOM 會多一次 layout，還要處理
+     * 面板一開始 width=0 的情形）。
+     *
+     * @param props - { points }。
+     * @returns SVG 元素。
+     */
+    function ActivityChart(props) {
+      var pts = (props && props.points) || [];
+      var W = 240, H = 64, PAD = 3;
+      if (pts.length < 2) return null;
+      var max = Math.max.apply(null, pts);
+      var min = Math.min.apply(null, pts);
+      var span = Math.max(1, max - min);
+      /** 把索引／值映射成座標。 @param i - 索引。 @param v - 值。 @returns {x,y}。 */
+      function xy(i, v) {
+        return {
+          x: PAD + (i / (pts.length - 1)) * (W - PAD * 2),
+          y: H - PAD - ((v - min) / span) * (H - PAD * 2)
+        };
+      }
+      var line = pts.map(function (v, i) {
+        var p = xy(i, v);
+        return (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ' ' + p.y.toFixed(1);
+      }).join(' ');
+      var first = xy(0, pts[0]);
+      var lastP = xy(pts.length - 1, pts[pts.length - 1]);
+      var area = line + ' L' + lastP.x.toFixed(1) + ' ' + H + ' L' + first.x.toFixed(1) + ' ' + H + ' Z';
+      // 漸層 id 要唯一：同一個頁面可能同時有多個面板實例（實測踩過重複 id）。
+      var gid = 'ntfy-teams-grad-' + Math.abs(props.gradientSeed || 1);
+
+      return e('svg', {
+        className: 'ntfy-teams-chartwrap',
+        viewBox: '0 0 ' + W + ' ' + H,
+        preserveAspectRatio: 'none',
+        role: 'img',
+        'aria-label': '示範活動量折線圖'
+      },
+        e('defs', null,
+          e('linearGradient', { id: gid, x1: 0, y1: 0, x2: 0, y2: 1 },
+            e('stop', { offset: '0%', stopColor: 'var(--dsw-static-blue-500)', stopOpacity: 0.32 }),
+            e('stop', { offset: '100%', stopColor: 'var(--dsw-static-blue-500)', stopOpacity: 0 })
+          )
+        ),
+        // 三條水平格線
+        [0, 0.5, 1].map(function (f, gi) {
+          var y = PAD + f * (H - PAD * 2);
+          return e('line', {
+            key: 'grid' + gi, className: 'ntfy-teams-gridline',
+            x1: 0, y1: y, x2: W, y2: y
+          });
+        }),
+        e('path', { d: area, fill: 'url(#' + gid + ')' }),
+        e('path', { className: 'ntfy-teams-chartline', d: line })
+      );
+    }
+
+    /**
+     * 分類佔比的甜甜圈圖。
+     *
+     * @param props - { parts }。
+     * @returns SVG 元素。
+     */
+    function DoughnutChart(props) {
+      var parts = (props && props.parts) || [];
+      var S = 76, R = 28, SW = 14;
+      var C = 2 * Math.PI * R;
+      var sum = parts.reduce(function (a, p) { return a + p.value; }, 0) || 1;
+      var offset = 0;
+      var segs = parts.map(function (p, i) {
+        var frac = p.value / sum;
+        var len = C * frac;
+        var seg = { i: i, len: len, offset: offset };
+        offset += len;
+        return seg;
+      });
+      var lead = parts[0] ? parts[0].value : 0;
+      return e('svg', {
+        className: 'ntfy-teams-chartwrap',
+        viewBox: '0 0 ' + S + ' ' + S,
+        width: S, height: S,
+        style: { maxWidth: S + 'px', margin: '0 auto' },
+        role: 'img',
+        'aria-label': '示範分類佔比甜甜圈圖'
+      },
+        // 底圈（灰）
+        e('circle', {
+          className: 'ntfy-teams-doughnuttrack',
+          cx: S / 2, cy: S / 2, r: R, strokeWidth: SW
+        }),
+        segs.map(function (s) {
+          return e('circle', {
+            key: 'seg' + s.i,
+            className: 'ntfy-teams-dseg ntfy-teams-dseg--' + s.i,
+            cx: S / 2, cy: S / 2, r: R,
+            // 從 12 點鐘方向開始：旋轉 -90°，再依累計長度位移
+            strokeDasharray: s.len.toFixed(2) + ' ' + (C - s.len).toFixed(2),
+            strokeDashoffset: (-s.offset).toFixed(2),
+            transform: 'rotate(-90 ' + (S / 2) + ' ' + (S / 2) + ')'
+          });
+        }),
+        // 圓心的兩行字（最大那一類的百分比 + 名稱）。
+        //
+        // ⚠️ 用 `dominant-baseline:central` 把兩行各自**垂直居中在指定的 y** 上，
+        // 而不是靠調 font-size 猜基線 —— 靠猜的話不同字型／字級就會疊在一起
+        // （實測前兩版就是把 58% 和「已讀」黏住，而且第一版還在中間開了一個洞）。
+        // 環的內緣半徑 = 28 − 14/2 = 21，所以內圈直徑約 42px，
+        // 兩行分別放在圓心上下各 8px，合計 26px 高的字塊，留得下。
+        e('text', {
+          x: S / 2, y: S / 2 - 8, textAnchor: 'middle', dominantBaseline: 'central',
+          'font-size': 13, 'font-weight': 700, fill: 'var(--dsw-alias-label-primary)'
+        }, lead + '%'),
+        e('text', {
+          x: S / 2, y: S / 2 + 8, textAnchor: 'middle', dominantBaseline: 'central',
+          'font-size': 9, fill: 'var(--dsw-alias-label-secondary)'
+        }, parts[0] ? parts[0].label : '')
+      );
+    }
+
+    /**
+     * 看板內容：示範儀表板（KPI + 折線 + 甜甜圈 + 各主題迷你條）。
+     *
+     * ⚠️ 這裡的資料是**隨機產生的示範**，不是真的統計（畫面上有「示範」標籤）。
+     * 目的只是讓看板看起來像個儀表板，並驗證版面撐得住圖表。
+     *
+     * 「動態」的作法刻意**不用固定間隔的計時器**：
+     *   * 使用者回報過「不要輪詢」的顧慮（雖然那是網路請求，但持續跳動一樣擾人）；
+     *   * 而且每次換種子都重畫整棵子樹，在縮到很窄的面板裡會一直被 reflow。
+     * 改成**跟著真實事件換一輪**：切換主題、開關面板都會給一個新種子，
+     * 所以看起來是活的，但不會自己閃。
+     *
+     * @param props - { seed, topics }。
+     * @returns 看板內容元素。
+     */
+    function DashDemo(props) {
+      var seed = (props && props.seed) || 1;
+      var names = (props && props.topics) || [];
+      var data = buildDemoData(seed, names);
+      var maxTopic = data.topics.reduce(function (a, t) { return Math.max(a, t.value); }, 1);
+
+      return e('div', { className: 'ntfy-teams-charts' },
+        // ---- KPI 三格 ----
+        e('div', { className: 'ntfy-teams-card' },
+          e('div', { className: 'ntfy-teams-cardhead' },
+            e('span', { className: 'ntfy-teams-cardtitle' }, '總覽'),
+            e('span', { className: 'ntfy-teams-demotag' }, '示範')
+          ),
+          e('div', { className: 'ntfy-teams-kpi' },
+            data.kpis.map(function (k, i) {
+              var up = k.delta >= 0;
+              return e('div', { key: 'kpi' + i, className: 'ntfy-teams-kpibox' },
+                e('span', { className: 'ntfy-teams-kpival' }, String(k.value)),
+                e('span', { className: 'ntfy-teams-kpilabel' }, k.label),
+                e('span', {
+                  className: 'ntfy-teams-kpidelta '
+                    + (up ? 'ntfy-teams-kpidelta--up' : 'ntfy-teams-kpidelta--down')
+                }, (up ? '▲ +' : '▼ ') + k.delta + '%')
+              );
+            })
+          )
+        ),
+
+        // ---- 活動量折線 ----
+        e('div', { className: 'ntfy-teams-card' },
+          e('div', { className: 'ntfy-teams-cardhead' },
+            e('span', { className: 'ntfy-teams-cardtitle' }, '近 24 小時活動量'),
+            e('span', { className: 'ntfy-teams-spacer' }),
+            e('span', { className: 'ntfy-teams-demotag' }, '示範')
+          ),
+          e(ActivityChart, { points: data.points, gradientSeed: seed })
+        ),
+
+        // ---- 分類佔比 ----
+        e('div', { className: 'ntfy-teams-card' },
+          e('div', { className: 'ntfy-teams-cardhead' },
+            e('span', { className: 'ntfy-teams-cardtitle' }, '訊息分類'),
+            e('span', { className: 'ntfy-teams-spacer' }),
+            e('span', { className: 'ntfy-teams-demotag' }, '示範')
+          ),
+          e(DoughnutChart, { parts: data.parts }),
+          e('div', { className: 'ntfy-teams-legend' },
+            data.parts.map(function (p, i) {
+              return e('span', { key: 'lg' + i, className: 'ntfy-teams-lgleaf' },
+                e('span', {
+                  className: 'ntfy-teams-lgdot',
+                  style: { background: 'var(--dsw-static-' + ['blue-500', 'amber-500', 'green-500', 'neutral-400'][i] + ')' }
+                }),
+                p.label + ' ' + p.value + '%'
+              );
+            })
+          )
+        ),
+
+        // ---- 各主題活動量 ----
+        e('div', { className: 'ntfy-teams-card' },
+          e('div', { className: 'ntfy-teams-cardhead' },
+            e('span', { className: 'ntfy-teams-cardtitle' }, '各主題活動量'),
+            e('span', { className: 'ntfy-teams-spacer' }),
+            e('span', { className: 'ntfy-teams-demotag' }, '示範')
+          ),
+          e('div', { className: 'ntfy-teams-topicbars' },
+            data.topics.map(function (t, i) {
+              return e('div', { key: 'tb' + i, className: 'ntfy-teams-tbrow' },
+                e('span', { className: 'ntfy-teams-tbname', title: t.name }, t.name),
+                e('span', { className: 'ntfy-teams-tbtrack' },
+                  e('span', {
+                    className: 'ntfy-teams-tbfill',
+                    style: { width: Math.round((t.value / maxTopic) * 100) + '%' }
+                  })
+                ),
+                e('span', { className: 'ntfy-teams-tbval' }, String(t.value))
+              );
+            })
+          )
+        )
+      );
+    }
+
+    /**
+     * 右側面板：**看板**（示範圖表）。
+     *
+     * 這一格可以拖寬、寬度會記住。最小寬度是需求（見 core.CONFIG.dashboardMinWidth）；
+     * 拖動時同時夾住上限，免得把訊息串擠到看不見。
+     *
+     * @param props - { width, onResize, onResizeEnd, seed, topics }。
      * @returns 面板元素。
      */
     function DashboardPanel(props) {
@@ -6439,12 +6958,14 @@ window.__ModuleLoader__.load({
           }
         }),
         e('div', { className: 'ntfy-teams-dashbody' },
-          e('div', { className: 'ntfy-teams-dashph' },
-            e('div', { className: 'ntfy-teams-dashphglyph', 'aria-hidden': 'true' },
-              e(GroupGlyph, { size: 22 })),
-            e('div', { className: 'ntfy-teams-dashphtitle' }, '看板'),
-            e('div', { className: 'ntfy-teams-dashphsub' }, '即將推出')
-          )
+          e(DashDemo, {
+            seed: props.seed,
+            topics: props.topics
+          }),
+          // 看板底部：留一段空白 + 一條極淡的分隔線（使用者指定 1px solid #eee）。
+          // 這一塊是刻意的留白區（不是壞掉的多餘 div）——內容區與面板底緣之間
+          // 需要一段呼吸空間，捲到底時也有一個明確的收尾。
+          e('div', { className: 'ntfy-teams-dashfoot' })
         )
       );
     }
@@ -6654,6 +7175,24 @@ window.__ModuleLoader__.load({
       });
       var dashWidth = dashState[0];
       var setDashWidth = dashState[1];
+
+      // 看板示範資料的種子。
+      //
+      // 需求要「動態而隨機」，但**刻意不做定時更新**：
+      //   * 使用者明確回報過不要輪詢（雖然那是指網路請求，但持續跳動一樣擾人）；
+      //   * 每隔幾秒重畫整棵子樹，在拖到很窄的面板裡會一直被 reflow。
+      // 改成「跟著真實事件換一輪」——切換主題、開關面板都讓種子變一次。
+      // 這樣它看起來是活的，但不會自己閃；而且同一輪內重繪拿到的是同一組數字
+      // （種子式隨機，不是 Math.random），所以不會畫面抖動。
+      var dashSeedState = React.useState(function () {
+        return (Date.now() % 1000000) + 1;
+      });
+      var dashSeed = dashSeedState[0];
+      var setDashSeed = dashSeedState[1];
+      React.useEffect(function () {
+        // 當前主題一變就換一輪示範資料。
+        setDashSeed(function (s) { return (s + 7919) % 1000000 + 1; });
+      }, [active]);
 
       var topicsKey = topics.join('\u0000');
       var authRequired = !!(active && snapshot.authByTopic && snapshot.authByTopic[active]);
@@ -6954,7 +7493,7 @@ window.__ModuleLoader__.load({
         // 它只讀不寫；編輯表單仍由 MainPanel 掛在 body（展開時才出現）。
         e(SettingsSummary, {
           key: 'summary',
-          // 鉛筆是**切換**：沒開就開、開著就收。
+          // 齒輪是**切換**：沒開就開、開著就收。
           // 表單裡那顆「收合」按鈕已移除（需求），所以收起只能靠這裡 ——
           // 而且它就在同一個位置，切換比「展開用一顆、收起用另一顆」直覺。
           open: showConn || authRequired,
@@ -7115,6 +7654,10 @@ window.__ModuleLoader__.load({
           e(DashboardPanel, {
             key: 'dash',
             width: dashWidth,
+            // 看板示範資料的種子：跟著「當前主題 + 面板開關」變 —— 切主題或重開面板
+            // 就會換一輪數字（看起來是活的），但不會自己定時跳動。
+            seed: dashSeed,
+            topics: topics,
             onResize: function (w) { setDashWidth(w); },
             onResizeEnd: function (w) {
               if (core && typeof core.saveConfig === 'function') {
@@ -7866,6 +8409,9 @@ window.__ModuleLoader__.load({
       Composer: Composer,
       MessageList: MessageList,
       MessageRow: MessageRow,
+      // 看板：示範圖表（測試要能驗結構與「示範」標示）
+      DashDemo: DashDemo,
+      buildDemoData: buildDemoData,
       // 日期分組：測試要能直接驗「非今天預設折疊」的規則
       dayKeyOf: dayKeyOf,
       isTodayKey: isTodayKey,
