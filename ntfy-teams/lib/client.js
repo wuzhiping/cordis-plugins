@@ -5103,6 +5103,37 @@ window.__ModuleLoader__.load({
       'background:color-mix(in srgb, var(--dsw-static-green-500) 10%, transparent);}',
       '.ntfy-teams-autoapprovetext,.ntfy-teams-staybottomtext{white-space:nowrap;}',
 
+      // ---- 自動批準：倒數狀態 ----
+      //
+      // 倒數時把整顆膠囊變成「注意色」（琥珀），並長出一顆取消鈕。
+      // 用琥珀而不是紅色：紅色在這份 UI 裡代表「錯誤／危險」，
+      // 而倒數只是一個**進行中、可取消**的狀態。
+      '.ntfy-teams-approvewrap{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;}',
+      '.ntfy-teams-approvewrap--pending .ntfy-teams-autoapprove{',
+      'color:var(--dsw-alias-state-warn-primary) !important;',
+      'border-color:color-mix(in srgb, var(--dsw-alias-state-warn-primary) 50%, transparent) !important;',
+      'background:color-mix(in srgb, var(--dsw-alias-state-warn-primary) 12%, transparent) !important;}',
+      // 連 checkbox 也一起轉琥珀 —— 不然「藍色的勾 + 琥珀色的字」看起來像兩件事。
+      '.ntfy-teams-approvewrap--pending .ntfy-teams-autoapprovebox{',
+      'accent-color:var(--dsw-alias-state-warn-primary);}',
+      // 秒數：等寬數字，倒數時寬度不會跳動
+      '.ntfy-teams-approvecount{font-weight:700;font-variant-numeric:tabular-nums;',
+      'font-size:11px;line-height:1;}',
+      '.ntfy-teams-approvecancel{display:inline-flex;align-items:center;height:20px;',
+      'padding:0 8px;margin:0;border-radius:6px;cursor:pointer;font:inherit;font-size:11px;',
+      'line-height:1;white-space:nowrap;',
+      'color:var(--dsw-alias-label-primary);',
+      'border:1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 22%, transparent);',
+      'background:var(--dsw-alias-bg-layer-1);}',
+      '.ntfy-teams-approvecancel:hover{background:color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);}',
+      '.ntfy-teams-approvecancel:focus-visible{outline:2px solid var(--dsw-static-blue-500);outline-offset:1px;}',
+      // 倒數時多出「Ns」與「取消」約 50px；窄畫面就先犧牲「永遠滾到最新」的文字
+      // （那顆在這一行裡最不重要），避免整列被擠爆。
+      // ⚠️ staybottom 是 approvewrap 的**兄弟**，不是子節點 —— 所以要用 :has 選父層。
+      '@media (max-width:1050px){',
+      '.ntfy-teams-composemeta:has(.ntfy-teams-approvewrap--pending) .ntfy-teams-staybottomtext{',
+      'display:none;}}',
+
       // ---- 優先級：分段控制 ----
       //
       // 視覺語言：強度用「格數」表達（1..4 格實心），顏色用紅色系深淺
@@ -8016,6 +8047,19 @@ window.__ModuleLoader__.load({
     var DEFAULT_PRIORITY = 3;
 
     /**
+     * 自動批準的延遲秒數。
+     *
+     * 需求：「自動回覆，延遲 5s，有倒計時效果，中途可以取消」。
+     *
+     * 這個延遲是**安全機制**，不是為了好看：ntfy 沒有撤回，送出去就收不回來，
+     * 而自動批準是「代替使用者發言」。5 秒讓人來得及在看到不對時取消
+     * （例如那句話其實是在討論、不是在請求核准）。
+     *
+     * @type {number}
+     */
+    var AUTO_APPROVE_DELAY_SEC = 5;
+
+    /**
      * 優先級的選項（四級）。
      *
      * `level` 同時是「第幾格」與「強度」：四格做出階梯狀，選到第 n 級就亮前 n 格。
@@ -8201,30 +8245,62 @@ window.__ModuleLoader__.load({
             e(PersonGlyph),
             e('span', { className: 'ntfy-teams-sendastext' },
               sendAs !== '' ? sendAs : '未設定名稱')),
-          // ---- 自動批準 ----
+          // ---- 自動批準（＋倒數期間的取消鈕）----
           //
           // 標籤刻意**簡短**（回饋：「解釋太多了」、「文本簡約」）：
           // 平常只要看得懂「這是什麼開關」，詳細規則（觸發字串、回什麼、
           // 還需要 hermes-agent 標籤…）放在 tooltip 裡 ——
           // 想知道的人滑過去就有，不想知道的人不必每次讀一整句。
-          e('label', {
-            className: 'ntfy-teams-autoapprove',
-            // tooltip 要把「還需要 hermes-agent 標籤」寫出來 —— 少了這句，
-            // 使用者會以為只要有人打出那句話就會被自動回覆。
-            title: '自動批準：收到帶 hermes-agent 標籤、且含「/approve session」的訊息時，自動回覆「/approve」'
+          //
+          // 延遲期間（倒數中）這顆膠囊會**變成倒數狀態**：顯示剩幾秒 + 一顆取消鈕。
+          // 就地變身而不是另外彈一個 toast —— 使用者的視線本來就在這裡，
+          // 而且「哪裡開啟、就在哪裡取消」比多一個浮層好理解。
+          //
+          // ⚠️ 取消鈕**不能**放在 label 裡面：label 會把點擊轉給 checkbox，
+          // 按「取消」就會順便關掉整個開關（那不是使用者的意思）。
+          // 所以 label 與取消鈕是同一個 wrapper 的兄弟節點。
+          e('span', {
+            className: 'ntfy-teams-approvewrap'
+              + (props.approvePending ? ' ntfy-teams-approvewrap--pending' : '')
           },
-            e('input', {
-              type: 'checkbox',
-              className: 'ntfy-teams-autoapprovebox',
-              checked: !!props.autoApproveOn,
-              disabled: !canPublish,
-              onChange: function (ev) {
-                if (typeof props.onToggleAutoApprove === 'function') {
-                  props.onToggleAutoApprove(ev.target.checked);
+            e('label', {
+              className: 'ntfy-teams-autoapprove',
+              // tooltip 要把「還需要 hermes-agent 標籤」寫出來 —— 少了這句，
+              // 使用者會以為只要有人打出那句話就會被自動回覆。
+              title: props.approvePending
+                ? '倒數中：' + props.approveLeftSec + ' 秒後會自動回覆「' + props.approvePending.text
+                  + '」。按「取消」可以不送。'
+                : '自動批準：收到帶 hermes-agent 標籤、且含「/approve session」的訊息時，'
+                  + '延遲 ' + AUTO_APPROVE_DELAY_SEC + ' 秒後自動回覆「/approve」（期間可取消）'
+            },
+              e('input', {
+                type: 'checkbox',
+                className: 'ntfy-teams-autoapprovebox',
+                checked: !!props.autoApproveOn,
+                disabled: !canPublish,
+                onChange: function (ev) {
+                  if (typeof props.onToggleAutoApprove === 'function') {
+                    props.onToggleAutoApprove(ev.target.checked);
+                  }
                 }
-              }
-            }),
-            e('span', { className: 'ntfy-teams-autoapprovetext' }, '自動批準')
+              }),
+              props.approvePending
+                ? e('span', { className: 'ntfy-teams-autoapprovetext' },
+                  '自動批準 ',
+                  e('b', { className: 'ntfy-teams-approvecount' }, props.approveLeftSec + 's')
+                )
+                : e('span', { className: 'ntfy-teams-autoapprovetext' }, '自動批準')
+            ),
+            props.approvePending
+              ? e('button', {
+                type: 'button',
+                className: 'ntfy-teams-approvecancel',
+                title: '取消這次自動回覆',
+                onClick: function () {
+                  if (typeof props.onCancelAutoApprove === 'function') props.onCancelAutoApprove();
+                }
+              }, '取消')
+              : null
           ),
           // ---- 永遠滾到最新 ----
           //
@@ -8630,6 +8706,10 @@ window.__ModuleLoader__.load({
       }
 
       var activeMessages = (active && snapshot.messagesByTopic && snapshot.messagesByTopic[active]) || [];
+      // 給計時器用的「目前主題」：setTimeout 的 callback 只認得建立當下的閉包，
+      // 用 ref 才讀得到**當下**的主題（倒數期間使用者可能已經切走了）。
+      var activeRef = React.useRef(active);
+      activeRef.current = active;
       var activeStatus = statusOf(snapshot, active);
       var activeFailure = active ? failures[active] : null;
       var cred = credOf();
@@ -8713,9 +8793,42 @@ window.__ModuleLoader__.load({
 
       var approveBusyRef = React.useRef(false);
       var approveIdRef = React.useRef('');
+
+      /**
+       * 待送出的自動批準（延遲期間的狀態）。
+       *
+       * 需求：「自動回覆，延遲 5s，有倒計時效果，中途可以取消」。
+       *
+       * 形狀：`{ topic, id, text, deadline }` 或 `null`。
+       *   * `topic`：要回覆到哪個主題（**送出時會再確認它還是當前主題**）；
+       *   * `id`：觸發訊息的 id（送成功後記進「已回過」清單）；
+       *   * `text`：要送出的內容（先算好，倒數期間不必再判定一次）；
+       *   * `deadline`：送到哪個時間點（`Date.now()` 毫秒）。
+       *
+       * ⚠️ 用**截止時間**而不是「每秒 -1 的計數器」：
+       * 計數器版本要等第一個 interval 才顯示，所以畫面慢一秒，
+       * 總延遲變成 6 秒而不是 5 秒（實測：觸發後 1.5 秒才顯示 4s）。
+       * 截止時間版本在**排程的當下**就能算出剩幾秒，畫面立刻正確。
+       *
+       * 為什麼要讓使用者能取消：這是**代替使用者發言**的功能，
+       * 而且 ntfy 沒有「撤回」—— 送出去就收不回來。
+       * 這幾秒的窗口讓人來得及在看到內容不對時喊停（例如那句話其實是在討論、
+       * 不是在請求核准）。「來不及取消」比「多等幾秒」嚴重得多。
+       */
+      var approvePendingState = React.useState(null);
+      var approvePending = approvePendingState[0];
+      var setApprovePending = approvePendingState[1];
+
+      /** 取消待送出的自動批準。 */
+      function cancelApprove() {
+        setApprovePending(null);
+      }
+
+      // 判定：有新訊息符合條件就**排程**（不是立刻送出）。
       React.useEffect(function () {
         if (!active || !autoApproveOn) return;
         if (approveBusyRef.current) return;
+        if (approvePending) return;      // 已經有一個在倒數，不重複排隊
         if (!core || typeof core.autoApproveDecision !== 'function') return;
         var list = (snapshot.messagesByTopic && snapshot.messagesByTopic[active]) || [];
         if (!list.length) return;
@@ -8735,15 +8848,70 @@ window.__ModuleLoader__.load({
         // 而且下一次的判定會被同一則舊訊息佔住。
         approveIdRef.current = id;
         if (!verdict) return;
-        approveBusyRef.current = true;
-        publishToTopic(active, verdict.reply, {}).then(function (r) {
-          approveBusyRef.current = false;
-          // 只有**送成功**才記「回過了」：先記再送的話，送失敗就永遠不會重試。
-          if (r && r.ok && typeof core.markAutoApproveReplied === 'function') {
-            core.markAutoApproveReplied(active, verdict.id);
-          }
+        setApprovePending({
+          topic: active,
+          id: verdict.id,
+          text: verdict.reply,
+          deadline: Date.now() + AUTO_APPROVE_DELAY_SEC * 1000
         });
-      }, [active, activeMessages.length, autoApproveOn]);
+      }, [active, activeMessages.length, autoApproveOn, approvePending]);
+
+      // 倒數：依截止時間算出剩幾秒（畫面用），歸零就送出。
+      //
+      // 每 100ms 檢查一次而不是每 1000ms：這樣「5s」在排程後立刻出現，
+      // 而且不會因為 interval 的相位而多等將近一秒。
+      React.useEffect(function () {
+        if (!approvePending) return undefined;
+        /** 依截止時間重畫（必要時順便送出）。 */
+        function tick() {
+          var leftMs = approvePending.deadline - Date.now();
+          if (leftMs > 0) {
+            var sec = Math.ceil(leftMs / 1000);
+            setApprovePending(function (cur) {
+              if (!cur) return null;
+              if (cur.left === sec) return cur;          // 同一秒不重畫
+              return {
+                topic: cur.topic, id: cur.id, text: cur.text,
+                deadline: cur.deadline, left: sec
+              };
+            });
+            return;
+          }
+          // 歸零 → 送出。**送出前再確認一次這個主題還是當前主題** ——
+          // 倒數期間使用者可能已經切走了，那就不該再代替他發言。
+          if (approvePending.topic === activeRef.current) {
+            approveBusyRef.current = true;
+            publishToTopic(approvePending.topic, approvePending.text, {}).then(function (r) {
+              approveBusyRef.current = false;
+              // 只有**送成功**才記「回過了」：先記再送的話，送失敗就永遠不會重試。
+              if (r && r.ok && core && typeof core.markAutoApproveReplied === 'function') {
+                core.markAutoApproveReplied(approvePending.topic, approvePending.id);
+              }
+            });
+          }
+          setApprovePending(null);
+        }
+        var timer = setInterval(tick, 100);
+        tick();
+        return function () { clearInterval(timer); };
+      }, [approvePending === null ? '' : approvePending.deadline]);
+
+      // 切換主題 / 關掉開關 → 取消待送出的。這是「保護使用者」的一部分：
+      // 他已經不看那個主題了，就不該還替他送出。
+      React.useEffect(function () {
+        setApprovePending(function (cur) {
+          if (!cur) return null;
+          if (cur.topic !== active || !autoApproveOn) return null;
+          return cur;
+        });
+      }, [active, autoApproveOn]);
+
+      /** 倒數剩幾秒（畫面用）。 @returns 秒數。 */
+      function approveLeftSec() {
+        if (!approvePending) return 0;
+        if (typeof approvePending.left === 'number') return approvePending.left;
+        return Math.max(1, Math.ceil((approvePending.deadline - Date.now()) / 1000));
+      }
 
       /** 切換自動回應。 @param next - 是否開啟。 */
       function toggleAutoApprove(next) {
@@ -8982,6 +9150,10 @@ window.__ModuleLoader__.load({
           // 自動回應開關（見上面 autoApproveOn 的說明）。
           autoApproveOn: autoApproveOn,
           onToggleAutoApprove: toggleAutoApprove,
+          // 倒數中：顯示剩幾秒 + 取消鈕（見 approvePending 的說明）。
+          approvePending: approvePending,
+          approveLeftSec: approveLeftSec(),
+          onCancelAutoApprove: cancelApprove,
           // 「永遠滾到最新」開關。
           stayAtBottom: stayAtBottom,
           onToggleStayAtBottom: toggleStayAtBottom

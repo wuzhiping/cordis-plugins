@@ -2766,6 +2766,76 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     core.store.removeTopic('pub_prio');
   });
 
+  test('★ 自動批準倒數中：顯示秒數、有取消鈕，而且取消鈕不在 label 裡', () => {
+    // 需求：「自動回覆，延遲 5s，有倒計時效果，中途可以取消」。
+    //
+    // 這條驗**倒數狀態的 UI**（時間行為由瀏覽器驗，見 test 註解）。
+    // 秒數是由 MainPanel 依「截止時間」算好後用 props 傳進來的
+    // （`approvePending` 本身只帶 deadline，見 client.js 的說明）。
+    const pending = {
+      topic: 'pub_ap', id: 'm1', text: '/approve',
+      deadline: Date.now() + 3000
+    };
+    const render = (withPending) => {
+      const { harness, core, seats } = freshPanel();
+      core.store.ensureTopic('pub_ap');
+      core.store.setActiveTopic('pub_ap');
+      core.setIdentity('shawoo');
+      const out = [];
+      walk(harness, harness.render(seats['main:ntfy-teams'].component, {}), out, 0);
+      return { nodes: out, harness, pending: withPending ? pending : null };
+    };
+
+    // 1) 沒有倒數時：沒有取消鈕、沒有秒數
+    const idle = render(false);
+    assert.ok(!findNode(idle.nodes, 'ntfy-teams-approvecancel'),
+      '沒有倒數時不該出現取消鈕');
+    assert.ok(!findNode(idle.nodes, 'ntfy-teams-approvecount'),
+      '沒有倒數時不該出現秒數');
+
+    // 2) 倒數中：膠囊變成 pending 狀態
+    //
+    // ⚠️ Composer 的 pending 來自 props（`props.approvePending`），
+    // 而 props 由 MainPanel 決定 —— 離線這裡直接餵給 Composer 太麻煩，
+    // 所以改成驗**元件本身**：把 Composer 當普通函式呼叫。
+    const Composer = idle.nodes && null;   // 佔位：下面直接用 exports 取
+    const { exports: mod } = freshPanel();
+    const C = mod.__test && mod.__test.Composer;
+    if (typeof C === 'function') {
+      const nodes = [];
+      walk(idle.harness, C({
+        topic: 'pub_ap', identity: 'shawoo', canPublish: true,
+        autoApproveOn: true, approvePending: pending, approveLeftSec: 3
+      }), nodes, 0);
+      assert.ok(findNode(nodes, 'ntfy-teams-approvewrap--pending'),
+        '倒數中 wrapper 要有 pending 標記（CSS 靠它上色）');
+      const count = findNode(nodes, 'ntfy-teams-approvecount');
+      assert.ok(count, '倒數中要顯示秒數');
+      assert.strictEqual(
+        walkInto(idle.harness, count).map((n) => n.text).join(''),
+        '3s', '要顯示剩幾秒');
+      assert.ok(findNode(nodes, 'ntfy-teams-approvecancel'), '倒數中要有取消鈕');
+
+      // ★ 取消鈕不能在 label 裡面 —— 否則點它會連帶切換 checkbox
+      const label = findNode(nodes, 'ntfy-teams-autoapprove');
+      const insideLabel = walkInto(idle.harness, label)
+        .some((n) => n.cls && String(n.cls).indexOf('ntfy-teams-approvecancel') !== -1);
+      assert.ok(!insideLabel,
+        '取消鈕**不能**放在 label 內（點它會順便關掉開關）');
+
+      // 秒數剩 1 時顯示 1s（而不是 0s）
+      const nodes0 = [];
+      walk(idle.harness, C({
+        topic: 'pub_ap', identity: 'shawoo', canPublish: true,
+        autoApproveOn: true, approvePending: pending, approveLeftSec: 1
+      }), nodes0, 0);
+      assert.strictEqual(
+        walkInto(idle.harness, findNode(nodes0, 'ntfy-teams-approvecount'))
+          .map((n) => n.text).join(''),
+        '1s', '剩 1 秒時顯示 1s');
+    }
+  });
+
   test('★ 優先級不進設定：開面板永遠是預設值', () => {
     // 需求：「切換 topic 恢復預設，不用保存它狀態」。
     //
@@ -2835,7 +2905,9 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     const kidCls = (meta.children || []).map((c) => (c && c.props && c.props.className) || '');
     const hasKid = (cls) => kidCls.some((c) => String(c).split(/\s+/).indexOf(cls) !== -1);
     assert.ok(hasKid('ntfy-teams-sendas'), '身分要在這一列裡');
-    assert.ok(hasKid('ntfy-teams-autoapprove'), '自動批準要在這一列裡');
+    // 自動批準包在一個 wrapper 裡：取消鈕是它的兄弟節點 —— 不能放進 label 內，
+    // 否則按「取消」會順帶切換 checkbox。
+    assert.ok(hasKid('ntfy-teams-approvewrap'), '自動批準（含取消鈕的位置）要在這一列裡');
     assert.ok(hasKid('ntfy-teams-staybottom'), '永遠滾到最新要在這一列裡');
 
     // 兩個開關不再是獨立的一整列（以前它們各是一個 flex 子項、排在 meta 之前）
