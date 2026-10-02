@@ -1637,6 +1637,38 @@ check('★ markReadToLatest 也要清未讀（點「N 則新訊息」跳過去�
   core.store.removeTopic('rdc');
 });
 
+check('永遠滾到最新：每個主題一份開關，且壞設定不會讓核心爆掉', function () {
+  // 需求：「再加一個 checkbox，如果選中，當前 topic 永遠滾動到最新」。
+  // 這個開關住在 config.yml（要跨重新整理），所以驗它的持久化與正規化。
+  core.saveConfig({ stayAtBottom: {} });
+  assert.deepStrictEqual(core.readConfig().stayAtBottom, {}, '起點應為空表');
+
+  core.setStayAtBottom('sab_a', true);
+  assert.strictEqual(core.readConfig().stayAtBottom.sab_a.on, true, '應記下已開啟');
+
+  // 每個主題各自一份：另一個主題不受影響
+  assert.strictEqual(core.readConfig().stayAtBottom.sab_b, undefined,
+    '沒勾的主題不該被建立');
+
+  core.setStayAtBottom('sab_a', false);
+  assert.strictEqual(core.readConfig().stayAtBottom.sab_a.on, false, '應能關閉');
+
+  // 主題名不合法 → 不建立、不爆
+  assert.strictEqual(core.setStayAtBottom('', true), null, '空主題名應回 null');
+  assert.deepStrictEqual(Object.keys(core.readConfig().stayAtBottom), ['sab_a'],
+    '不合法的呼叫不該留下垃圾');
+
+  // 壞掉的設定（使用者手改 config.yml）→ 正規化成空表
+  core.saveConfig({ stayAtBottom: 'nope' });
+  assert.deepStrictEqual(core.readConfig().stayAtBottom, {}, '壞設定應被正規化成空表');
+  core.saveConfig({ stayAtBottom: { '': { on: true }, sab_c: { on: 'yes' } } });
+  assert.strictEqual(core.readConfig().stayAtBottom.sab_c.on, false,
+    'on 不是 true 就當成 false');
+  assert.strictEqual(core.readConfig().stayAtBottom[''], undefined, '空主題名要被濾掉');
+
+  core.saveConfig({ stayAtBottom: {} });
+});
+
 check('「讀到哪」在同一 session 內保留，但不再跨重新整理（不再用 localStorage）', function () {
   // 舊行為：lastReadIdByTopic 會被寫進 localStorage，重開後還原。
   // 新行為：這個外掛不使用 localStorage，所以「讀到哪」只活在記憶體 ——

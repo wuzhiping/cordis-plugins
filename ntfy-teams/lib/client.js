@@ -97,7 +97,9 @@ window.__ModuleLoader__.load({
         dashboardMinWidth: 300,
         dashboardMaxWidth: 1300,
         // 每個主題的「自動回應」設定（見 normalizeAutoApprove 的說明）。
-        autoApprove: {}
+        autoApprove: {},
+        // 每個主題的「永遠滾到最新」開關（見 normalizeStayAtBottom 的說明）。
+        stayAtBottom: {}
       };
 
       /** 支持的鉴权模式。 */
@@ -492,8 +494,45 @@ window.__ModuleLoader__.load({
           if (persisted.aliases !== undefined) out.aliases = normalizeTopicAliases(persisted.aliases);
           out.dashboardWidth = clampDashboardWidth(persisted.dashboardWidth, out.dashboardWidth);
           if (persisted.autoApprove !== undefined) out.autoApprove = normalizeAutoApprove(persisted.autoApprove);
+          if (persisted.stayAtBottom !== undefined) out.stayAtBottom = normalizeStayAtBottom(persisted.stayAtBottom);
           if (persisted.defaultTopicAdded === true) out.defaultTopicAdded = true;
         }
+        return out;
+      }
+
+      /**
+       * 把「每個主題一份、內容是 { on, ids }」的設定正規化。
+       *
+       * 抽成共用的是刻意的：自動回應與「永遠滾到最新」是同一個形狀
+       * （`{ 主題: { on, ids } }`）。這種「同一份邏輯有兩份實作」的地方
+       * 正是本專案最容易出錯的來源（見 HANDOFF §3.B／§3.L），所以只留一份。
+       *
+       * @param value - 任何輸入。
+       * @param maxIds - ids 最多保留幾筆（0 = 不保留 ids）。
+       * @returns 正規化後的設定物件。
+       */
+      function normalizeTopicToggleMap(value, maxIds) {
+        var out = {};
+        if (!value || typeof value !== 'object') return out;
+        Object.keys(value).forEach(function (topic) {
+          var name = normalizeTopic(topic);
+          if (!name) return;
+          var entry = value[topic];
+          if (!entry || typeof entry !== 'object') return;
+          var ids = Array.isArray(entry.ids) ? entry.ids : [];
+          var cleaned = [];
+          for (var i = 0; i < ids.length; i += 1) {
+            var id = ids[i];
+            if (id === null || id === undefined || id === '') continue;
+            var s = String(id);
+            if (cleaned.indexOf(s) === -1) cleaned.push(s);
+          }
+          if (maxIds > 0 && cleaned.length > maxIds) {
+            cleaned = cleaned.slice(cleaned.length - maxIds);
+          }
+          if (maxIds <= 0) cleaned = [];
+          out[name] = { on: entry.on === true, ids: cleaned };
+        });
         return out;
       }
 
@@ -511,28 +550,20 @@ window.__ModuleLoader__.load({
        * @returns 正規化後的設定物件。
        */
       function normalizeAutoApprove(value) {
-        var out = {};
-        if (!value || typeof value !== 'object') return out;
-        Object.keys(value).forEach(function (topic) {
-          var name = normalizeTopic(topic);
-          if (!name) return;
-          var entry = value[topic];
-          if (!entry || typeof entry !== 'object') return;
-          var ids = Array.isArray(entry.ids) ? entry.ids : [];
-          var cleaned = [];
-          for (var i = 0; i < ids.length; i += 1) {
-            var id = ids[i];
-            if (id === null || id === undefined || id === '') continue;
-            var s = String(id);
-            if (cleaned.indexOf(s) === -1) cleaned.push(s);
-          }
-          // 只留最近 AUTOAPPROVE_MAX_IDS 筆。
-          if (cleaned.length > AUTOAPPROVE_MAX_IDS) {
-            cleaned = cleaned.slice(cleaned.length - AUTOAPPROVE_MAX_IDS);
-          }
-          out[name] = { on: entry.on === true, ids: cleaned };
-        });
-        return out;
+        return normalizeTopicToggleMap(value, AUTOAPPROVE_MAX_IDS);
+      }
+
+      /**
+       * 「永遠滾到最新」設定：`{ [topic]: { on: boolean, ids: [] } }`。
+       *
+       * 形狀跟自動回應一樣只是為了共用正規化；`ids` 對它沒有意義（它不需要去重），
+       * 所以一律收成空陣列。
+       *
+       * @param value - 任何輸入。
+       * @returns 正規化後的設定物件。
+       */
+      function normalizeStayAtBottom(value) {
+        return normalizeTopicToggleMap(value, 0);
       }
 
       /**
@@ -594,6 +625,22 @@ window.__ModuleLoader__.load({
         return true;
       }
 
+      /**
+       * 開啟／關閉某個主題的「永遠滾到最新」。
+       *
+       * @param topic - 主題名。
+       * @param on - 是否開啟。
+       * @returns 更新後的該主題設定。
+       */
+      function setStayAtBottom(topic, on) {
+        var name = normalizeTopic(topic);
+        if (!name) return null;
+        var current = normalizeStayAtBottom(readConfig().stayAtBottom);
+        current[name] = { on: on === true, ids: [] };
+        saveConfig({ stayAtBottom: current });
+        return current[name];
+      }
+
       /** 合并写入配置（部分字段即可），返回写入后的完整配置。 */
       function saveConfig(partial) {    var current = readConfig();
         if (partial && typeof partial === 'object') {
@@ -621,6 +668,9 @@ window.__ModuleLoader__.load({
           // 自動回應設定：整張表替換（語意單純，跟 aliases 一樣）。
           if (partial.autoApprove !== undefined) {
             current.autoApprove = normalizeAutoApprove(partial.autoApprove);
+          }
+          if (partial.stayAtBottom !== undefined) {
+            current.stayAtBottom = normalizeStayAtBottom(partial.stayAtBottom);
           }
           // 預設主題的「已加過」記號：只寫 true，不寫回 false（加過就是加過）。
           if (partial.defaultTopicAdded === true) current.defaultTopicAdded = true;
@@ -3157,6 +3207,10 @@ window.__ModuleLoader__.load({
           AUTO_APPROVE_TRIGGER: AUTO_APPROVE_TRIGGER,
           AUTO_APPROVE_REPLY: AUTO_APPROVE_REPLY,
 
+          // 永遠滾到最新（每個主題一份開關）
+          setStayAtBottom: setStayAtBottom,
+          normalizeStayAtBottom: normalizeStayAtBottom,
+
           // 错误描述
           describeError: describeError,
 
@@ -3414,6 +3468,7 @@ window.__ModuleLoader__.load({
             if (cfg.aliases && typeof cfg.aliases === 'object') partial.aliases = cfg.aliases;
             if (cfg.dashboardWidth !== undefined) partial.dashboardWidth = cfg.dashboardWidth;
             if (cfg.autoApprove !== undefined) partial.autoApprove = cfg.autoApprove;
+            if (cfg.stayAtBottom !== undefined) partial.stayAtBottom = cfg.stayAtBottom;
             try { core.saveConfig(partial); } catch (err) { /* 單一欄位壞掉不該讓整次同步失敗 */ }
           }
           // 憑證進記憶體快取（不寫 localStorage —— YAML 才是持久層）。
@@ -3561,7 +3616,9 @@ window.__ModuleLoader__.load({
           // 自動回應（每個主題的開關 + 已回過的訊息 id）。
           // 一定要帶上：`saveConfig` 只寫記憶體，漏了這個欄位
           // 勾選就不會進 config.yml，重新整理就沒了。
-          autoApprove: cfg.autoApprove || {}
+          autoApprove: cfg.autoApprove || {},
+          // 「永遠滾到最新」的每個主題開關（同理：漏了就存不進 config.yml）。
+          stayAtBottom: cfg.stayAtBottom || {}
         };
       } catch (err) {
         return { ok: false, error: '讀不到設定：' + text(err && err.message) };
@@ -4985,7 +5042,22 @@ window.__ModuleLoader__.load({
       '.ntfy-teams-autoapprove code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;',
       'font-size:11px;padding:0 3px;border-radius:4px;',
       'background:color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);',
-      'color:var(--dsw-alias-label-primary);}'
+      'color:var(--dsw-alias-label-primary);}',
+
+      // ---- 永遠滾到最新（與自動回應同一套視覺語言，但用綠色區分）----
+      '.ntfy-teams-staybottom{display:flex;align-items:center;gap:7px;flex:0 0 auto;',
+      'padding:5px 9px;margin-bottom:7px;border:1px solid var(--dsw-alias-border-l1);',
+      'border-radius:8px;cursor:pointer;font-size:11.5px;',
+      'color:var(--dsw-alias-label-secondary);',
+      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 3%, transparent);}',
+      '.ntfy-teams-staybottom:hover{background:color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);}',
+      '.ntfy-teams-staybottom:has(.ntfy-teams-staybottombox:checked){',
+      'color:var(--dsw-static-green-600);',
+      'border-color:color-mix(in srgb, var(--dsw-static-green-500) 45%, transparent);',
+      'background:color-mix(in srgb, var(--dsw-static-green-500) 10%, transparent);}',
+      '.ntfy-teams-staybottombox{flex:0 0 auto;width:14px;height:14px;margin:0;cursor:pointer;',
+      'accent-color:var(--dsw-static-green-500);}',
+      '.ntfy-teams-staybottomtext{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}'
     ].concat(AVATAR_CSS).join('');
 
     // =========================================================================
@@ -6503,6 +6575,17 @@ window.__ModuleLoader__.load({
     var streamFollowingRef = { current: true };
 
     /**
+     * 「請訊息串跳到最尾端」的請求（模組層）。
+     *
+     * 由 `MainPanel`（勾選「永遠滾到最新」的那一瞬間）寫入，`MessageList` 讀取並清掉。
+     * 為什麼要這樣傳：捲動容器在 `MessageList` 身上，而開關在 `MainPanel`；
+     * 「剛勾選就立刻捲到底」需要跨元件呼叫。
+     *
+     * @type {{ current: ?function }}
+     */
+    var streamJumpToEndRef = { current: null };
+
+    /**
      * 一顆跳轉用的箭頭／符號圖示。
      *
      * @param props - { dir }：`'up'` 上箭頭、`'down'` 下箭頭、`'end'` 底部橫線。
@@ -6705,12 +6788,15 @@ window.__ModuleLoader__.load({
       //       如果是其他人發的就提示未讀」。
       //
       // 所以這裡的條件比舊版嚴格，三個都要成立：
-      //   1. `stickRef.current` —— 使用者還貼著底部（往上翻歷史時不打擾他）；
+      //   1. `props.stayAtBottom` 為真 **或** `stickRef.current` ——
+      //      「永遠滾到最新」打開時就無條件跟隨；否則要求使用者還貼著底部
+      //      （往上翻歷史時不打擾他）；
       //   2. 這一輪真的是「有新訊息」（不是切換主題或摺疊造成的重繪）；
-      //   3. 最新那一則是**自己發的**（`senderOf(..., selfName).isSelf`）。
+      //   3. 最新那一則是**自己發的**（`senderOf(..., selfName).isSelf`），
+      //      或者「永遠滾到最新」打開了（那就不管誰發的都要捲）。
       //
-      // 別人的訊息不捲 —— 由 store 累加未讀、由 `UnreadPill` 浮出提示條，
-      // 讓使用者自己決定什麼時候跳過去。
+      // 別人的訊息不捲（在開關關閉時）—— 由 store 累加未讀、由 `UnreadPill`
+      // 浮出提示條，讓使用者自己決定什麼時候跳過去。
       //
       // 為什麼還要 `syncSeenToViewport()`：自己發的那條捲到底之後，
       // 「讀到哪」要跟著推進到最新，否則未讀線會停在上一輪的位置又冒出來
@@ -6718,17 +6804,39 @@ window.__ModuleLoader__.load({
       React.useEffect(function () {
         var box = boxRef.current;
         if (!box) return;
-        if (!stickRef.current) return;
+        // ⚠️ 開了「永遠滾到最新」時**不看** stickRef：那個旗標在使用者自己往上捲
+        // 之後會變 false，但這個開關的語意就是「不管怎樣都回到最新」。
+        if (!props.stayAtBottom && !stickRef.current) return;
         var lastMsg = count > 0 ? messages[count - 1] : null;
         if (!lastMsg) return;
         // 只認「剛剛新增的那一則」：id 沒變就代表只是重繪，不要動捲動位置。
         var lastId = text(lastMsg.id);
         if (lastId === lastAutoScrollIdRef.current) return;
         lastAutoScrollIdRef.current = lastId;
-        if (!senderOf(lastMsg, props.selfName).isSelf) return;
+        // 開關打開時，別人的訊息也要捲（那正是這個開關的用途）。
+        if (!props.stayAtBottom && !senderOf(lastMsg, props.selfName).isSelf) return;
         box.scrollTop = box.scrollHeight;
+        stickRef.current = true;
+        streamFollowingRef.current = true;
         syncSeenToViewport();
-      }, [count, props.topic]);
+      }, [count, props.topic, props.stayAtBottom]);
+
+      // 勾選「永遠滾到最新」的那一瞬間要立刻捲到底 ——
+      // 否則使用者會覺得「勾了但畫面沒動」。MainPanel 透過模組層的 ref 請求。
+      React.useEffect(function () {
+        streamJumpToEndRef.current = function () {
+          var box = boxRef.current;
+          if (!box) return;
+          dropStick();
+          box.scrollTop = box.scrollHeight;
+          stickRef.current = true;
+          streamFollowingRef.current = true;
+          syncSeenToViewport();
+        };
+        return function () {
+          if (streamJumpToEndRef.current) streamJumpToEndRef.current = null;
+        };
+      }, []);
 
       // ---- 切換主題：捲到「上次讀到的那一則」----
       //
@@ -7913,6 +8021,28 @@ window.__ModuleLoader__.load({
             e('code', null, '/approve')
           )
         ),
+        // ---- 永遠滾到最新 ----
+        //
+        // 這一條會**覆蓋**「只有自己發的才跟隨」的預設行為，所以說明要寫清楚
+        // 「不管誰發的」—— 否則使用者會以為它跟提示條是同一件事。
+        e('label', {
+          className: 'ntfy-teams-staybottom',
+          title: '勾選後這個主題永遠捲到最新（不管訊息是誰發的）'
+        },
+          e('input', {
+            type: 'checkbox',
+            className: 'ntfy-teams-staybottombox',
+            checked: !!props.stayAtBottom,
+            onChange: function (ev) {
+              if (typeof props.onToggleStayAtBottom === 'function') {
+                props.onToggleStayAtBottom(ev.target.checked);
+              }
+            }
+          }),
+          e('span', { className: 'ntfy-teams-staybottomtext' },
+            '永遠滾到最新：不管誰發的訊息都自動捲到最底'
+          )
+        ),
         e('div', { className: 'ntfy-teams-composemeta' },
           e('span', { className: 'ntfy-teams-sendas' },
             e(PersonGlyph),
@@ -8433,6 +8563,39 @@ window.__ModuleLoader__.load({
         return entry;
       }
 
+      // ---- 「永遠滾到最新」開關 ----
+      //
+      // 需求：勾選後這個主題**永遠**捲到最新（不管訊息是誰發的）。
+      // 它會**覆蓋**「只有自己發的才跟隨」那條預設規則。
+      //
+      // 跟自動回應同一個坑：`saveConfig` 不會觸發 store 通知，
+      // 所以開關狀態必須用 React state，讀 config 的普通變數不會重繪。
+      var sabState = React.useState(function () {
+        return !!(core && core.readConfig && core.readConfig().stayAtBottom
+          && core.readConfig().stayAtBottom[active]
+          && core.readConfig().stayAtBottom[active].on === true);
+      });
+      var stayAtBottom = sabState[0];
+      var setStayAtBottomState = sabState[1];
+      React.useEffect(function () {
+        var cfgSab = (core && core.readConfig && core.readConfig().stayAtBottom) || {};
+        var want = !!(cfgSab[active] && cfgSab[active].on === true);
+        setStayAtBottomState(function (prev) { return prev === want ? prev : want; });
+      }, [active]);
+
+      /** 切換「永遠滾到最新」。 @param next - 是否開啟。 */
+      function toggleStayAtBottom(next) {
+        if (!core || typeof core.setStayAtBottom !== 'function') return;
+        var on = next === true;
+        setStayAtBottomState(on);
+        var entry = core.setStayAtBottom(active, on);
+        // 一勾選就立刻捲到底 —— 不然使用者會覺得「勾了但沒反應」。
+        if (on && typeof streamJumpToEndRef.current === 'function') streamJumpToEndRef.current();
+        // 跟其他設定一樣要寫回宿主，否則重新整理就沒了。
+        saveSubscriptions();
+        return entry;
+      }
+
       // 抬頭只留「這是什麼群組」：群組名 + 主題數。
       //
       // **不顯示伺服器**（連主機名都不顯示）：伺服器位址由外掛設定決定，
@@ -8566,6 +8729,8 @@ window.__ModuleLoader__.load({
         // （實測就是這個：storeUnread 2，pill 卻因為 count=0 而不畫）。
         unreadLive: unreadOfActive,
         lastReadId: pendingForActive.lastReadId,
+        // 「永遠滾到最新」開關：打開時訊息串無條件跟隨（見 MessageList 的說明）。
+        stayAtBottom: stayAtBottom,
         // 某一天抬頭上的問號：把那天整理成復盤材料，交給宿主建立一個帶著它的工作階段。
         onDayReview: function (day) {
           var topic = active;
@@ -8619,7 +8784,10 @@ window.__ModuleLoader__.load({
           identity: identity,
           // 自動回應開關（見上面 autoApproveOn 的說明）。
           autoApproveOn: autoApproveOn,
-          onToggleAutoApprove: toggleAutoApprove
+          onToggleAutoApprove: toggleAutoApprove,
+          // 「永遠滾到最新」開關。
+          stayAtBottom: stayAtBottom,
+          onToggleStayAtBottom: toggleStayAtBottom
         }));
       }
       // 版面：抬头（滿寬）在上，底下才是「主欄 ｜ 看板」。

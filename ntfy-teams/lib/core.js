@@ -45,7 +45,9 @@
     dashboardMinWidth: 300,
     dashboardMaxWidth: 1300,
     // 每個主題的「自動回應」設定（見 normalizeAutoApprove 的說明）。
-    autoApprove: {}
+    autoApprove: {},
+    // 每個主題的「永遠滾到最新」開關（見 normalizeStayAtBottom 的說明）。
+    stayAtBottom: {}
   };
 
   /** 支持的鉴权模式。 */
@@ -440,8 +442,45 @@
       if (persisted.aliases !== undefined) out.aliases = normalizeTopicAliases(persisted.aliases);
       out.dashboardWidth = clampDashboardWidth(persisted.dashboardWidth, out.dashboardWidth);
       if (persisted.autoApprove !== undefined) out.autoApprove = normalizeAutoApprove(persisted.autoApprove);
+      if (persisted.stayAtBottom !== undefined) out.stayAtBottom = normalizeStayAtBottom(persisted.stayAtBottom);
       if (persisted.defaultTopicAdded === true) out.defaultTopicAdded = true;
     }
+    return out;
+  }
+
+  /**
+   * 把「每個主題一份、內容是 { on, ids }」的設定正規化。
+   *
+   * 抽成共用的是刻意的：自動回應與「永遠滾到最新」是同一個形狀
+   * （`{ 主題: { on, ids } }`）。這種「同一份邏輯有兩份實作」的地方
+   * 正是本專案最容易出錯的來源（見 HANDOFF §3.B／§3.L），所以只留一份。
+   *
+   * @param value - 任何輸入。
+   * @param maxIds - ids 最多保留幾筆（0 = 不保留 ids）。
+   * @returns 正規化後的設定物件。
+   */
+  function normalizeTopicToggleMap(value, maxIds) {
+    var out = {};
+    if (!value || typeof value !== 'object') return out;
+    Object.keys(value).forEach(function (topic) {
+      var name = normalizeTopic(topic);
+      if (!name) return;
+      var entry = value[topic];
+      if (!entry || typeof entry !== 'object') return;
+      var ids = Array.isArray(entry.ids) ? entry.ids : [];
+      var cleaned = [];
+      for (var i = 0; i < ids.length; i += 1) {
+        var id = ids[i];
+        if (id === null || id === undefined || id === '') continue;
+        var s = String(id);
+        if (cleaned.indexOf(s) === -1) cleaned.push(s);
+      }
+      if (maxIds > 0 && cleaned.length > maxIds) {
+        cleaned = cleaned.slice(cleaned.length - maxIds);
+      }
+      if (maxIds <= 0) cleaned = [];
+      out[name] = { on: entry.on === true, ids: cleaned };
+    });
     return out;
   }
 
@@ -459,28 +498,20 @@
    * @returns 正規化後的設定物件。
    */
   function normalizeAutoApprove(value) {
-    var out = {};
-    if (!value || typeof value !== 'object') return out;
-    Object.keys(value).forEach(function (topic) {
-      var name = normalizeTopic(topic);
-      if (!name) return;
-      var entry = value[topic];
-      if (!entry || typeof entry !== 'object') return;
-      var ids = Array.isArray(entry.ids) ? entry.ids : [];
-      var cleaned = [];
-      for (var i = 0; i < ids.length; i += 1) {
-        var id = ids[i];
-        if (id === null || id === undefined || id === '') continue;
-        var s = String(id);
-        if (cleaned.indexOf(s) === -1) cleaned.push(s);
-      }
-      // 只留最近 AUTOAPPROVE_MAX_IDS 筆。
-      if (cleaned.length > AUTOAPPROVE_MAX_IDS) {
-        cleaned = cleaned.slice(cleaned.length - AUTOAPPROVE_MAX_IDS);
-      }
-      out[name] = { on: entry.on === true, ids: cleaned };
-    });
-    return out;
+    return normalizeTopicToggleMap(value, AUTOAPPROVE_MAX_IDS);
+  }
+
+  /**
+   * 「永遠滾到最新」設定：`{ [topic]: { on: boolean, ids: [] } }`。
+   *
+   * 形狀跟自動回應一樣只是為了共用正規化；`ids` 對它沒有意義（它不需要去重），
+   * 所以一律收成空陣列。
+   *
+   * @param value - 任何輸入。
+   * @returns 正規化後的設定物件。
+   */
+  function normalizeStayAtBottom(value) {
+    return normalizeTopicToggleMap(value, 0);
   }
 
   /**
@@ -542,6 +573,22 @@
     return true;
   }
 
+  /**
+   * 開啟／關閉某個主題的「永遠滾到最新」。
+   *
+   * @param topic - 主題名。
+   * @param on - 是否開啟。
+   * @returns 更新後的該主題設定。
+   */
+  function setStayAtBottom(topic, on) {
+    var name = normalizeTopic(topic);
+    if (!name) return null;
+    var current = normalizeStayAtBottom(readConfig().stayAtBottom);
+    current[name] = { on: on === true, ids: [] };
+    saveConfig({ stayAtBottom: current });
+    return current[name];
+  }
+
   /** 合并写入配置（部分字段即可），返回写入后的完整配置。 */
   function saveConfig(partial) {    var current = readConfig();
     if (partial && typeof partial === 'object') {
@@ -569,6 +616,9 @@
       // 自動回應設定：整張表替換（語意單純，跟 aliases 一樣）。
       if (partial.autoApprove !== undefined) {
         current.autoApprove = normalizeAutoApprove(partial.autoApprove);
+      }
+      if (partial.stayAtBottom !== undefined) {
+        current.stayAtBottom = normalizeStayAtBottom(partial.stayAtBottom);
       }
       // 預設主題的「已加過」記號：只寫 true，不寫回 false（加過就是加過）。
       if (partial.defaultTopicAdded === true) current.defaultTopicAdded = true;
@@ -3116,6 +3166,10 @@
       markAutoApproveReplied: markAutoApproveReplied,
       AUTO_APPROVE_TRIGGER: AUTO_APPROVE_TRIGGER,
       AUTO_APPROVE_REPLY: AUTO_APPROVE_REPLY,
+
+      // 永遠滾到最新（每個主題一份開關）
+      setStayAtBottom: setStayAtBottom,
+      normalizeStayAtBottom: normalizeStayAtBottom,
 
       // 错误描述
       describeError: describeError,

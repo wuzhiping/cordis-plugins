@@ -2583,6 +2583,63 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     on.core.saveConfig({ autoApprove: {} });
   });
 
+  test('永遠滾到最新：另一個 checkbox，且狀態跟著每個主題的設定', () => {
+    // 需求：「再加入一個 checkbox，如果選中，當前 topic 永遠滾動到最新」。
+    //
+    // 這個開關會**覆蓋**「只有自己發的才跟隨」的預設行為，
+    // 所以它必須是每個主題各自一份的設定（不是全域）。
+    /** 渲染面板並回傳節點。 @param on - 該主題的「永遠滾到最新」是否開啟。 @returns { nodes, core, harness, seats }。 */
+    const render = (on) => {
+      const { harness, core, seats } = freshPanel();
+      core.store.ensureTopic('pub_sab');
+      core.store.setActiveTopic('pub_sab');
+      core.setIdentity('shawoo');
+      core.saveConfig({ stayAtBottom: {} });
+      if (on) core.setStayAtBottom('pub_sab', true);
+      const nodes = [];
+      walk(harness, harness.render(seats['main:ntfy-teams'].component, {}), nodes, 0);
+      return { nodes, core, harness, seats };
+    };
+
+    /** 找出「永遠滾到最新」的 checkbox。 @param nodes - 走訪結果。 @returns 節點。 */
+    const box = (nodes) => nodes.filter((n) => n.tag === 'input'
+      && n.cls && String(n.cls).indexOf('ntfy-teams-staybottombox') !== -1)[0];
+
+    // 1) 未開啟
+    const off = render(false);
+    const offBox = box(off.nodes);
+    assert.ok(offBox, '應該有「永遠滾到最新」的 checkbox');
+    assert.strictEqual(offBox.props.type, 'checkbox', '要是 checkbox');
+    assert.ok(!offBox.props.checked, '未開啟時不該被勾選');
+
+    // 2) 有兩個 checkbox（自動回應 + 永遠滾到最新），而且都在輸入框之前
+    const inputs = off.nodes.filter((n) => n.tag === 'input' && n.props && n.props.type === 'checkbox');
+    assert.strictEqual(inputs.length, 2, '應該剛好兩個 checkbox，實際 ' + inputs.length);
+    const areaIdx = off.nodes.findIndex((n) => n.tag === 'textarea');
+    const boxIdx = off.nodes.indexOf(offBox);
+    assert.ok(boxIdx !== -1 && areaIdx !== -1 && boxIdx < areaIdx,
+      'checkbox 應該排在輸入框之前（需求：在 input 上面）');
+
+    // 3) 說明要寫出「不管誰發的」—— 否則會被誤解成跟未讀提示條同一件事
+    const text = off.nodes.filter((n) => n.tag === '#text').map((n) => n.text).join(' ');
+    assert.ok(text.indexOf('永遠滾到最新') !== -1, '要有「永遠滾到最新」字樣');
+    assert.ok(text.indexOf('不管誰發') !== -1,
+      '說明要講清楚「不管誰發的」，實際：' + text.slice(0, 160));
+
+    // 4) 已開啟 → 打勾，而且是**每個主題各自**的設定
+    const on = render(true);
+    assert.ok(box(on.nodes).props.checked, '開啟後應該打勾');
+    assert.strictEqual(on.core.readConfig().stayAtBottom.pub_sab.on, true, '設定應為開啟');
+
+    // 5) 每個主題各自一份：另一個沒勾過的主題必須是關著的
+    const second = render(false);
+    assert.strictEqual(second.core.readConfig().stayAtBottom.pub_sab, undefined,
+      '沒勾選過的主題不該有這筆設定');
+    assert.ok(!box(second.nodes).props.checked, '未開啟的主題應該是未勾選');
+
+    on.core.saveConfig({ stayAtBottom: {} });
+    second.core.saveConfig({ stayAtBottom: {} });
+  });
   test('不再有任何 localStorage 持久化入口（單一真相 = 宿主 YAML）', () => {
     const { exports: mod, core } = freshPanel();
     // 一次性遷移用的 readLegacyTopics 已經移除（它讀的是 localStorage）。
