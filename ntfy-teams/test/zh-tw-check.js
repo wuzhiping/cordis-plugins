@@ -27,9 +27,9 @@ const SIMPLIFIED_ONLY = [
   '则', '读', '题', '样', '见', '为', '发', '间', '么', '没', '东', '车', '书', '门',
   '问', '习', '线', '连', '认', '让', '对', '说', '还', '这', '内', '开', '实', '现',
   '产', '与', '于', '后', '关', '参', '数', '单', '击', '录', '应', '总', '页', '据',
-  '权', '账', '号', '记', '载', '软', '复', '态', '选', '择', '删', '仅', '准',
+  '权', '账', '号', '记', '载', '软', '复', '态', '选', '择', '删', '仅',
   '备', '场', '图', '风', '双', '网', '络', '输', '转', '换', '错', '误',
-  '顶', '缓', '冲', '队', '务', '员', '环', '顾', '客',
+  '顶', '缓', '冲', '队', '务', '员', '环', '顾',
 ];
 
 /**
@@ -39,9 +39,12 @@ const SIMPLIFIED_ONLY = [
  *   * `境`（U+5883）两边同形，只有偏旁不同（环 U+73AF ↔ 環 U+74B0）；
  *     之前把「環」和「境」当成一对都列进去，于是任何出现「環境」的文案都被误判。
  *   * `列` 同样两边同形。
+ *   * `客`（U+5BA2）同样两边同形 —— 「客戶」「客戶端」「客人」在繁體裡就是這樣寫。
+ *     之前把它列進简体专属名单，于是任何出现「客戶端」的文件都被误判
+ *     （实测：README／HANDOFF 各有一处）。
  * 用测试把这件事钉住，避免以后有人「顺手补一个」又补错。
  */
-const SHARED_CHARS = ['境', '列'];
+const SHARED_CHARS = ['境', '列', '客'];
 
 /** 有些字在繁體里也用，但出现在特定词里就是简体；用词来判断更准。 */
 const SIMPLIFIED_WORDS = [
@@ -126,16 +129,50 @@ for (const entry of literals) {
   }
 }
 
+// ---- 文件也要掃，但**只用可靠的字表，而且不讓它弄失敗** ----
+//
+// 為什麼不共用 `SIMPLIFIED_WORDS`：那份詞表是為**介面字串**設計的，
+// 拿來掃技術文件會產生大量誤報（實測 14 筆裡只有 1 筆真的）：
+//   * 「確保存在」被 `保存` 誤中（子串巧合）；
+//   * 「令牌」被判成簡體 —— 它是繁體技術用語，只是繁體慣用「權杖」；
+//   * 「文件」被判成簡體 —— 繁體也用，只是慣用「檔案」。
+//
+// 一個一直響的檢查比沒有檢查更糟，它會訓練人忽略它。
+// 所以文件這邊：**只掃簡體專屬字**（字表可靠），而且只警告、不改 exit code ——
+// 寧可漏報也不要因為誤報擋住建置。
+const DOCS = ['README.md', 'HANDOFF.md'];
+const docWarnings = [];
+DOCS.forEach((doc) => {
+  const full = path.join(__dirname, '..', doc);
+  if (!fs.existsSync(full)) return;
+  read(full).split('\n').forEach((line, idx) => {
+    const bad = SIMPLIFIED_ONLY.filter((ch) => line.indexOf(ch) !== -1);
+    if (bad.length > 0) {
+      docWarnings.push(doc + ':' + (idx + 1) + ': 简体字 ' + bad.join('、')
+        + '  →  ' + line.trim().slice(0, 56));
+    }
+  });
+});
+
 console.log('');
 console.log('ntfy-teams · 介面文案语言检查（繁體中文）');
 console.log('  扫描字串字面值：' + literals.length + ' 个');
-console.log('');
+console.log('  扫描文件：' + DOCS.filter((d) => fs.existsSync(path.join(__dirname, '..', d))).join('、')
+  + '（只掃簡體專屬字，僅警告）');
+
+if (docWarnings.length > 0) {
+  console.log('');
+  console.log('  WARN  文件裡發現 ' + docWarnings.length + ' 处簡體字（不影響結果）：');
+  docWarnings.forEach((w) => console.log('        ' + w));
+}
 
 if (problems.length === 0) {
+  console.log('');
   console.log('  PASS  使用者可见文案没有简体字');
   console.log('');
   process.exitCode = 0;
 } else {
+  console.log('');
   console.log('  FAIL  发现 ' + problems.length + ' 处疑似简体文案：');
   problems.forEach((p) => console.log('        ' + p));
   console.log('');

@@ -66,11 +66,43 @@
   /** 觸發自動回應的字串（訊息內**包含**它就算）。 */
   var AUTO_APPROVE_TRIGGER = '/approve session';
 
+  /**
+   * 自動回應還要求訊息帶有這個 tag。
+   *
+   * 為什麼要有這個限制：`/approve session` 是可以被任何人打出來的普通字串，
+   * 只看內文的話，任何人在這個主題裡打出那句話都會觸發自動回覆。
+   * 加上 tag 等於要求「這是 Hermes agent 產生的請求」，把觸發面縮到
+   * 我們真的想自動處理的來源。
+   *
+   * 比對方式：tag 逐個 trim + 轉小寫後比對（ntfy 的 tag 不分大小寫慣例，
+   * 而且從 HTTP 標頭讀進來的可能帶空白）。
+   */
+  var AUTO_APPROVE_TAG = 'hermes-agent';
+
   /** 自動回應要送出的內容。 */
   var AUTO_APPROVE_REPLY = '/approve';
 
   /** `ids` 最多保留幾筆（見 normalizeAutoApprove）。 */
   var AUTOAPPROVE_MAX_IDS = 50;
+
+  /**
+   * 訊息是否帶有某個 tag（不分大小寫、忽略前後空白）。
+   *
+   * @param msg - 正規化訊息。
+   * @param want - 要找的 tag。
+   * @returns 是否帶有。
+   */
+  function hasTag(msg, want) {
+    if (!msg || !Array.isArray(msg.tags) || msg.tags.length === 0) return false;
+    var target = String(want).trim().toLowerCase();
+    if (target === '') return false;
+    for (var i = 0; i < msg.tags.length; i += 1) {
+      var t = msg.tags[i];
+      if (t === null || t === undefined) continue;
+      if (String(t).trim().toLowerCase() === target) return true;
+    }
+    return false;
+  }
 
   /**
    * 判斷一則訊息是否應該觸發自動回應，以及該回什麼。
@@ -98,6 +130,8 @@
     if (!msg || typeof msg !== 'object') return null;
     var body = typeof msg.message === 'string' ? msg.message : '';
     if (body.indexOf(AUTO_APPROVE_TRIGGER) === -1) return null;
+    // 必須帶有指定的 tag（見 AUTO_APPROVE_TAG 的說明）。
+    if (!hasTag(msg, AUTO_APPROVE_TAG)) return null;
     // 自己發的不回應（防無限循環）。
     var self = normalizeIdentity(o.selfName);
     if (self === '') return null;
@@ -3165,6 +3199,7 @@
       setAutoApprove: setAutoApprove,
       markAutoApproveReplied: markAutoApproveReplied,
       AUTO_APPROVE_TRIGGER: AUTO_APPROVE_TRIGGER,
+      AUTO_APPROVE_TAG: AUTO_APPROVE_TAG,
       AUTO_APPROVE_REPLY: AUTO_APPROVE_REPLY,
 
       // 永遠滾到最新（每個主題一份開關）

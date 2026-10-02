@@ -838,6 +838,36 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
    * @param depth - 目前深度。
    * @param outer - 内部用：整棵树共用的外层快照。
    */
+  /**
+   * 把一個元素的子樹攤平成走訪節點（含文字）。
+   *
+   * ⚠️ 為什麼需要這個：`walk()` 產生的節點是**已經攤平過**的，`n.children` 是
+   * 原始 React 子元素（不是走訪節點）。所以不能對 `n.children` 直接再 `walk()`，
+   * 也不能用 `array.forEach(collect)` 去收集 —— `forEach` 會多傳 index 與陣列，
+   * 遞迴函式的第二個參數就被污染了，而且**不會報錯**，只會安靜地收不到東西。
+   *
+   * @param harness - 測試替身。
+   * @param element - 原始 React 元素（或節點）。
+   * @returns 走訪節點陣列。
+   */
+  function walkInto(harness, element) {
+    const out = [];
+    if (element === null || element === undefined) return out;
+    if (element.tag) {
+      // 已經是走訪節點 → 從它的原始 children 繼續。
+      walk(harness, element.children, out, 0);
+      return out;
+    }
+    walk(harness, element, out, 0);
+    return out;
+  }
+
+  /** 測試脚手架：找一個走訪節點。 @param nodes - 走訪結果。 @param cls - class 名。 @returns 節點。 */
+  function findNode(nodes, cls) {
+    return nodes.filter((n) => n.cls
+      && String(n.cls).split(/\s+/).indexOf(cls) !== -1)[0];
+  }
+
   function walk(harness, node, out, depth, outer) {
     if (outer === undefined) outer = harness.snapshot();
     if (node === null || node === undefined || depth > 40) return;
@@ -2536,7 +2566,7 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     //
     // 這裡驗 UI：checkbox 在、勾選狀態跟著設定、切換時會回報。
     // 「什麼時候真的該回」是純函式，由 core-node.js 驗（那裡才有完整的防護矩陣）。
-    /** 渲染面板並回傳節點。 @param on - 該主題的自動回應是否開啟。 @returns { nodes, toggled }。 */
+    /** 渲染面板並回傳節點。 @param on - 該主題的自動回應是否開啟。 @returns { nodes, core, harness }。 */
     const render = (on) => {
       const { harness, core, seats } = freshPanel();
       core.store.ensureTopic('pub_ap');
@@ -2546,7 +2576,7 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
       if (on) core.setAutoApprove('pub_ap', true);
       const nodes = [];
       walk(harness, harness.render(seats['main:ntfy-teams'].component, {}), nodes, 0);
-      return { nodes, core };
+      return { nodes, core, harness };
     };
 
     /** 找出自動回應的 checkbox。 @param nodes - 走訪結果。 @returns 節點。 */
@@ -2561,15 +2591,37 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     assert.ok(!offBox.props.checked, '未開啟時不該被勾選');
     assert.strictEqual(typeof offBox.props.onChange, 'function', '要能切換');
 
-    // 2) 說明要看得出「觸發什麼、回什麼」—— 這是會代替使用者發言的功能，
-    //    不能只寫「自動回應」四個字。
+    // 2) 標籤要**簡短**，但看得出這是什麼開關；完整規則放 tooltip。
+    //
+    // 回饋：「checkbox 的文本，解釋太多了，簡短一些」。
+    // 所以標籤只留名字（+ 觸發的那個指令），細節（觸發字串、只認即時推送、
+    // 不回應自己發的…）搬到 label 的 title。
     const allCls = (n, cls) => n.cls && String(n.cls).split(/\s+/).indexOf(cls) !== -1;
-    const labelNode = off.nodes.filter((n) => n.tag === 'label' && allCls(n, 'ntfy-teams-autoapprove'))[0];
+    const labelNode = findNode(off.nodes, 'ntfy-teams-autoapprove');
     assert.ok(labelNode, '應該有一個包住 checkbox 的 label（點文字也能切換）');
-    const labelText = off.nodes.filter((n) => n.tag === '#text').map((n) => n.text).join(' ');
-    assert.ok(labelText.indexOf('/approve session') !== -1,
-      '說明要寫出觸發字串，實際：' + labelText.slice(0, 120));
-    assert.ok(labelText.indexOf('/approve') !== -1, '說明要寫出回覆內容');
+    assert.strictEqual(labelNode.tag, 'label', '找到的應該是 label');
+
+    // ⚠️ 只看**這個 label 裡**的文字，不是整個面板的。
+    // （`nodes.filter(tag==='#text')` 會撈到整棵樹的文字，那樣長度斷言毫無意義 ——
+    //  實測第一次寫成這樣，量到 261 字而誤判。）
+    const text = walkInto(off.harness, labelNode)
+      .filter((n) => n.tag === '#text').map((n) => n.text).join(' ');
+    assert.ok(text.indexOf('自動批準') !== -1,
+      '標籤要看得出這是「自動批準」，實際：' + JSON.stringify(text));
+    assert.ok(text.indexOf('/approve') !== -1, '標籤要顯示會送出什麼指令');
+    assert.ok(text.length < 30,
+      '標籤應該簡短（不要一整句解釋），實際 ' + text.length + ' 字：' + JSON.stringify(text));
+    assert.ok(text.indexOf('自動批準') !== -1,
+      '標籤要看得出這是「自動批準」，實際：' + JSON.stringify(text));
+    assert.ok(text.indexOf('/approve') !== -1, '標籤要顯示會送出什麼指令');
+    assert.ok(text.length < 30,
+      '標籤應該簡短（不要一整句解釋），實際 ' + text.length + ' 字：' + JSON.stringify(text));
+    assert.ok(String(labelNode.props.title || '').indexOf('/approve session') !== -1,
+      '完整規則（含觸發字串）要放在 tooltip，實際：' + labelNode.props.title);
+    // ★ tooltip 必須寫出「還要帶 hermes-agent 標籤」—— 少了這句，使用者會以為
+    //   只要有人打出那句話就會被自動回覆，然後納悶為什麼沒反應。
+    assert.ok(String(labelNode.props.title || '').indexOf('hermes-agent') !== -1,
+      'tooltip 要說明還需要 hermes-agent 標籤，實際：' + labelNode.props.title);
 
     // 3) 已開啟：checkbox 打勾（狀態來自設定，不是元件自己的 state）
     const on = render(true);
@@ -2620,11 +2672,20 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     assert.ok(boxIdx !== -1 && areaIdx !== -1 && boxIdx < areaIdx,
       'checkbox 應該排在輸入框之前（需求：在 input 上面）');
 
-    // 3) 說明要寫出「不管誰發的」—— 否則會被誤解成跟未讀提示條同一件事
-    const text = off.nodes.filter((n) => n.tag === '#text').map((n) => n.text).join(' ');
-    assert.ok(text.indexOf('永遠滾到最新') !== -1, '要有「永遠滾到最新」字樣');
-    assert.ok(text.indexOf('不管誰發') !== -1,
-      '說明要講清楚「不管誰發的」，實際：' + text.slice(0, 160));
+    // 3) 說明要寫出「不管誰發的」—— 但**放在 tooltip**，不是佔掉標籤。
+    //    回饋：「checkbox 的文本，解釋太多了，簡短一些」。
+    const allText = off.nodes.filter((n) => n.tag === '#text').map((n) => n.text).join(' ');
+    assert.ok(allText.indexOf('永遠滾到最新') !== -1, '要有「永遠滾到最新」字樣');
+    const sabLabel = findNode(off.nodes, 'ntfy-teams-staybottom');
+    assert.ok(sabLabel, '應該有包含 checkbox 的 label');
+    assert.strictEqual(sabLabel.tag, 'label', '找到的應該是 label');
+    assert.ok(String(sabLabel.props.title || '').indexOf('不管訊息是誰發的') !== -1,
+      'tooltip 要講清楚「不管誰發的」，實際：' + sabLabel.props.title);
+    // 標籤本身只留標題（短），不要把整句解釋塞進去
+    const sabText = walkInto(off.harness, sabLabel)
+      .filter((n) => n.tag === '#text').map((n) => n.text).join(' ');
+    assert.ok(sabText.length < 20,
+      '標籤應該簡短，實際 ' + sabText.length + ' 字：' + JSON.stringify(sabText));
 
     // 4) 已開啟 → 打勾，而且是**每個主題各自**的設定
     const on = render(true);

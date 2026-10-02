@@ -1467,25 +1467,63 @@ check('別名持久化：reload（重讀 config）後還在，且不破壞其它
 
 group('自動回應：出現 /approve session 時回 /approve');
 
-check('自動回應：只有「開啟 + 即時來源 + 含觸發字串 + 不是自己發的」才回，且同一則只回一次', function () {
+check('自動回應：只有「開啟 + 即時來源 + 含觸發字串 + 帶 hermes-agent tag + 不是自己發的」才回，且同一則只回一次', function () {
   // 這個功能一旦誤觸發就是**往群組灌訊息**，所以每一道防護都要釘住。
   core.saveConfig({ identity: 'me' });
   var on = { t: { on: true, ids: [] } };
   var off = { t: { on: false, ids: [] } };
-  var trigger = { id: 'm1', time: 1, title: '#bob', message: 'please /approve session now' };
+  // 觸發訊息必須**同時**含觸發字串與指定的 tag（見 AUTO_APPROVE_TAG）。
+  var trigger = { id: 'm1', time: 1, title: '#bob', message: 'please /approve session now', tags: ['hermes-agent'] };
 
   // 1) 沒開啟 → 不回
   assert.strictEqual(core.autoApproveDecision({
     msg: trigger, source: 'sse', topic: 't', selfName: 'me', autoApprove: off
   }), null, '沒勾選就不該回');
 
-  // 2) 開啟 + 即時 + 含字串 + 別人發的 → 回 /approve
+  // 2) 開啟 + 即時 + 含字串 + 帶 tag + 別人發的 → 回 /approve
   var hit = core.autoApproveDecision({
     msg: trigger, source: 'sse', topic: 't', selfName: 'me', autoApprove: on
   });
   assert.ok(hit, '應該判定要回');
   assert.strictEqual(hit.reply, '/approve', '回覆內容應是 /approve');
   assert.strictEqual(hit.id, 'm1', '要帶回觸發訊息的 id（用來記「回過了」）');
+
+  // 2b) ★ 一定要有 hermes-agent tag —— 少了就不回。
+  //
+  // `/approve session` 是可以被任何人打出來的普通字串；只認內文的話，
+  // 任何人在這個主題打那句話都會被自動回覆。tag 把觸發面縮到 Hermes agent。
+  assert.strictEqual(core.autoApproveDecision({
+    msg: { id: 'nt1', title: '#bob', message: '/approve session' },
+    source: 'sse', topic: 't', selfName: 'me', autoApprove: on
+  }), null, '沒有 hermes-agent tag 不該觸發');
+
+  // 2c) tag 大小寫與前後空白都不影響（ntfy 的 tag 慣例不分大小寫）
+  ['hermes-agent', 'HERMES-AGENT', ' hermes-agent '].forEach(function (v) {
+    assert.ok(core.autoApproveDecision({
+      msg: { id: 'tc' + v, title: '#bob', message: '/approve session', tags: [v] },
+      source: 'sse', topic: 't', selfName: 'me', autoApprove: on
+    }), 'tag「' + v + '」應該算命中');
+  });
+
+  // 2d) tag 清單裡有別的 tag 也無所謂，只要**含**目標那一個
+  assert.ok(core.autoApproveDecision({
+    msg: { id: 'tm', title: '#bob', message: '/approve session', tags: ['urgent', 'hermes-agent', 'x'] },
+    source: 'sse', topic: 't', selfName: 'me', autoApprove: on
+  }), '只要清單裡含有目標 tag 就該命中');
+
+  // 2e) 有別的 tag 但沒有目標 tag → 不回
+  assert.strictEqual(core.autoApproveDecision({
+    msg: { id: 'tw', title: '#bob', message: '/approve session', tags: ['urgent', 'hermes'] },
+    source: 'sse', topic: 't', selfName: 'me', autoApprove: on
+  }), null, '近似的 tag（hermes）不算命中');
+
+  // 2f) tags 不是陣列／是空陣列／壞值 → 安全地不回，不爆
+  [undefined, null, '', [], 'hermes-agent', 42].forEach(function (bad) {
+    assert.strictEqual(core.autoApproveDecision({
+      msg: { id: 'tb', title: '#bob', message: '/approve session', tags: bad },
+      source: 'sse', topic: 't', selfName: 'me', autoApprove: on
+    }), null, 'tags=' + JSON.stringify(bad) + ' 不該觸發（只有真的陣列才算）');
+  });
 
   // 3) 訊息裡沒有觸發字串 → 不回
   assert.strictEqual(core.autoApproveDecision({
@@ -1505,13 +1543,16 @@ check('自動回應：只有「開啟 + 即時來源 + 含觸發字串 + 不是�
   }), null, '歷史訊息不該觸發（否則開面板就灌一輪）');
 
   // 5) ★ 自己發的不回 —— 否則「我回的 /approve」又被判定成觸發 → 無限循環
+  //
+  // ⚠️ 這兩則都**刻意帶上 tag**：不然它們會因為「沒有 tag」而不回，
+  // 測試就變成在驗 tag 而不是在驗「自己發的」—— 通過了卻沒守住真正的那條規則。
   assert.strictEqual(core.autoApproveDecision({
-    msg: { id: 'm3', title: '#me', message: '有人要我 /approve session' },
+    msg: { id: 'm3', title: '#me', message: '有人要我 /approve session', tags: ['hermes-agent'] },
     source: 'sse', topic: 't', selfName: 'me', autoApprove: on
   }), null, '自己發的不該觸發（防無限循環）');
   // 大小寫不在意
   assert.strictEqual(core.autoApproveDecision({
-    msg: { id: 'm3b', title: '#ME', message: '/approve session' },
+    msg: { id: 'm3b', title: '#ME', message: '/approve session', tags: ['hermes-agent'] },
     source: 'sse', topic: 't', selfName: 'me', autoApprove: on
   }), null, '#ME 也算自己');
 

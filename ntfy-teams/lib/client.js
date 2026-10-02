@@ -118,11 +118,43 @@ window.__ModuleLoader__.load({
       /** 觸發自動回應的字串（訊息內**包含**它就算）。 */
       var AUTO_APPROVE_TRIGGER = '/approve session';
 
+      /**
+       * 自動回應還要求訊息帶有這個 tag。
+       *
+       * 為什麼要有這個限制：`/approve session` 是可以被任何人打出來的普通字串，
+       * 只看內文的話，任何人在這個主題裡打出那句話都會觸發自動回覆。
+       * 加上 tag 等於要求「這是 Hermes agent 產生的請求」，把觸發面縮到
+       * 我們真的想自動處理的來源。
+       *
+       * 比對方式：tag 逐個 trim + 轉小寫後比對（ntfy 的 tag 不分大小寫慣例，
+       * 而且從 HTTP 標頭讀進來的可能帶空白）。
+       */
+      var AUTO_APPROVE_TAG = 'hermes-agent';
+
       /** 自動回應要送出的內容。 */
       var AUTO_APPROVE_REPLY = '/approve';
 
       /** `ids` 最多保留幾筆（見 normalizeAutoApprove）。 */
       var AUTOAPPROVE_MAX_IDS = 50;
+
+      /**
+       * 訊息是否帶有某個 tag（不分大小寫、忽略前後空白）。
+       *
+       * @param msg - 正規化訊息。
+       * @param want - 要找的 tag。
+       * @returns 是否帶有。
+       */
+      function hasTag(msg, want) {
+        if (!msg || !Array.isArray(msg.tags) || msg.tags.length === 0) return false;
+        var target = String(want).trim().toLowerCase();
+        if (target === '') return false;
+        for (var i = 0; i < msg.tags.length; i += 1) {
+          var t = msg.tags[i];
+          if (t === null || t === undefined) continue;
+          if (String(t).trim().toLowerCase() === target) return true;
+        }
+        return false;
+      }
 
       /**
        * 判斷一則訊息是否應該觸發自動回應，以及該回什麼。
@@ -150,6 +182,8 @@ window.__ModuleLoader__.load({
         if (!msg || typeof msg !== 'object') return null;
         var body = typeof msg.message === 'string' ? msg.message : '';
         if (body.indexOf(AUTO_APPROVE_TRIGGER) === -1) return null;
+        // 必須帶有指定的 tag（見 AUTO_APPROVE_TAG 的說明）。
+        if (!hasTag(msg, AUTO_APPROVE_TAG)) return null;
         // 自己發的不回應（防無限循環）。
         var self = normalizeIdentity(o.selfName);
         if (self === '') return null;
@@ -3205,6 +3239,7 @@ window.__ModuleLoader__.load({
           setAutoApprove: setAutoApprove,
           markAutoApproveReplied: markAutoApproveReplied,
           AUTO_APPROVE_TRIGGER: AUTO_APPROVE_TRIGGER,
+          AUTO_APPROVE_TAG: AUTO_APPROVE_TAG,
           AUTO_APPROVE_REPLY: AUTO_APPROVE_REPLY,
 
           // 永遠滾到最新（每個主題一份開關）
@@ -3347,7 +3382,7 @@ window.__ModuleLoader__.load({
     /**
      * 首次從宿主載入設定是否已完成。
      *
-     * 在它變成 true 之前，**不准把設定寫回宿主** —— 那時 store 可能還是空的，
+     * 在它變成 true 之前，**不準把設定寫回宿主** —— 那時 store 可能還是空的，
      * 送出去的 topics 會把宿主的完整清單覆蓋掉（詳見 pushSettingsToHost）。
      */
     var initialSyncDone = false;
@@ -3551,7 +3586,7 @@ window.__ModuleLoader__.load({
       if (typeof fetch !== 'function' || !core) {
         return Promise.resolve({ ok: false, error: '沒有 fetch 或 core' });
       }
-      // ⚠️ 首次同步完成前**不准寫**。
+      // ⚠️ 首次同步完成前**不準寫**。
       //
       // 為什麼：payload 的 topics 取自 **store**（見下方說明），而剛開機時 store
       // 還是空的 —— 在宿主設定套用進來之前送出 PUT，就會用「本機當下的清單」
@@ -8080,11 +8115,14 @@ window.__ModuleLoader__.load({
       return e('div', { className: 'ntfy-teams-compose' },
         // ---- 自動回應開關（需求：input 上方一個 checkbox）----
         //
-        // 說明文字把「觸發字串」與「回什麼」都寫出來 —— 這是會**代替使用者發言**的
-        // 功能，不能只寫「自動回應」四個字讓他自己猜。
+        // 標籤刻意**簡短**（回饋：「解釋太多了」）：平常只要看得懂「這是什麼開關」，
+        // 詳細規則（觸發字串、回什麼、只認即時推送…）放在 tooltip 裡 ——
+        // 想知道的人滑過去就有，不想知道的人不必每次讀一整句。
         e('label', {
           className: 'ntfy-teams-autoapprove',
-          title: '勾選後，這個主題收到含「/approve session」的訊息時，自動回覆「/approve」'
+          // tooltip 要把「還需要 hermes-agent 標籤」寫出來 —— 少了這句，
+          // 使用者會以為只要有人打出那句話就會被自動回覆。
+          title: '自動批準：收到帶 hermes-agent 標籤、且含「/approve session」的訊息時，自動回覆「/approve」'
         },
           e('input', {
             type: 'checkbox',
@@ -8098,19 +8136,17 @@ window.__ModuleLoader__.load({
             }
           }),
           e('span', { className: 'ntfy-teams-autoapprovetext' },
-            '自動回應：出現 ',
-            e('code', null, '/approve session'),
-            ' 時回覆 ',
+            '自動批準 ',
             e('code', null, '/approve')
           )
         ),
         // ---- 永遠滾到最新 ----
         //
-        // 這一條會**覆蓋**「只有自己發的才跟隨」的預設行為，所以說明要寫清楚
-        // 「不管誰發的」—— 否則使用者會以為它跟提示條是同一件事。
+        // 同樣只留標題；「不管誰發的」這個關鍵差別放在 tooltip，
+        // 因為它跟未讀提示條的取捨需要解釋，但不該佔掉每一眼的閱讀成本。
         e('label', {
           className: 'ntfy-teams-staybottom',
-          title: '勾選後這個主題永遠捲到最新（不管訊息是誰發的）'
+          title: '永遠滾到最新：不管訊息是誰發的，都自動捲到最底'
         },
           e('input', {
             type: 'checkbox',
@@ -8123,7 +8159,7 @@ window.__ModuleLoader__.load({
             }
           }),
           e('span', { className: 'ntfy-teams-staybottomtext' },
-            '永遠滾到最新：不管誰發的訊息都自動捲到最底'
+            '永遠滾到最新'
           )
         ),
         e('div', { className: 'ntfy-teams-composemeta' },
@@ -9674,7 +9710,7 @@ window.__ModuleLoader__.load({
 
       StatusGlyph: StatusGlyph,
       CSS_TEXT: NTFY_TEAMS_CSS,
-      // 讓測試能模擬「首次同步已完成」（那之後才准寫回宿主）。
+      // 讓測試能模擬「首次同步已完成」（那之後才準寫回宿主）。
       markInitialSyncDone: function () { initialSyncDone = true; },
       // 讓測試能驗「舊版 localStorage 痕跡會被清乾淨」。
       purgeLegacyStorage: purgeLegacyStorage,
