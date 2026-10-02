@@ -95,7 +95,9 @@ window.__ModuleLoader__.load({
         // （實測：預設 260 + 最小值 280 就是這種自相矛盾，測試會直接抓到）。
         dashboardWidth: 360,
         dashboardMinWidth: 300,
-        dashboardMaxWidth: 1300
+        dashboardMaxWidth: 1300,
+        // 每個主題的「自動回應」設定（見 normalizeAutoApprove 的說明）。
+        autoApprove: {}
       };
 
       /** 支持的鉴权模式。 */
@@ -108,6 +110,57 @@ window.__ModuleLoader__.load({
         LOCAL: 'local',     // 本机自己发出的
         SERVER: 'server'    // 来源未知（parseServerMessage 的默认值）
       };
+
+      // ---- 自動回應（/approve session → /approve）----
+
+      /** 觸發自動回應的字串（訊息內**包含**它就算）。 */
+      var AUTO_APPROVE_TRIGGER = '/approve session';
+
+      /** 自動回應要送出的內容。 */
+      var AUTO_APPROVE_REPLY = '/approve';
+
+      /** `ids` 最多保留幾筆（見 normalizeAutoApprove）。 */
+      var AUTOAPPROVE_MAX_IDS = 50;
+
+      /**
+       * 判斷一則訊息是否應該觸發自動回應，以及該回什麼。
+       *
+       * 這裡刻意做成**純函式**（不碰網路、不改狀態），所以可以離線測試 ——
+       * 這個功能一旦誤觸發或重複觸發，代價是「往群組裡灌訊息」。
+       *
+       * 一律**不回應自己發的訊息**：否則自己送出的內容只要含觸發字串就會無限循環
+       * （我回了一則 → 又被判定為觸發 → 再回一則…）。
+       *
+       * @param opts - { msg, source, topic, selfName, autoApprove }。
+       * @returns { reply: string } 或 null。
+       */
+      function autoApproveDecision(opts) {
+        var o = opts || {};
+        var topic = normalizeTopic(o.topic);
+        if (!topic) return null;
+        var settings = o.autoApprove && typeof o.autoApprove === 'object' ? o.autoApprove : {};
+        var entry = settings[topic];
+        if (!entry || entry.on !== true) return null;
+        // 只有「即時推送」才觸發。歷史載入不算 —— 否則面板一開就把舊訊息
+        // 全部回一遍（那些訊息可能好幾天前就在那裡了）。
+        if (o.source !== SOURCE.SSE) return null;
+        var msg = o.msg;
+        if (!msg || typeof msg !== 'object') return null;
+        var body = typeof msg.message === 'string' ? msg.message : '';
+        if (body.indexOf(AUTO_APPROVE_TRIGGER) === -1) return null;
+        // 自己發的不回應（防無限循環）。
+        var self = normalizeIdentity(o.selfName);
+        if (self === '') return null;
+        var parsed = parseIdentity(msg.title);
+        if (parsed.isMention && parsed.handle !== ''
+          && parsed.handle.toLowerCase() === self.toLowerCase()) {
+          return null;
+        }
+        // 同一則只回一次（`ids` 跨重新整理存活）。
+        var id = msg.id === null || msg.id === undefined ? '' : String(msg.id);
+        if (id !== '' && Array.isArray(entry.ids) && entry.ids.indexOf(id) !== -1) return null;
+        return { reply: AUTO_APPROVE_REPLY, id: id };
+      }
 
       var CONFIG_KEY = 'ntfy-teams:config:v1';
 
@@ -438,8 +491,47 @@ window.__ModuleLoader__.load({
           if (typeof persisted.identity === 'string') out.identity = normalizeIdentity(persisted.identity);
           if (persisted.aliases !== undefined) out.aliases = normalizeTopicAliases(persisted.aliases);
           out.dashboardWidth = clampDashboardWidth(persisted.dashboardWidth, out.dashboardWidth);
+          if (persisted.autoApprove !== undefined) out.autoApprove = normalizeAutoApprove(persisted.autoApprove);
           if (persisted.defaultTopicAdded === true) out.defaultTopicAdded = true;
         }
+        return out;
+      }
+
+      /**
+       * 自動回應設定（每個主題一份）：`{ [topic]: { on: boolean, ids: string[] } }`。
+       *
+       * 這個設定住在 `config.yml` 而不是瀏覽器 —— 它是**行為設定**，
+       * 而且 `ids`（已經回過哪些訊息）必須跨重新整理存活，否則每次重載都可能重複回覆。
+       *
+       * `ids` 只留最近 N 筆：目的是「不要對同一則回兩次」，不是完整歷史。
+       * 留太多會讓 config.yml 膨脹，而且舊訊息本來也不會再被判定為新訊息
+       * （只有 `sse` 來源才觸發）。
+       *
+       * @param value - 任何輸入。
+       * @returns 正規化後的設定物件。
+       */
+      function normalizeAutoApprove(value) {
+        var out = {};
+        if (!value || typeof value !== 'object') return out;
+        Object.keys(value).forEach(function (topic) {
+          var name = normalizeTopic(topic);
+          if (!name) return;
+          var entry = value[topic];
+          if (!entry || typeof entry !== 'object') return;
+          var ids = Array.isArray(entry.ids) ? entry.ids : [];
+          var cleaned = [];
+          for (var i = 0; i < ids.length; i += 1) {
+            var id = ids[i];
+            if (id === null || id === undefined || id === '') continue;
+            var s = String(id);
+            if (cleaned.indexOf(s) === -1) cleaned.push(s);
+          }
+          // 只留最近 AUTOAPPROVE_MAX_IDS 筆。
+          if (cleaned.length > AUTOAPPROVE_MAX_IDS) {
+            cleaned = cleaned.slice(cleaned.length - AUTOAPPROVE_MAX_IDS);
+          }
+          out[name] = { on: entry.on === true, ids: cleaned };
+        });
         return out;
       }
 
@@ -449,8 +541,7 @@ window.__ModuleLoader__.load({
        * @param value - 任何輸入。
        * @param fallback - 回退值。
        * @returns 合法的寬度（整數 px）。
-       */
-      function clampDashboardWidth(value, fallback) {
+       */  function clampDashboardWidth(value, fallback) {
         var n = toFiniteNumber(value);
         var base = toFiniteNumber(fallback);
         if (base === null) base = CONFIG.dashboardWidth;
@@ -460,9 +551,51 @@ window.__ModuleLoader__.load({
         return Math.round(n);
       }
 
+      /**
+       * 開啟／關閉某個主題的自動回應。
+       *
+       * 關掉時**保留** `ids`：使用者可能只是暫時關掉，回來時不該把已經回過的
+       * 訊息再回一遍。要清掉就整張表覆蓋（`saveConfig({ autoApprove: {} })`）。
+       *
+       * @param topic - 主題名。
+       * @param on - 是否開啟。
+       * @returns 更新後的該主題設定。
+       */
+      function setAutoApprove(topic, on) {
+        var name = normalizeTopic(topic);
+        if (!name) return null;
+        var current = normalizeAutoApprove(readConfig().autoApprove);
+        var entry = current[name] || { on: false, ids: [] };
+        entry.on = on === true;
+        current[name] = entry;
+        saveConfig({ autoApprove: current });
+        return entry;
+      }
+
+      /**
+       * 記下「這一則觸發訊息已經回過了」。
+       *
+       * 一定要在**送出成功之後**才呼叫：先記再送的話，送出失敗就永遠不會重試。
+       *
+       * @param topic - 主題名。
+       * @param id - 觸發訊息的 id。
+       * @returns 是否真的記下了。
+       */
+      function markAutoApproveReplied(topic, id) {
+        var name = normalizeTopic(topic);
+        var key = id === null || id === undefined ? '' : String(id);
+        if (!name || key === '') return false;
+        var current = normalizeAutoApprove(readConfig().autoApprove);
+        var entry = current[name] || { on: false, ids: [] };
+        if (entry.ids.indexOf(key) !== -1) return false;
+        entry.ids.push(key);
+        current[name] = entry;
+        saveConfig({ autoApprove: current });
+        return true;
+      }
+
       /** 合并写入配置（部分字段即可），返回写入后的完整配置。 */
-      function saveConfig(partial) {
-        var current = readConfig();
+      function saveConfig(partial) {    var current = readConfig();
         if (partial && typeof partial === 'object') {
           if (typeof partial.server === 'string') {
             current.server = normalizeServer(partial.server) || DEFAULT_SERVER;
@@ -484,6 +617,10 @@ window.__ModuleLoader__.load({
           }
           if (partial.dashboardWidth !== undefined) {
             current.dashboardWidth = clampDashboardWidth(partial.dashboardWidth, current.dashboardWidth);
+          }
+          // 自動回應設定：整張表替換（語意單純，跟 aliases 一樣）。
+          if (partial.autoApprove !== undefined) {
+            current.autoApprove = normalizeAutoApprove(partial.autoApprove);
           }
           // 預設主題的「已加過」記號：只寫 true，不寫回 false（加過就是加過）。
           if (partial.defaultTopicAdded === true) current.defaultTopicAdded = true;
@@ -3013,6 +3150,13 @@ window.__ModuleLoader__.load({
           // 看板寬度（夾在合法範圍內）
           clampDashboardWidth: clampDashboardWidth,
 
+          // 自動回應（/approve session → /approve）
+          autoApproveDecision: autoApproveDecision,
+          setAutoApprove: setAutoApprove,
+          markAutoApproveReplied: markAutoApproveReplied,
+          AUTO_APPROVE_TRIGGER: AUTO_APPROVE_TRIGGER,
+          AUTO_APPROVE_REPLY: AUTO_APPROVE_REPLY,
+
           // 错误描述
           describeError: describeError,
 
@@ -3269,6 +3413,7 @@ window.__ModuleLoader__.load({
             if (typeof cfg.identity === 'string') partial.identity = cfg.identity;
             if (cfg.aliases && typeof cfg.aliases === 'object') partial.aliases = cfg.aliases;
             if (cfg.dashboardWidth !== undefined) partial.dashboardWidth = cfg.dashboardWidth;
+            if (cfg.autoApprove !== undefined) partial.autoApprove = cfg.autoApprove;
             try { core.saveConfig(partial); } catch (err) { /* 單一欄位壞掉不該讓整次同步失敗 */ }
           }
           // 憑證進記憶體快取（不寫 localStorage —— YAML 才是持久層）。
@@ -3412,7 +3557,11 @@ window.__ModuleLoader__.load({
           topics: topics,
           identity: cfg.identity || '',
           aliases: cfg.aliases || {},
-          dashboardWidth: cfg.dashboardWidth
+          dashboardWidth: cfg.dashboardWidth,
+          // 自動回應（每個主題的開關 + 已回過的訊息 id）。
+          // 一定要帶上：`saveConfig` 只寫記憶體，漏了這個欄位
+          // 勾選就不會進 config.yml，重新整理就沒了。
+          autoApprove: cfg.autoApprove || {}
         };
       } catch (err) {
         return { ok: false, error: '讀不到設定：' + text(err && err.message) };
@@ -4812,7 +4961,31 @@ window.__ModuleLoader__.load({
       'color:var(--dsw-alias-label-primary);font:inherit;font-size:13px;line-height:1.5;}',
       '.ntfy-teams-textarea:focus{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-1px;}',
       '.ntfy-teams-textarea::placeholder{color:var(--dsw-alias-label-secondary);}',
-      '.ntfy-teams-sendbtn{height:38px;padding:0 18px;}'
+      '.ntfy-teams-sendbtn{height:38px;padding:0 18px;}',
+
+      // ---- 自動回應開關（input 上方）----
+      //
+      // 它是**會代替使用者發言**的功能，所以視覺上要看得出來「現在是開的」：
+      // 勾選時整列上色（跟齒輪用同一個藍），而不是只有一個小小的打勾。
+      '.ntfy-teams-autoapprove{display:flex;align-items:center;gap:7px;flex:0 0 auto;',
+      'padding:5px 9px;margin-bottom:7px;border:1px solid var(--dsw-alias-border-l1);',
+      'border-radius:8px;cursor:pointer;font-size:11.5px;',
+      'color:var(--dsw-alias-label-secondary);',
+      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 3%, transparent);}',
+      '.ntfy-teams-autoapprove:hover{background:color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);}',
+      // 勾選時：整列變成淡藍（:has 不支援時的退化只是顏色不變，功能不受影響）
+      '.ntfy-teams-autoapprove:has(.ntfy-teams-autoapprovebox:checked){',
+      'color:var(--dsw-static-blue-600);',
+      'border-color:color-mix(in srgb, var(--dsw-static-blue-500) 45%, transparent);',
+      'background:color-mix(in srgb, var(--dsw-static-blue-500) 10%, transparent);}',
+      '.ntfy-teams-autoapprovebox{flex:0 0 auto;width:14px;height:14px;margin:0;cursor:pointer;',
+      'accent-color:var(--dsw-static-blue-500);}',
+      '.ntfy-teams-autoapprovebox:disabled{cursor:default;opacity:.45;}',
+      '.ntfy-teams-autoapprovetext{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+      '.ntfy-teams-autoapprove code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;',
+      'font-size:11px;padding:0 3px;border-radius:4px;',
+      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);',
+      'color:var(--dsw-alias-label-primary);}'
     ].concat(AVATAR_CSS).join('');
 
     // =========================================================================
@@ -7714,6 +7887,32 @@ window.__ModuleLoader__.load({
       var canSend = canPublish && hasName;
 
       return e('div', { className: 'ntfy-teams-compose' },
+        // ---- 自動回應開關（需求：input 上方一個 checkbox）----
+        //
+        // 說明文字把「觸發字串」與「回什麼」都寫出來 —— 這是會**代替使用者發言**的
+        // 功能，不能只寫「自動回應」四個字讓他自己猜。
+        e('label', {
+          className: 'ntfy-teams-autoapprove',
+          title: '勾選後，這個主題收到含「/approve session」的訊息時，自動回覆「/approve」'
+        },
+          e('input', {
+            type: 'checkbox',
+            className: 'ntfy-teams-autoapprovebox',
+            checked: !!props.autoApproveOn,
+            disabled: !canPublish,
+            onChange: function (ev) {
+              if (typeof props.onToggleAutoApprove === 'function') {
+                props.onToggleAutoApprove(ev.target.checked);
+              }
+            }
+          }),
+          e('span', { className: 'ntfy-teams-autoapprovetext' },
+            '自動回應：出現 ',
+            e('code', null, '/approve session'),
+            ' 時回覆 ',
+            e('code', null, '/approve')
+          )
+        ),
         e('div', { className: 'ntfy-teams-composemeta' },
           e('span', { className: 'ntfy-teams-sendas' },
             e(PersonGlyph),
@@ -8109,6 +8308,131 @@ window.__ModuleLoader__.load({
       var cred = credOf();
       var canPublish = /^pub_/.test(active) || (cred.mode && cred.mode !== 'none');
 
+      /**
+       * 送一則訊息到某個主題（文字輸入與自動回應共用這一條路）。
+       *
+       * 為什麼要抽出來：自動回應也是「送一則訊息」，如果它自己另寫一份
+       * publishMessage → addMessage → 處理錯誤的流程，兩邊遲早會不一致
+       * （這裡已經有太多「兩份實作不同步」的前例）。
+       *
+       * @param topic - 主題名。
+       * @param message - 內文。
+       * @param options - { priority, asName }。
+       * @returns Promise<{ok:boolean, error?:string}>。
+       */
+      function publishToTopic(topic, message, options) {
+        var o = options || {};
+        if (!core || typeof core.publishMessage !== 'function') {
+          return Promise.resolve({ ok: false, error: '核心模組未載入' });
+        }
+        var name = text(o.asName !== undefined ? o.asName : identity).trim();
+        var as = titleFor(name);
+        if (as === '') return Promise.resolve({ ok: false, error: '尚未設定顯示名稱' });
+        return core.publishMessage(core.readConfig().server, topic, {
+          title: as,
+          message: message,
+          priority: typeof o.priority === 'number' ? o.priority : 3,
+          cred: credOf()
+        }).then(function (result) {
+          if (result && result.ok) {
+            if (result.message && core.store && typeof core.store.addMessage === 'function') {
+              core.store.addMessage(topic, result.message);
+            }
+            return { ok: true };
+          }
+          return {
+            ok: false,
+            error: core && typeof core.describeError === 'function'
+              ? core.describeError(result)
+              : '傳送失敗'
+          };
+        }, function (e2) {
+          return { ok: false, error: '傳送失敗：' + text(e2 && e2.message) };
+        });
+      }
+
+      // ---- 自動回應：/approve session → /approve ----
+      //
+      // 需求：input 上方一個 checkbox，勾選後「當前 topic 出現 /approve session
+      // 就自動回 /approve」。
+      //
+      // 判定本身在 core（純函式、可離線測）；這裡只負責**在正確的時機呼叫它、
+      // 送出去、並記錄已經回過哪一則**。
+      //
+      // ⚠️ 三重防護，缺一不可（這功能一旦誤觸發就是往群組灌訊息）：
+      //   1. 只認 `sse` 來源 —— 面板一開載入的歷史訊息不會被回一遍；
+      //   2. 不回應自己發的 —— 否則「我回了 /approve」又被判定成觸發 → 無限循環；
+      //   3. `ids` 記在 config.yml（跨重新整理存活）—— 同一則只回一次。
+      // ⚠️ 開關的狀態一定要用 React state，**不能**直接讀 `core.readConfig()`。
+      //
+      // 踩過的 bug：`saveConfig()` 只寫記憶體與宿主，**不會觸發 store 的通知**，
+      // 所以「讀 config 的普通變數」在切換後不會讓元件重繪 ——
+      // 畫面會停在舊的勾選狀態，跟真正的設定不一致（實測：取消勾選後
+      // `設定.on=false` 但 checkbox 仍顯示打勾；第一次之所以看起來正常，
+      // 只是剛好有別的原因讓它重繪了）。
+      var apOnState = React.useState(function () {
+        return !!(core && core.readConfig && core.readConfig().autoApprove
+          && core.readConfig().autoApprove[active]
+          && core.readConfig().autoApprove[active].on === true);
+      });
+      var autoApproveOn = apOnState[0];
+      var setAutoApproveOn = apOnState[1];
+      // 切換主題時要把開關切到那個主題的設定（同一個元件、不同的主題）。
+      React.useEffect(function () {
+        var cfgAp = (core && core.readConfig && core.readConfig().autoApprove) || {};
+        var want = !!(cfgAp[active] && cfgAp[active].on === true);
+        setAutoApproveOn(function (prev) { return prev === want ? prev : want; });
+      }, [active]);
+
+      var approveBusyRef = React.useRef(false);
+      var approveIdRef = React.useRef('');
+      React.useEffect(function () {
+        if (!active || !autoApproveOn) return;
+        if (approveBusyRef.current) return;
+        if (!core || typeof core.autoApproveDecision !== 'function') return;
+        var list = (snapshot.messagesByTopic && snapshot.messagesByTopic[active]) || [];
+        if (!list.length) return;
+        // 只檢查最新那一則。為什麼不看整串：這個 effect 會在每次 store 變更時
+        // 跑，整串掃描等於每則訊息都被判定 N 次；而新訊息一定是加在尾端。
+        var last = list[list.length - 1];
+        var id = text(last.id);
+        if (id === '' || id === approveIdRef.current) return;
+        var verdict = core.autoApproveDecision({
+          msg: last,
+          source: last.source,
+          topic: active,
+          selfName: identity,
+          autoApprove: core.readConfig().autoApprove
+        });
+        // ⚠️ 這裡**即使沒有觸發也要記下 id**：不然每來一則訊息都會重複判定，
+        // 而且下一次的判定會被同一則舊訊息佔住。
+        approveIdRef.current = id;
+        if (!verdict) return;
+        approveBusyRef.current = true;
+        publishToTopic(active, verdict.reply, {}).then(function (r) {
+          approveBusyRef.current = false;
+          // 只有**送成功**才記「回過了」：先記再送的話，送失敗就永遠不會重試。
+          if (r && r.ok && typeof core.markAutoApproveReplied === 'function') {
+            core.markAutoApproveReplied(active, verdict.id);
+          }
+        });
+      }, [active, activeMessages.length, autoApproveOn]);
+
+      /** 切換自動回應。 @param next - 是否開啟。 */
+      function toggleAutoApprove(next) {
+        if (!core || typeof core.setAutoApprove !== 'function') return;
+        var on = next === true;
+        // 先更新畫面（state），再寫設定 —— 寫入是同步的，但只改 config
+        // 不會讓元件重繪，所以要自己推一下 state。
+        setAutoApproveOn(on);
+        var entry = core.setAutoApprove(active, on);
+        // 讓下一個訊息可以重新被判定（否則剛勾選時會沿用上一輪的 id）。
+        approveIdRef.current = '';
+        // 這跟其他設定一樣要寫回宿主，否則重新整理就沒了。
+        saveSubscriptions();
+        return entry;
+      }
+
       // 抬頭只留「這是什麼群組」：群組名 + 主題數。
       //
       // **不顯示伺服器**（連主機名都不顯示）：伺服器位址由外掛設定決定，
@@ -8292,7 +8616,10 @@ window.__ModuleLoader__.load({
           topic: active,
           cred: cred,
           canPublish: canPublish,
-          identity: identity
+          identity: identity,
+          // 自動回應開關（見上面 autoApproveOn 的說明）。
+          autoApproveOn: autoApproveOn,
+          onToggleAutoApprove: toggleAutoApprove
         }));
       }
       // 版面：抬头（滿寬）在上，底下才是「主欄 ｜ 看板」。

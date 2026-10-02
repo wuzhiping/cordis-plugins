@@ -2530,6 +2530,59 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     assert.ok(!btnOn.props.disabled, '設定了名稱就應該可以送出');
   });
 
+  test('自動回應開關：input 上方一個 checkbox，且說明觸發字串與回覆內容', () => {
+    // 需求：「在 input 上面加個 checkbox，如果選中，當前 topic 中出現
+    //       『/approve session』就自動回覆『/approve』」。
+    //
+    // 這裡驗 UI：checkbox 在、勾選狀態跟著設定、切換時會回報。
+    // 「什麼時候真的該回」是純函式，由 core-node.js 驗（那裡才有完整的防護矩陣）。
+    /** 渲染面板並回傳節點。 @param on - 該主題的自動回應是否開啟。 @returns { nodes, toggled }。 */
+    const render = (on) => {
+      const { harness, core, seats } = freshPanel();
+      core.store.ensureTopic('pub_ap');
+      core.store.setActiveTopic('pub_ap');
+      core.setIdentity('shawoo');
+      core.saveConfig({ autoApprove: {} });
+      if (on) core.setAutoApprove('pub_ap', true);
+      const nodes = [];
+      walk(harness, harness.render(seats['main:ntfy-teams'].component, {}), nodes, 0);
+      return { nodes, core };
+    };
+
+    /** 找出自動回應的 checkbox。 @param nodes - 走訪結果。 @returns 節點。 */
+    const box = (nodes) => nodes.filter((n) => n.tag === 'input'
+      && n.cls && String(n.cls).indexOf('ntfy-teams-autoapprovebox') !== -1)[0];
+
+    // 1) 未開啟：checkbox 存在、未勾選
+    const off = render(false);
+    const offBox = box(off.nodes);
+    assert.ok(offBox, '應該有自動回應的 checkbox');
+    assert.strictEqual(offBox.props.type, 'checkbox', '要是 checkbox');
+    assert.ok(!offBox.props.checked, '未開啟時不該被勾選');
+    assert.strictEqual(typeof offBox.props.onChange, 'function', '要能切換');
+
+    // 2) 說明要看得出「觸發什麼、回什麼」—— 這是會代替使用者發言的功能，
+    //    不能只寫「自動回應」四個字。
+    const allCls = (n, cls) => n.cls && String(n.cls).split(/\s+/).indexOf(cls) !== -1;
+    const labelNode = off.nodes.filter((n) => n.tag === 'label' && allCls(n, 'ntfy-teams-autoapprove'))[0];
+    assert.ok(labelNode, '應該有一個包住 checkbox 的 label（點文字也能切換）');
+    const labelText = off.nodes.filter((n) => n.tag === '#text').map((n) => n.text).join(' ');
+    assert.ok(labelText.indexOf('/approve session') !== -1,
+      '說明要寫出觸發字串，實際：' + labelText.slice(0, 120));
+    assert.ok(labelText.indexOf('/approve') !== -1, '說明要寫出回覆內容');
+
+    // 3) 已開啟：checkbox 打勾（狀態來自設定，不是元件自己的 state）
+    const on = render(true);
+    assert.ok(box(on.nodes).props.checked, '開啟後 checkbox 應該打勾');
+
+    // 4) 切換會把設定寫進去（透過 props 回報，實際寫入由 MainPanel 做）
+    //    直接驗核心的 setter：開啟 → 關閉 → 再開啟都能往返。
+    assert.strictEqual(on.core.readConfig().autoApprove.pub_ap.on, true, '設定應為開啟');
+    on.core.setAutoApprove('pub_ap', false);
+    assert.strictEqual(on.core.readConfig().autoApprove.pub_ap.on, false, '應能關閉');
+    on.core.saveConfig({ autoApprove: {} });
+  });
+
   test('不再有任何 localStorage 持久化入口（單一真相 = 宿主 YAML）', () => {
     const { exports: mod, core } = freshPanel();
     // 一次性遷移用的 readLegacyTopics 已經移除（它讀的是 localStorage）。

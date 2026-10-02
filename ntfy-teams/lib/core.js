@@ -43,7 +43,9 @@
     // （實測：預設 260 + 最小值 280 就是這種自相矛盾，測試會直接抓到）。
     dashboardWidth: 360,
     dashboardMinWidth: 300,
-    dashboardMaxWidth: 1300
+    dashboardMaxWidth: 1300,
+    // 每個主題的「自動回應」設定（見 normalizeAutoApprove 的說明）。
+    autoApprove: {}
   };
 
   /** 支持的鉴权模式。 */
@@ -56,6 +58,57 @@
     LOCAL: 'local',     // 本机自己发出的
     SERVER: 'server'    // 来源未知（parseServerMessage 的默认值）
   };
+
+  // ---- 自動回應（/approve session → /approve）----
+
+  /** 觸發自動回應的字串（訊息內**包含**它就算）。 */
+  var AUTO_APPROVE_TRIGGER = '/approve session';
+
+  /** 自動回應要送出的內容。 */
+  var AUTO_APPROVE_REPLY = '/approve';
+
+  /** `ids` 最多保留幾筆（見 normalizeAutoApprove）。 */
+  var AUTOAPPROVE_MAX_IDS = 50;
+
+  /**
+   * 判斷一則訊息是否應該觸發自動回應，以及該回什麼。
+   *
+   * 這裡刻意做成**純函式**（不碰網路、不改狀態），所以可以離線測試 ——
+   * 這個功能一旦誤觸發或重複觸發，代價是「往群組裡灌訊息」。
+   *
+   * 一律**不回應自己發的訊息**：否則自己送出的內容只要含觸發字串就會無限循環
+   * （我回了一則 → 又被判定為觸發 → 再回一則…）。
+   *
+   * @param opts - { msg, source, topic, selfName, autoApprove }。
+   * @returns { reply: string } 或 null。
+   */
+  function autoApproveDecision(opts) {
+    var o = opts || {};
+    var topic = normalizeTopic(o.topic);
+    if (!topic) return null;
+    var settings = o.autoApprove && typeof o.autoApprove === 'object' ? o.autoApprove : {};
+    var entry = settings[topic];
+    if (!entry || entry.on !== true) return null;
+    // 只有「即時推送」才觸發。歷史載入不算 —— 否則面板一開就把舊訊息
+    // 全部回一遍（那些訊息可能好幾天前就在那裡了）。
+    if (o.source !== SOURCE.SSE) return null;
+    var msg = o.msg;
+    if (!msg || typeof msg !== 'object') return null;
+    var body = typeof msg.message === 'string' ? msg.message : '';
+    if (body.indexOf(AUTO_APPROVE_TRIGGER) === -1) return null;
+    // 自己發的不回應（防無限循環）。
+    var self = normalizeIdentity(o.selfName);
+    if (self === '') return null;
+    var parsed = parseIdentity(msg.title);
+    if (parsed.isMention && parsed.handle !== ''
+      && parsed.handle.toLowerCase() === self.toLowerCase()) {
+      return null;
+    }
+    // 同一則只回一次（`ids` 跨重新整理存活）。
+    var id = msg.id === null || msg.id === undefined ? '' : String(msg.id);
+    if (id !== '' && Array.isArray(entry.ids) && entry.ids.indexOf(id) !== -1) return null;
+    return { reply: AUTO_APPROVE_REPLY, id: id };
+  }
 
   var CONFIG_KEY = 'ntfy-teams:config:v1';
 
@@ -386,8 +439,47 @@
       if (typeof persisted.identity === 'string') out.identity = normalizeIdentity(persisted.identity);
       if (persisted.aliases !== undefined) out.aliases = normalizeTopicAliases(persisted.aliases);
       out.dashboardWidth = clampDashboardWidth(persisted.dashboardWidth, out.dashboardWidth);
+      if (persisted.autoApprove !== undefined) out.autoApprove = normalizeAutoApprove(persisted.autoApprove);
       if (persisted.defaultTopicAdded === true) out.defaultTopicAdded = true;
     }
+    return out;
+  }
+
+  /**
+   * 自動回應設定（每個主題一份）：`{ [topic]: { on: boolean, ids: string[] } }`。
+   *
+   * 這個設定住在 `config.yml` 而不是瀏覽器 —— 它是**行為設定**，
+   * 而且 `ids`（已經回過哪些訊息）必須跨重新整理存活，否則每次重載都可能重複回覆。
+   *
+   * `ids` 只留最近 N 筆：目的是「不要對同一則回兩次」，不是完整歷史。
+   * 留太多會讓 config.yml 膨脹，而且舊訊息本來也不會再被判定為新訊息
+   * （只有 `sse` 來源才觸發）。
+   *
+   * @param value - 任何輸入。
+   * @returns 正規化後的設定物件。
+   */
+  function normalizeAutoApprove(value) {
+    var out = {};
+    if (!value || typeof value !== 'object') return out;
+    Object.keys(value).forEach(function (topic) {
+      var name = normalizeTopic(topic);
+      if (!name) return;
+      var entry = value[topic];
+      if (!entry || typeof entry !== 'object') return;
+      var ids = Array.isArray(entry.ids) ? entry.ids : [];
+      var cleaned = [];
+      for (var i = 0; i < ids.length; i += 1) {
+        var id = ids[i];
+        if (id === null || id === undefined || id === '') continue;
+        var s = String(id);
+        if (cleaned.indexOf(s) === -1) cleaned.push(s);
+      }
+      // 只留最近 AUTOAPPROVE_MAX_IDS 筆。
+      if (cleaned.length > AUTOAPPROVE_MAX_IDS) {
+        cleaned = cleaned.slice(cleaned.length - AUTOAPPROVE_MAX_IDS);
+      }
+      out[name] = { on: entry.on === true, ids: cleaned };
+    });
     return out;
   }
 
@@ -397,8 +489,7 @@
    * @param value - 任何輸入。
    * @param fallback - 回退值。
    * @returns 合法的寬度（整數 px）。
-   */
-  function clampDashboardWidth(value, fallback) {
+   */  function clampDashboardWidth(value, fallback) {
     var n = toFiniteNumber(value);
     var base = toFiniteNumber(fallback);
     if (base === null) base = CONFIG.dashboardWidth;
@@ -408,9 +499,51 @@
     return Math.round(n);
   }
 
+  /**
+   * 開啟／關閉某個主題的自動回應。
+   *
+   * 關掉時**保留** `ids`：使用者可能只是暫時關掉，回來時不該把已經回過的
+   * 訊息再回一遍。要清掉就整張表覆蓋（`saveConfig({ autoApprove: {} })`）。
+   *
+   * @param topic - 主題名。
+   * @param on - 是否開啟。
+   * @returns 更新後的該主題設定。
+   */
+  function setAutoApprove(topic, on) {
+    var name = normalizeTopic(topic);
+    if (!name) return null;
+    var current = normalizeAutoApprove(readConfig().autoApprove);
+    var entry = current[name] || { on: false, ids: [] };
+    entry.on = on === true;
+    current[name] = entry;
+    saveConfig({ autoApprove: current });
+    return entry;
+  }
+
+  /**
+   * 記下「這一則觸發訊息已經回過了」。
+   *
+   * 一定要在**送出成功之後**才呼叫：先記再送的話，送出失敗就永遠不會重試。
+   *
+   * @param topic - 主題名。
+   * @param id - 觸發訊息的 id。
+   * @returns 是否真的記下了。
+   */
+  function markAutoApproveReplied(topic, id) {
+    var name = normalizeTopic(topic);
+    var key = id === null || id === undefined ? '' : String(id);
+    if (!name || key === '') return false;
+    var current = normalizeAutoApprove(readConfig().autoApprove);
+    var entry = current[name] || { on: false, ids: [] };
+    if (entry.ids.indexOf(key) !== -1) return false;
+    entry.ids.push(key);
+    current[name] = entry;
+    saveConfig({ autoApprove: current });
+    return true;
+  }
+
   /** 合并写入配置（部分字段即可），返回写入后的完整配置。 */
-  function saveConfig(partial) {
-    var current = readConfig();
+  function saveConfig(partial) {    var current = readConfig();
     if (partial && typeof partial === 'object') {
       if (typeof partial.server === 'string') {
         current.server = normalizeServer(partial.server) || DEFAULT_SERVER;
@@ -432,6 +565,10 @@
       }
       if (partial.dashboardWidth !== undefined) {
         current.dashboardWidth = clampDashboardWidth(partial.dashboardWidth, current.dashboardWidth);
+      }
+      // 自動回應設定：整張表替換（語意單純，跟 aliases 一樣）。
+      if (partial.autoApprove !== undefined) {
+        current.autoApprove = normalizeAutoApprove(partial.autoApprove);
       }
       // 預設主題的「已加過」記號：只寫 true，不寫回 false（加過就是加過）。
       if (partial.defaultTopicAdded === true) current.defaultTopicAdded = true;
@@ -2972,6 +3109,13 @@
 
       // 看板寬度（夾在合法範圍內）
       clampDashboardWidth: clampDashboardWidth,
+
+      // 自動回應（/approve session → /approve）
+      autoApproveDecision: autoApproveDecision,
+      setAutoApprove: setAutoApprove,
+      markAutoApproveReplied: markAutoApproveReplied,
+      AUTO_APPROVE_TRIGGER: AUTO_APPROVE_TRIGGER,
+      AUTO_APPROVE_REPLY: AUTO_APPROVE_REPLY,
 
       // 错误描述
       describeError: describeError,

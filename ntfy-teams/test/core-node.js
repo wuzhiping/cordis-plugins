@@ -1463,6 +1463,116 @@ check('別名持久化：reload（重讀 config）後還在，且不破壞其它
   core.saveConfig({ server: 'https://msn.feg.cn', topics: [], historyLimit: 300, identity: '', aliases: {} });
 });
 
+/* ============================================ 自動回應（/approve session） */
+
+group('自動回應：出現 /approve session 時回 /approve');
+
+check('自動回應：只有「開啟 + 即時來源 + 含觸發字串 + 不是自己發的」才回，且同一則只回一次', function () {
+  // 這個功能一旦誤觸發就是**往群組灌訊息**，所以每一道防護都要釘住。
+  core.saveConfig({ identity: 'me' });
+  var on = { t: { on: true, ids: [] } };
+  var off = { t: { on: false, ids: [] } };
+  var trigger = { id: 'm1', time: 1, title: '#bob', message: 'please /approve session now' };
+
+  // 1) 沒開啟 → 不回
+  assert.strictEqual(core.autoApproveDecision({
+    msg: trigger, source: 'sse', topic: 't', selfName: 'me', autoApprove: off
+  }), null, '沒勾選就不該回');
+
+  // 2) 開啟 + 即時 + 含字串 + 別人發的 → 回 /approve
+  var hit = core.autoApproveDecision({
+    msg: trigger, source: 'sse', topic: 't', selfName: 'me', autoApprove: on
+  });
+  assert.ok(hit, '應該判定要回');
+  assert.strictEqual(hit.reply, '/approve', '回覆內容應是 /approve');
+  assert.strictEqual(hit.id, 'm1', '要帶回觸發訊息的 id（用來記「回過了」）');
+
+  // 3) 訊息裡沒有觸發字串 → 不回
+  assert.strictEqual(core.autoApproveDecision({
+    msg: { id: 'm2', title: '#bob', message: '只是一般訊息' },
+    source: 'sse', topic: 't', selfName: 'me', autoApprove: on
+  }), null, '沒有觸發字串就不該回');
+
+  // 3b) 只有 /approve 沒有 session → 不回（觸發字串是完整片語）
+  assert.strictEqual(core.autoApproveDecision({
+    msg: { id: 'm2b', title: '#bob', message: '/approve' },
+    source: 'sse', topic: 't', selfName: 'me', autoApprove: on
+  }), null, '只寫 /approve 不該觸發');
+
+  // 4) ★ 歷史載入不算 —— 否則面板一開就把舊訊息全部回一遍
+  assert.strictEqual(core.autoApproveDecision({
+    msg: trigger, source: 'history', topic: 't', selfName: 'me', autoApprove: on
+  }), null, '歷史訊息不該觸發（否則開面板就灌一輪）');
+
+  // 5) ★ 自己發的不回 —— 否則「我回的 /approve」又被判定成觸發 → 無限循環
+  assert.strictEqual(core.autoApproveDecision({
+    msg: { id: 'm3', title: '#me', message: '有人要我 /approve session' },
+    source: 'sse', topic: 't', selfName: 'me', autoApprove: on
+  }), null, '自己發的不該觸發（防無限循環）');
+  // 大小寫不在意
+  assert.strictEqual(core.autoApproveDecision({
+    msg: { id: 'm3b', title: '#ME', message: '/approve session' },
+    source: 'sse', topic: 't', selfName: 'me', autoApprove: on
+  }), null, '#ME 也算自己');
+
+  // 6) ★ 已經回過的那一則不再回（ids 跨重新整理存活）
+  var replied = { t: { on: true, ids: ['m1'] } };
+  assert.strictEqual(core.autoApproveDecision({
+    msg: trigger, source: 'sse', topic: 't', selfName: 'me', autoApprove: replied
+  }), null, '同一則不該回第二次');
+
+  // 7) 沒有顯示名稱 → 不回（送出的訊息會是無名訊息，沒有意義）
+  assert.strictEqual(core.autoApproveDecision({
+    msg: trigger, source: 'sse', topic: 't', selfName: '', autoApprove: on
+  }), null, '沒設定顯示名稱就不該自動回');
+
+  // 8) 主題沒開啟（另一張表）→ 不回
+  assert.strictEqual(core.autoApproveDecision({
+    msg: trigger, source: 'sse', topic: 'other', selfName: 'me', autoApprove: on
+  }), null, '沒開啟的主題不該觸發');
+});
+
+check('自動回應：開關與「回過了」清單會持久化（重開才不會重複回）', function () {
+  core.saveConfig({ autoApprove: {} });
+  assert.deepStrictEqual(core.readConfig().autoApprove, {}, '起點應為空表');
+
+  core.setAutoApprove('ap_a', true);
+  assert.strictEqual(core.readConfig().autoApprove.ap_a.on, true, '應記下已開啟');
+  assert.deepStrictEqual(core.readConfig().autoApprove.ap_a.ids, [], '還沒回過任何一則');
+
+  // 記下回過哪一則
+  assert.strictEqual(core.markAutoApproveReplied('ap_a', 'x1'), true, '第一次記要成功');
+  assert.strictEqual(core.markAutoApproveReplied('ap_a', 'x1'), false, '同一則記第二次不該重複');
+  assert.deepStrictEqual(core.readConfig().autoApprove.ap_a.ids, ['x1'], 'id 應被記下');
+
+  // 關掉時**保留** ids：暫時關掉再開，不該把已回過的重回一遍
+  core.setAutoApprove('ap_a', false);
+  assert.strictEqual(core.readConfig().autoApprove.ap_a.on, false, '應記下已關閉');
+  assert.deepStrictEqual(core.readConfig().autoApprove.ap_a.ids, ['x1'],
+    '關掉時要保留已回過的清單（否則再打開會重複回）');
+
+  // ids 有上限：不會無限成長
+  for (var i = 0; i < 80; i += 1) core.markAutoApproveReplied('ap_a', 'k' + i);
+  var ids = core.readConfig().autoApprove.ap_a.ids;
+  assert.ok(ids.length <= 50, 'ids 應有上限（實際 ' + ids.length + '）');
+  assert.ok(ids.indexOf('k79') !== -1, '應保留最近的那幾筆');
+  assert.strictEqual(ids.indexOf('x1'), -1, '太舊的應該被丟掉');
+
+  core.saveConfig({ autoApprove: {} });
+});
+
+check('自動回應：設定壞掉（不是物件／主題名不合法）不會讓核心爆掉', function () {
+  // config.yml 是使用者可以手改的檔案，壞掉不該讓整個 store 掛掉。
+  ['', null, 42, 'nope', [], { '': { on: true } }].forEach(function (bad) {
+    var d = core.autoApproveDecision({
+      msg: { id: 'z1', title: '#bob', message: '/approve session' },
+      source: 'sse', topic: 't', selfName: 'me', autoApprove: bad
+    });
+    assert.strictEqual(d, null, '壞掉的設定應安全回 null，實際：' + JSON.stringify(d));
+  });
+  assert.deepStrictEqual(core.readConfig().autoApprove, {}, '壞掉的設定應被正規化成空表');
+});
+
 /* ============================================ 10d. 上次讀到哪（lastReadId） */
 
 group('未讀的第二層提示：記錄「上次讀到哪一則」');

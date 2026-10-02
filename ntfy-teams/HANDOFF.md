@@ -453,6 +453,53 @@ const has = (n, token) => (n.cls || '').split(/\s+/).indexOf(token) !== -1;
   **建置產物**，改那裡會被 `node build.js` 覆蓋掉。`addMessages` 的真正來源是
   `lib/core.js`（實測：插在 client.js 的版本永遠沒被執行到，白白多繞一圈）。
 
+### N. ★ 宿主把設定**記在記憶體**，直接改 `config.yml` 沒有用
+
+**症狀**：明明已經把測試主題從 `config.yml` 刪掉了，GUI 裡它還在。
+
+**根因**：執行中的宿主把 `config.yml` 讀進記憶體之後就**以記憶體為準**。
+直接編輯檔案它不會知道；而且**下一次任何寫入**（拖看板寬度、改設定、加主題）
+都會用它記憶體裡的舊清單把檔案**蓋回去** —— 刪掉的主題就復活了。
+
+這正是「刪除的主題又回來了」在開發階段的另一個成因，也是為什麼**探針留下的
+測試主題總是清不乾淨**（我改了檔案，但宿主記憶體裡還留著，下次寫入又寫回來）。
+
+**正確做法**：要改設定就走宿主認可的寫入路徑：
+
+```js
+// ✅ 先 GET 拿完整的 config，只改要改的欄位，再 PUT 回去
+const cur = await fetch('http://127.0.0.1:3080/ntfy-teams/settings').then((r) => r.json());
+await fetch('http://127.0.0.1:3080/ntfy-teams/settings', {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ config: { ...cur.config, topics: ['pub_dsh'] } })
+});
+```
+
+⚠️ **只用 delta 會把其他欄位清掉**：`writeConfig` 是整份覆寫，
+所以一定要先 GET 拿完整的再改（實測：只 PUT `{topics}` 會讓
+identity / aliases / dashboardWidth 全部消失）。
+
+**教訓**：
+* **「檔案改了」不等於「系統改了」** —— 有記憶體快取的地方，改檔案是無效的；
+* 清理測試資料時要**從系統的入口**清（PUT），不能從底層檔案清。
+
+### O. 設定欄位漏掉一端，功能就「看起來能開但其實沒作用」
+
+加一個新的持久化設定（例如自動回應的開關）時，**有三個地方要一起改**：
+
+| # | 位置 | 漏了會怎樣 |
+|---|---|---|
+| 1 | `core` 的 `CONFIG` 預設 + `readConfig` 正規化 + `saveConfig` 合併 | 設定存不進記憶體 |
+| 2 | `buildSettingsPayload`（寫給宿主的 payload） | **勾了不會進 `config.yml`**，重新整理就沒了 |
+| 3 | `syncSettingsFromHost`（從宿主讀回來） | 重開之後讀不到，設定形同虛設 |
+
+實測踩過：只做了 (1)，勾選後 `config.yml` 裡根本沒有 `autoApprove` 這個欄位 ——
+**功能看起來正常（UI 有反應），實際上完全沒作用**。
+
+**自查方式**：加完欄位後，勾一次設定，然後 `cat config.yml` 看那個欄位在不在。
+
+
 
 
 ---
@@ -617,6 +664,7 @@ const has = (n, token) => (n.cls || '').split(/\s+/).indexOf(token) !== -1;
 * 看板最小 300px；看板底部 130px 保留區 + `1px solid #eee`；
 * 訊息串**右側中央**要有跳轉列：**START（第一則）**／向上（上一天第一則）／向下（下一天第一則）／END（最後一則）；
 * 焦點中的主題：**自己發的**自動捲過去；**別人發的**不要搶走畫面，改浮出「N 則新訊息」提示條讓使用者自己點；
+* 輸入框上方要有**自動回應**的 checkbox：這個主題出現 `/approve session` 時自動回 `/approve`（預設關閉、每個主題獨立）；
 * 看板的圖表是**示範**，必須標示「示範」。
 
 ---
