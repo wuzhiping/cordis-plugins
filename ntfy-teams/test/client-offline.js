@@ -2527,9 +2527,9 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
   });
 
   test('顯示名稱未設定時不能傳送（送出按鈕 disabled）', () => {
-    /** 找到送出按鈕節點。 @param nodes - 走訪結果。 @returns 節點或 undefined。 */
+    /** 找到「送出」那一半的按鈕節點。 @param nodes - 走訪結果。 @returns 節點或 undefined。 */
     const sendButton = (nodes) => nodes.filter((n) => n.tag === 'button'
-      && n.cls && String(n.cls).indexOf('ntfy-teams-sendbtn') !== -1)[0];
+      && n.cls && String(n.cls).indexOf('ntfy-teams-sendgo') !== -1)[0];
 
     /** 在給定身分下渲染面板並回傳節點。 @param identity - 顯示名稱。 @returns 節點。 */
     const renderWithIdentity = (identity) => {
@@ -2704,14 +2704,15 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     on.core.saveConfig({ stayAtBottom: {} });
     second.core.saveConfig({ stayAtBottom: {} });
   });
-  test('優先級：四格階梯（單一控制項、預設高亮、標籤只在 tooltip）', () => {
-    // 回饋演進：「預設」下拉框看不出是什麼 → 改成四段帶文字的分段控制
-    // → 「非常不優雅，囉嗦，預設值請高亮」→ 收成**四格階梯**。
+  test('優先級併進送出鈕：顏色分級、切換鈕好按、標籤只在 tooltip', () => {
+    // 回饋演進：「預設」下拉框看不出是什麼 → 四段帶文字（囉嗦）
+    // → 四格階梯（**每格只有 7×16px，幾乎按不到**）→ 併進送出鈕。
     //
-    // 這條測試同時守住三件事：
-    //   1. 不可以退回 <select>（看不出有哪幾種可選、選了也沒回饋）；
-    //   2. 標籤**不可以**再回到「每一格都掛文字」那種囉嗦寫法；
-    //   3. 「預設」那一格要有可辨識的標記（高亮）。
+    // 這條守住：
+    //   1. 不可以退回 <select>；
+    //   2. 優先級**就是**送出鈕的一部分（同一顆），顏色分級；
+    //   3. 切換用的那一半是**大顆**的（不是 7px 的細線）；
+    //   4. 標籤只放 tooltip／aria-label，畫面不塞四個詞。
     const { harness, core, seats } = freshPanel();
     core.store.ensureTopic('pub_prio');
     core.store.setActiveTopic('pub_prio');
@@ -2719,121 +2720,96 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     const nodes = [];
     walk(harness, harness.render(seats['main:ntfy-teams'].component, {}), nodes, 0);
 
-    // 1) 沒有 select
     assert.strictEqual(nodes.filter((n) => n.tag === 'select').length, 0,
       '傳送區不該有下拉框');
 
-    // 2) 一個 radiogroup 裡有四格
-    const group = findNode(nodes, 'ntfy-teams-prio');
-    assert.ok(group, '應該有優先級控制項');
-    assert.strictEqual(group.props.role, 'radiogroup', '整組是 radiogroup');
-    const levels = nodes.filter((n) => n.tag === 'button'
-      && n.cls && String(n.cls).indexOf('ntfy-teams-priolevel') !== -1);
-    assert.strictEqual(levels.length, 4, '應該有四格，實際 ' + levels.length);
-    assert.ok(levels.every((n) => n.props.role === 'radio'), '每一格是 radio');
-    assert.deepStrictEqual(levels.map((n) => n.props['aria-label']),
-      ['優先級：最低', '優先級：低', '優先級：預設', '優先級：高'],
-      '四格由低到高');
-    assert.deepStrictEqual(levels.map((n) => n.props['data-level']),
-      ['1', '2', '3', '4'], '階梯高度依序 1..4');
+    // 1) 整顆送出鈕帶著目前級別與色調
+    const btn = findNode(nodes, 'ntfy-teams-sendbtn');
+    assert.ok(btn, '應該有送出鈕');
+    assert.strictEqual(btn.tag, 'span', '送出鈕是一個 span 容器（內含兩顆 button）');
+    assert.ok(String(btn.cls).indexOf('ntfy-teams-sendbtn--p3') !== -1,
+      '預設應該是第 3 級，實際 class：' + btn.cls);
+    assert.strictEqual(btn.props['data-tone'], 'amber',
+      '第 3 級的色調應該是 amber（預設值會觸發推播，帶點顏色提醒）');
 
-    // 3) 預設選中第三格（ntfy normal = 3）
-    assert.deepStrictEqual(levels.map((n) => n.props['aria-checked']),
-      ['false', 'false', 'true', 'false'], '預設應選中第三格');
+    // 2) 兩顆按鈕：切換級別 + 送出
+    const lvl = findNode(nodes, 'ntfy-teams-sendlvl');
+    const go = findNode(nodes, 'ntfy-teams-sendgo');
+    assert.ok(lvl, '要有切換級別的按鈕');
+    assert.ok(go, '要有送出的按鈕');
+    assert.strictEqual(lvl.tag, 'button', '切換級別的要是 button');
+    assert.strictEqual(go.tag, 'button', '送出的要是 button');
 
-    // 4) ★「預設」那一格要有高亮標記 —— 使用者永遠知道回到哪裡
-    const defaults = levels.filter((n) => n.props.className
-      && String(n.props.className).indexOf('ntfy-teams-priolevel--default') !== -1);
-    assert.strictEqual(defaults.length, 1, '恰好一格標成「預設」，實際 ' + defaults.length);
-    assert.strictEqual(defaults[0].props['aria-label'], '優先級：預設',
-      '標成預設的要是第三格');
+    // 3) 切換鈕有文字（不是只有一條細線）—— 這是「好不好按」的關鍵之一
+    const lvlText = walkInto(harness, lvl).filter((n) => n.tag === '#text')
+      .map((n) => n.text).join('').trim();
+    assert.strictEqual(lvlText, '預設', '切換鈕要顯示目前級別的名字，實際：' + JSON.stringify(lvlText));
+    assert.ok(String(lvl.props.title).indexOf('切換下一級') !== -1,
+      'tooltip 要說明按一下會切換，實際：' + lvl.props.title);
+    // 四個級別都列在 tooltip 裡（使用者知道有哪些可選）
+    ['最低', '低', '預設', '高'].forEach((w) => {
+      assert.ok(String(lvl.props.title).indexOf(w) !== -1,
+        'tooltip 要列出「' + w + '」');
+    });
 
-    // 5) 標籤只留 tooltip／aria-label，畫面**不**顯示「最低／低／預設／高」四個詞
-    const allText = walkInto(harness, group).filter((n) => n.tag === '#text')
-      .map((n) => n.text).join(' ').trim();
-    assert.strictEqual(allText, '', '四格裡不該有可見文字（囉嗦），實際：' + JSON.stringify(allText));
+    // 4) 送出那一半的文字
+    const goText = walkInto(harness, go).filter((n) => n.tag === '#text')
+      .map((n) => n.text).join('').trim();
+    assert.strictEqual(goText, '傳送', '送出鈕要寫「傳送」，實際：' + JSON.stringify(goText));
 
-    // 6) 沒有名稱時整格停用（跟送出鈕一致）
+    // 5) 上面那一列不該再出現級別文字（優先級已經移出那一列）
+    const meta = findNode(nodes, 'ntfy-teams-composemeta');
+    const metaText = walkInto(harness, meta).filter((n) => n.tag === '#text')
+      .map((n) => n.text).join(' ');
+    ['最低', '高'].forEach((w) => {
+      assert.strictEqual(metaText.indexOf(w), -1,
+        '那一列不該再出現「' + w + '」，實際：' + metaText);
+    });
+
+    // 6) 沒有名稱時兩半都停用（跟舊版一致）
     core.setIdentity('');
     const offNodes = [];
     walk(harness, harness.render(seats['main:ntfy-teams'].component, {}), offNodes, 0);
-    const offLevels = offNodes.filter((n) => n.tag === 'button'
-      && n.cls && String(n.cls).indexOf('ntfy-teams-priolevel') !== -1);
-    assert.strictEqual(offLevels.length, 4, '沒有名稱時四格仍在（看得到只是不能用）');
-    assert.ok(offLevels.every((n) => n.props.disabled === true), '沒有顯示名稱時整組停用');
+    const offBtn = findNode(offNodes, 'ntfy-teams-sendbtn');
+    assert.ok(String(offBtn.cls).indexOf('ntfy-teams-sendbtn--p3') !== -1,
+      '沒有名稱時級別仍顯示（看得到只是不能用）');
+    assert.strictEqual(findNode(offNodes, 'ntfy-teams-sendlvl').props.disabled, true,
+      '沒有名稱時切換鈕應停用');
+    assert.strictEqual(findNode(offNodes, 'ntfy-teams-sendgo').props.disabled, true,
+      '沒有名稱時送出鈕應停用');
 
     core.setIdentity('shawoo');
     core.store.removeTopic('pub_prio');
   });
 
-  test('★ 自動批準倒數中：顯示秒數、有取消鈕，而且取消鈕不在 label 裡', () => {
-    // 需求：「自動回覆，延遲 5s，有倒計時效果，中途可以取消」。
+  test('★ 切換優先級：按一下就前進一級並循環，顏色跟著換', () => {
+    // 需求：「不同優先級，不同的顏色」。這條驗切換規則與顏色對應。
     //
-    // 這條驗**倒數狀態的 UI**（時間行為由瀏覽器驗，見 test 註解）。
-    // 秒數是由 MainPanel 依「截止時間」算好後用 props 傳進來的
-    // （`approvePending` 本身只帶 deadline，見 client.js 的說明）。
-    const pending = {
-      topic: 'pub_ap', id: 'm1', text: '/approve',
-      deadline: Date.now() + 3000
-    };
-    const render = (withPending) => {
-      const { harness, core, seats } = freshPanel();
-      core.store.ensureTopic('pub_ap');
-      core.store.setActiveTopic('pub_ap');
-      core.setIdentity('shawoo');
-      const out = [];
-      walk(harness, harness.render(seats['main:ntfy-teams'].component, {}), out, 0);
-      return { nodes: out, harness, pending: withPending ? pending : null };
-    };
-
-    // 1) 沒有倒數時：沒有取消鈕、沒有秒數
-    const idle = render(false);
-    assert.ok(!findNode(idle.nodes, 'ntfy-teams-approvecancel'),
-      '沒有倒數時不該出現取消鈕');
-    assert.ok(!findNode(idle.nodes, 'ntfy-teams-approvecount'),
-      '沒有倒數時不該出現秒數');
-
-    // 2) 倒數中：膠囊變成 pending 狀態
-    //
-    // ⚠️ Composer 的 pending 來自 props（`props.approvePending`），
-    // 而 props 由 MainPanel 決定 —— 離線這裡直接餵給 Composer 太麻煩，
-    // 所以改成驗**元件本身**：把 Composer 當普通函式呼叫。
-    const Composer = idle.nodes && null;   // 佔位：下面直接用 exports 取
+    // ⚠️ 為什麼不模擬點擊：測試替身的 walker 用一顆用完就丟的 slot 陣列展開
+    //   子元件，在那裡面 setState 的結果不會留下來（實測：按了之後再渲染
+    //   仍是原值）。所以規則抽成純函式驗，實際點擊交給瀏覽器驗。
     const { exports: mod } = freshPanel();
-    const C = mod.__test && mod.__test.Composer;
-    if (typeof C === 'function') {
-      const nodes = [];
-      walk(idle.harness, C({
-        topic: 'pub_ap', identity: 'shawoo', canPublish: true,
-        autoApproveOn: true, approvePending: pending, approveLeftSec: 3
-      }), nodes, 0);
-      assert.ok(findNode(nodes, 'ntfy-teams-approvewrap--pending'),
-        '倒數中 wrapper 要有 pending 標記（CSS 靠它上色）');
-      const count = findNode(nodes, 'ntfy-teams-approvecount');
-      assert.ok(count, '倒數中要顯示秒數');
-      assert.strictEqual(
-        walkInto(idle.harness, count).map((n) => n.text).join(''),
-        '3s', '要顯示剩幾秒');
-      assert.ok(findNode(nodes, 'ntfy-teams-approvecancel'), '倒數中要有取消鈕');
+    const next = mod.__test.nextPriority;
+    const tone = mod.__test.priorityTone;
+    assert.strictEqual(typeof next, 'function', '應該匯出 nextPriority');
+    assert.strictEqual(typeof tone, 'function', '應該匯出 priorityTone');
 
-      // ★ 取消鈕不能在 label 裡面 —— 否則點它會連帶切換 checkbox
-      const label = findNode(nodes, 'ntfy-teams-autoapprove');
-      const insideLabel = walkInto(idle.harness, label)
-        .some((n) => n.cls && String(n.cls).indexOf('ntfy-teams-approvecancel') !== -1);
-      assert.ok(!insideLabel,
-        '取消鈕**不能**放在 label 內（點它會順便關掉開關）');
+    // 循環：3 → 4 → 1 → 2 → 3（到頂之後回到最低）
+    assert.strictEqual(next(3), 4, '3 的下一級是 4');
+    assert.strictEqual(next(4), 1, '4 的下一級回到 1（循環）');
+    assert.strictEqual(next(1), 2, '1 的下一級是 2');
+    assert.strictEqual(next(2), 3, '2 的下一級是 3');
+    // 壞值也安全（回預設，不爆）
+    assert.strictEqual(next(99), 3, '不合法的級別應回到預設 3');
+    assert.strictEqual(next(null), 3, 'null 應回到預設 3');
 
-      // 秒數剩 1 時顯示 1s（而不是 0s）
-      const nodes0 = [];
-      walk(idle.harness, C({
-        topic: 'pub_ap', identity: 'shawoo', canPublish: true,
-        autoApproveOn: true, approvePending: pending, approveLeftSec: 1
-      }), nodes0, 0);
-      assert.strictEqual(
-        walkInto(idle.harness, findNode(nodes0, 'ntfy-teams-approvecount'))
-          .map((n) => n.text).join(''),
-        '1s', '剩 1 秒時顯示 1s');
-    }
+    // 顏色：每一級都不同 —— 這是「不同優先級不同的顏色」的核心
+    const tones = [1, 2, 3, 4].map((v) => tone(v));
+    assert.deepStrictEqual(tones, ['muted', 'cool', 'amber', 'hot'],
+      '四級的色調應該是 muted/cool/amber/hot，實際：' + JSON.stringify(tones));
+    assert.strictEqual(new Set(tones).size, 4, '四個顏色必須互不相同');
+    // 預設那一級是 amber（會觸發推播 → 帶點顏色提醒）
+    assert.strictEqual(tone(3), 'amber', '預設（第 3 級）應該是 amber');
   });
 
   test('★ 優先級不進設定：開面板永遠是預設值', () => {
@@ -2855,25 +2831,23 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     assert.strictEqual(core.readConfig().priority, undefined,
       '設定裡不該有 priority（優先級不是持久設定）');
 
-    /** 目前選中第幾格。 @returns 四個 aria-checked。 */
-    const checkedNow = (topic) => {
+    /** 目前送出鈕的級別（`sendbtn--pN` 的 N）。 @returns 級別字串。 */
+    const levelNow = (topic) => {
       core.store.setActiveTopic(topic);
       const out = [];
       walk(harness, harness.render(seats['main:ntfy-teams'].component, {}), out, 0);
-      return out.filter((n) => n.tag === 'button'
-        && n.cls && String(n.cls).indexOf('ntfy-teams-priolevel') !== -1)
-        .map((n) => n.props['aria-checked']);
+      const b = findNode(out, 'ntfy-teams-sendbtn');
+      const m = String(b.cls).match(/ntfy-teams-sendbtn--p(\d)/);
+      return m ? m[1] : '?';
     };
 
-    // 兩個主題各自打開都是預設（第三格）
-    assert.deepStrictEqual(checkedNow('pub_p1'), ['false', 'false', 'true', 'false'],
-      'pub_p1 打開時應是預設');
-    assert.deepStrictEqual(checkedNow('pub_p2'), ['false', 'false', 'true', 'false'],
+    // 兩個主題各自打開都是預設
+    assert.strictEqual(levelNow('pub_p1'), '3', 'pub_p1 打開時應是預設');
+    assert.strictEqual(levelNow('pub_p2'), '3',
       'pub_p2 打開時也應是預設（沒有沿用前一個主題）');
 
     // 來回切幾次都一樣
-    assert.deepStrictEqual(checkedNow('pub_p1'), ['false', 'false', 'true', 'false'],
-      '切回 pub_p1 仍是預設');
+    assert.strictEqual(levelNow('pub_p1'), '3', '切回 pub_p1 仍是預設');
 
     assert.strictEqual(core.readConfig().priority, undefined,
       '切換主題後仍不該把優先級寫進設定');
@@ -2918,12 +2892,10 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     assert.ok(apIdx > metaIdx && sbIdx > metaIdx,
       '兩個開關應該排在 composemeta **之內**（節點順序在它之後）');
 
-    // ⚠️ 優先級是**自訂元件**（PriorityControl），`meta.children` 裡拿到的是
-    // 還沒展開的 React 元素 —— 那裡沒有 className。所以用節點順序判斷：
-    // 它在這一列**之內**（節點索引在 meta 之後、且在輸入框之前）。
-    const prioIdx = nodes.indexOf(findNode(nodes, 'ntfy-teams-prio'));
-    assert.ok(prioIdx > metaIdx && prioIdx < areaIdx,
-      '優先級控制要在這一列裡、且在輸入框之前');
+    // 優先級已經**移出這一列**（併進送出鈕），所以這一列不該再有它。
+    const prioSendIdx = nodes.indexOf(findNode(nodes, 'ntfy-teams-sendbtn'));
+    assert.ok(prioSendIdx > areaIdx,
+      '送出鈕（含優先級）應該在輸入框之後 —— 它是傳送區的右邊那顆，不在上面那一列');
 
     // 身分是簡短版：只顯示 `#名稱`，完整句子搬到 tooltip
     const sendAs = findNode(nodes, 'ntfy-teams-sendas');

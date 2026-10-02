@@ -5063,7 +5063,6 @@ window.__ModuleLoader__.load({
       '.ntfy-teams-autoapprovetext,.ntfy-teams-staybottomtext{min-width:0;overflow:hidden;',
       'text-overflow:ellipsis;}',
       // 優先級控制是最重要的（要看得出選了什麼），最後才動它。
-      '.ntfy-teams-prio{flex-shrink:0;}',
       '.ntfy-teams-composerow{display:flex;align-items:flex-end;gap:9px;}',
       '.ntfy-teams-textarea{flex:1 1 auto;min-height:40px;max-height:180px;resize:vertical;padding:9px 11px;',
       'border-radius:9px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base);',
@@ -5138,55 +5137,65 @@ window.__ModuleLoader__.load({
       //
       // 視覺語言：強度用「格數」表達（1..4 格實心），顏色用紅色系深淺
       // （只有 state-error 那個紅是主題令牌；深浅用 color-mix 疊出來，
-      // ---- 優先級：四格階梯 ----
+      // ---- 送出鈕＝優先級（同一顆按鈕）----
       //
-      // 一個控制項（radiogroup），不是四個帶文字的按鈕。每一格是整塊可點的
-      // 按鈕（好按），但看起來只是四條由矮到高的線（簡約）。
-      // 文字標籤只出現在 tooltip 與 aria-label。
-      '.ntfy-teams-prio{display:inline-flex;align-items:flex-end;gap:2px;flex:0 0 auto;',
-      'height:20px;padding:2px;margin:0;border:0;background:transparent;}',
-      '.ntfy-teams-prio .ntfy-teams-priolevel{display:flex;align-items:flex-end;',
-      'justify-content:center;position:relative;width:7px;height:100%;padding:0;margin:0;',
-      'border:0;border-radius:3px;background:transparent;cursor:pointer;overflow:hidden;',
-      'transition:background .12s ease;}',
-      '.ntfy-teams-prio .ntfy-teams-priolevel:hover:not(:disabled){',
-      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent);}',
-      '.ntfy-teams-prio .ntfy-teams-priolevel:focus-visible{outline:2px solid var(--dsw-static-blue-500);',
-      'outline-offset:1px;}',
-      '.ntfy-teams-prio .ntfy-teams-priolevel:disabled{cursor:default;opacity:.45;}',
-      // 一條線；高度由第幾格決定（階梯）
-      '.ntfy-teams-priolevelbar{display:block;width:3px;border-radius:1.5px;',
-      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 20%, transparent);',
-      'transition:background .12s ease;}',
-      '.ntfy-teams-priolevel[data-level="1"] .ntfy-teams-priolevelbar{height:4px;}',
-      '.ntfy-teams-priolevel[data-level="2"] .ntfy-teams-priolevelbar{height:7px;}',
-      '.ntfy-teams-priolevel[data-level="3"] .ntfy-teams-priolevelbar{height:10px;}',
-      '.ntfy-teams-priolevel[data-level="4"] .ntfy-teams-priolevelbar{height:13px;}',
-      // 四格各自深淺：越高越紅（跟「強度」的直覺一致）
-      '.ntfy-teams-priolevel[data-level="1"] .ntfy-teams-priolevelbar{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 34%, var(--dsw-alias-label-primary) 18%);}',
-      '.ntfy-teams-priolevel[data-level="2"] .ntfy-teams-priolevelbar{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 55%, var(--dsw-alias-label-primary) 14%);}',
-      '.ntfy-teams-priolevel[data-level="3"] .ntfy-teams-priolevelbar{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 78%, var(--dsw-alias-label-primary) 10%);}',
-      '.ntfy-teams-priolevel[data-level="4"] .ntfy-teams-priolevelbar{background:var(--dsw-alias-state-error-primary);}',
-      // 「預設」那一格的標記：**淡淡的一層底**，而不是另外畫一個點。
+      // 需求：「這個新優先級 UI 也不好點擊。覺得可以和發送的 button 結合起來用，
+      //       不同優先級，不同的顏色」。
       //
-      // 試過兩種「點」的畫法都不行：畫在格線底部之上會疊成一個深色污點，
-      // 畫在它下面又像一個脫離的墨點（都放大截圖看過）。
-      // 用底色最乾淨 —— 它就是那一格本身，而且選中時會自然疊成更明顯的一層。
-      '.ntfy-teams-priolevel--default{',
-      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);}',
-      // 選中：底色加深（同一條規則也適用於預設那一格）
-      '.ntfy-teams-priolevel--on{background:color-mix(in srgb, var(--dsw-alias-label-primary) 11%, transparent) !important;}',
-      // 讓格線底部留一點空間（避免視覺上貼死底部）
-      '.ntfy-teams-prio .ntfy-teams-priolevel{padding-bottom:2px;}',
+      // 上一版是四個 7×16px 的小按鈕（實測），幾乎按不到。合併之後：
+      //   * **送出鈕的顏色＝目前的優先級** —— 按下去之前就知道這則訊息多大聲；
+      //   * 左半是切換級別、右半是送出，兩個動作各自有文字，
+      //     整顆約 130×38px，好按。
+      //
+      // 顏色基調（tone）：低→冷灰、預設→琥珀、高→紅。
+      // 琥珀給「預設」而不是灰的，是刻意的：預設值會觸發手機推播，
+      // 讓它帶一點顏色等於提醒「這則會通知別人」。
+      '.ntfy-teams-sendbtn{display:inline-flex;align-items:stretch;flex:0 0 auto;',
+      'height:38px;border-radius:10px;overflow:hidden;',
+      'border:1px solid color-mix(in srgb, var(--ntfy-tone) 45%, transparent);',
+      'background:color-mix(in srgb, var(--ntfy-tone) 13%, var(--dsw-alias-bg-layer-1));',
+      '--ntfy-tone:var(--dsw-alias-label-secondary);}',
+      '.ntfy-teams-sendbtn[data-tone="muted"]{--ntfy-tone:var(--dsw-alias-label-secondary);}',
+      '.ntfy-teams-sendbtn[data-tone="cool"]{--ntfy-tone:var(--dsw-static-blue-500);}',
+      '.ntfy-teams-sendbtn[data-tone="amber"]{--ntfy-tone:var(--dsw-alias-state-warn-primary);}',
+      '.ntfy-teams-sendbtn[data-tone="hot"]{--ntfy-tone:var(--dsw-alias-state-error-primary);}',
+      // 左半：切換級別。刻意比右半窄，視覺上「送出」才是主要動作。
+      '.ntfy-teams-sendlvl{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;',
+      'padding:0 10px;margin:0;border:0;cursor:pointer;font:inherit;font-size:11px;',
+      'line-height:1;white-space:nowrap;',
+      'color:color-mix(in srgb, var(--ntfy-tone) 78%, var(--dsw-alias-label-primary));',
+      'background:transparent;}',
+      '.ntfy-teams-sendlvl:hover:not(:disabled){',
+      'background:color-mix(in srgb, var(--ntfy-tone) 16%, transparent);}',
+      '.ntfy-teams-sendlvl:disabled{cursor:default;opacity:.45;}',
+      '.ntfy-teams-sendlvl:focus-visible{outline:2px solid var(--dsw-static-blue-500);outline-offset:-2px;}',
+      // 分隔線：用 tone 的淡色，讓兩半看起來是「同一顆按鈕的兩個區」
+      '.ntfy-teams-senddiv{width:1px;flex:0 0 auto;',
+      'background:color-mix(in srgb, var(--ntfy-tone) 30%, transparent);}',
+      '.ntfy-teams-sendgo{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;',
+      'padding:0 14px;margin:0;border:0;cursor:pointer;font:inherit;font-size:13px;',
+      'font-weight:600;line-height:1;white-space:nowrap;',
+      'color:color-mix(in srgb, var(--ntfy-tone) 82%, var(--dsw-alias-label-primary));',
+      'background:transparent;}',
+      '.ntfy-teams-sendgo:hover:not(:disabled){',
+      'background:color-mix(in srgb, var(--ntfy-tone) 18%, transparent);}',
+      '.ntfy-teams-sendgo:disabled{cursor:default;opacity:.45;}',
+      '.ntfy-teams-sendgo:focus-visible{outline:2px solid var(--dsw-static-blue-500);outline-offset:-2px;}',
+      // 強度格：4 格，高度由矮到高（階梯）
+      '.ntfy-teams-pribars{display:inline-flex;align-items:flex-end;gap:1.5px;height:12px;}',
+      '.ntfy-teams-pribar{display:block;width:2.5px;border-radius:1px;',
+      'background:color-mix(in srgb, var(--ntfy-tone) 26%, transparent);}',
+      '.ntfy-teams-pribar[data-lv="1"]{height:4px;}',
+      '.ntfy-teams-pribar[data-lv="2"]{height:6px;}',
+      '.ntfy-teams-pribar[data-lv="3"]{height:8px;}',
+      '.ntfy-teams-pribar[data-lv="4"]{height:11px;}',
+      '.ntfy-teams-pribar--on{background:var(--ntfy-tone) !important;}',
       // 窄畫面時**由外而內依序省略最不重要的文字**，而不是折行。
       //
-      // 斷點怎麼定的（實測，不是猜的）：這一列全部文字都顯示需要 ~537px
-      // （身分 55 + 自動批準 80 + 永遠滾到最新 102 + 舊的分段控制 220 + 間距）。
-      // 而訊息串那一欄會隨視窗縮小（看板固定 300px），於是視窗 ~1100px 時
-      // 這一列只剩 484px → 溢出。
-      //
-      // 新的四格控制只有 ~38px 寬（舊的 220px），所以餘裕大很多；
-      // 現在只剩兩個開關的文字需要讓位。
+      // 斷點怎麼定的（實測，不是猜的）：這一列全部文字都顯示需要 ~490px
+      // （身分 55 + 自動批準 80 + 永遠滾到最新 102 + 間距），
+      // 而訊息串那一欄會隨視窗縮小（看板固定 300px）。
+      // 優先級已經移出這一列，所以只剩兩個開關的文字需要讓位。
       '@media (max-width:800px){.ntfy-teams-autoapprovetext,.ntfy-teams-staybottomtext{',
       'display:none;}.ntfy-teams-autoapprove,.ntfy-teams-staybottom{padding:3px 6px;}}'
     ].concat(AVATAR_CSS).join('');
@@ -8066,58 +8075,148 @@ window.__ModuleLoader__.load({
      * 用「格數」而不是只用顏色，是因為顏色單獨一種編碼對色弱不友善，
      * 而且四個色階在小尺寸下很難分辨。
      *
-     * ⚠️ 這裡沒有「顯示用的文字標籤」欄位 —— 標籤只在 tooltip 與 aria-label 出現。
-     * 之前每一級都掛「最低／低／預設／高」四個字，四組文字並排非常囉嗦
-     * （回饋：「非常不優雅，囉嗦」）。四格的階梯本身就表達了大小。
+     * `tone` 是這一級的顏色基調（CSS 變數名）：送出鈕用它上色，
+     * 所以「選了什麼優先級」在按下去之前就看得出來。
      *
-     * @type {Array<{value:number, label:string, level:number}>}
+     * ⚠️ 這裡沒有「顯示用的文字標籤」欄位 —— 標籤只在 tooltip 與 aria-label 出現
+     * （送出的那一顆按鈕會顯示目前級別的名字，見 SendButton）。
+     *
+     * @type {Array<{value:number, label:string, level:number, tone:string}>}
      */
     var PRIORITY_OPTIONS = [
-      { value: 1, label: '最低', level: 1 },
-      { value: 2, label: '低', level: 2 },
-      { value: 3, label: '預設', level: 3 },
-      { value: 4, label: '高', level: 4 }
+      { value: 1, label: '最低', level: 1, tone: 'muted' },
+      { value: 2, label: '低', level: 2, tone: 'cool' },
+      { value: 3, label: '預設', level: 3, tone: 'amber' },
+      { value: 4, label: '高', level: 4, tone: 'hot' }
     ];
 
     /**
-     * 優先級控制：四格階梯。
+     * 找出某一級的設定。
      *
-     * 一個控制項而不是四個按鈕並排 —— 這是**單一選擇**（radio 語意），
-     * 不是四個獨立動作，所以視覺上就該是一組。
-     *
-     * 每一格是 `<button role="radio">`：整格可點（比只點一條細線好按），
-     * 但看起來只是四條由矮到高的線。選中的第 n 格連同左邊的都亮起來，
-     * 所以「現在多大」一眼看得出來。
-     *
-     * 「預設」那一格下方有一個小點 —— 使用者永遠知道回到哪裡。
-     *
-     * @param props - { value, disabled, onChange }。
-     * @returns 控制項元素。
+     * @param value - 優先級數值。
+     * @returns 選項物件（找不到時回傳預設那一級）。
      */
-    function PriorityControl(props) {
-      var value = props.value;
+    function priorityOption(value) {
+      for (var i = 0; i < PRIORITY_OPTIONS.length; i += 1) {
+        if (PRIORITY_OPTIONS[i].value === value) return PRIORITY_OPTIONS[i];
+      }
+      return PRIORITY_OPTIONS[PRIORITY_OPTIONS.length - 1];
+    }
+
+    /**
+     * 下一個優先級（循環）。
+     *
+     * 抽成純函式是為了**可離線測試**：測試替身的 walker 會用一顆用完就丟的
+     * slot 陣列展開子元件，在那裡面 `setState` 的結果不會留下來 ——
+     * 所以「按一下會不會前進一級」沒辦法靠模擬點擊來驗（實測踩過）。
+     * 把規則抽出來，就能直接驗規則本身。
+     *
+     * @param value - 目前級別。
+     * @returns 下一級。
+     */
+    function nextPriority(value) {
+      for (var i = 0; i < PRIORITY_OPTIONS.length; i += 1) {
+        if (PRIORITY_OPTIONS[i].value === value) {
+          return PRIORITY_OPTIONS[(i + 1) % PRIORITY_OPTIONS.length].value;
+        }
+      }
+      return DEFAULT_PRIORITY;
+    }
+
+    /**
+     * 某一級對應的色調（CSS 上的 `data-tone`）。
+     *
+     * 顏色是「不同優先級，不同的顏色」這個需求的實作，所以也抽出來測。
+     *
+     * @param value - 級別。
+     * @returns 色調名（muted / cool / amber / hot）。
+     */
+    function priorityTone(value) {
+      return priorityOption(value).tone;
+    }
+
+    /**
+     * 優先級強度指示（幾格實心，由矮到高）。
+     *
+     * @param props - { level, total }。
+     * @returns 指示元素。
+     */
+    function PriorityBars(props) {
+      var total = props.total || PRIORITY_OPTIONS.length;
+      var level = Math.max(0, Math.min(total, props.level || 0));
+      var cells = [];
+      for (var i = 0; i < total; i += 1) {
+        cells.push(e('i', {
+          key: 'b' + i,
+          'data-lv': String(i + 1),
+          className: 'ntfy-teams-pribar' + (i < level ? ' ntfy-teams-pribar--on' : '')
+        }));
+      }
+      return e('span', { className: 'ntfy-teams-pribars', 'aria-hidden': 'true' }, cells);
+    }
+
+    /**
+     * 送出鈕 —— **同時是優先級的顯示器**。
+     *
+     * 需求：「這個新優先級 UI 也不好點擊。覺得可以和發送的 button 結合起來用，
+     *       不同優先級，不同的顏色」。
+     *
+     * 上一版是四個獨立的小按鈕，每一格只有 7×16px（實測）—— 幾乎按不到，
+     * 而且它跟「送出」是兩件事、要分開看。合併之後：
+     *
+     *   * **送出鈕本身的顏色＝目前的優先級**：按下去之前就知道這則訊息多大聲，
+     *     不必再去別的地方確認；
+     *   * 按鈕左邊那一段是**切換優先級**（一次前進一級、循環），
+     *     右邊那一段是**送出** —— 兩個動作各自有明確的文字，
+     *     而且整顆按鈕高 38px、加起來約 130px 寬，好按。
+     *
+     * 為什麼不做成「換級別時就送出」：那是**無法撤銷**的動作，
+     * 把「打字打到一半誤觸」變成「送出一則錯誤訊息」，代價太高。
+     * 顏色已經讓它合為一體了，不需要連動作也合併。
+     *
+     * @param props - { priority, disabled, busy, canPublish, hasName, onCycle, onSend }。
+     * @returns 按鈕元素。
+     */
+    function SendButton(props) {
+      var opt = priorityOption(props.priority);
+      var level = opt.value;
+      var tone = opt.tone;
       var disabled = props.disabled === true;
+      // 「送出」的說明：跟舊版一致，分開講「要認證」與「還沒設定名稱」。
+      var sendTitle = !props.canPublish
+        ? '此主題需要認證才能傳送'
+        : (props.hasName === false ? '請先設定顯示名稱' : '傳送訊息');
+      var groups = [];
+      // 設定 key 避免 React 對同一組兄弟節點發出警告。
+      groups.push(e('button', {
+        key: 'lvl',
+        type: 'button',
+        className: 'ntfy-teams-sendlvl',
+        disabled: disabled,
+        'aria-label': '優先級：' + opt.label + '（按一下切換下一級）',
+        title: '優先級：' + opt.label + '。按一下切換下一級（'
+          + PRIORITY_OPTIONS.map(function (o) { return o.label; }).join(' → ') + '，循環）',
+        onClick: function () { props.onCycle(); }
+      },
+        e(PriorityBars, { level: level }),
+        e('span', { className: 'ntfy-teams-sendlvltext' }, opt.label)
+      ));
+      groups.push(e('span', { key: 'div', className: 'ntfy-teams-senddiv', 'aria-hidden': 'true' }));
+      groups.push(e('button', {
+        key: 'send',
+        type: 'button',
+        className: 'ntfy-teams-sendgo',
+        disabled: props.busy || disabled,
+        title: sendTitle,
+        onClick: function () { props.onSend(); }
+      },
+        e(SendGlyph),
+        e('span', null, props.busy ? '傳送中…' : '傳送')
+      ));
       return e('span', {
-        className: 'ntfy-teams-prio',
-        role: 'radiogroup',
-        'aria-label': '優先級'
-      }, PRIORITY_OPTIONS.map(function (opt) {
-        var on = opt.value === value;
-        return e('button', {
-          key: opt.value,
-          type: 'button',
-          role: 'radio',
-          className: 'ntfy-teams-priolevel'
-            + (on ? ' ntfy-teams-priolevel--on' : '')
-            + (opt.value === DEFAULT_PRIORITY ? ' ntfy-teams-priolevel--default' : ''),
-          'data-level': String(opt.level),
-          disabled: disabled,
-          'aria-checked': on ? 'true' : 'false',
-          'aria-label': '優先級：' + opt.label,
-          title: '優先級：' + opt.label,
-          onClick: function () { props.onChange(opt.value); }
-        }, e('i', { key: 'bar', className: 'ntfy-teams-priolevelbar' }));
-      }));
+        className: 'ntfy-teams-sendbtn ntfy-teams-sendbtn--p' + level,
+        'data-tone': tone
+      }, groups);
     }
 
     /**
@@ -8135,6 +8234,22 @@ window.__ModuleLoader__.load({
       var prioState = React.useState(DEFAULT_PRIORITY);
       var prio = prioState[0];
       var setPrio = prioState[1];
+
+      /**
+       * 切換到下一級優先級（循環）。
+       *
+       * 為什麼用「循環」而不是展開一個清單：送出鈕上面那個區塊很小，
+       * 展開清單會把它變成一個浮層（多一層要處理定位與關閉）。
+       * 四級循環最多按 3 下就到想要的，而且每一級的名字都顯示在按鈕上，
+       * 按的時候看得到自己在哪一級。
+       *
+       * @returns 切換後的級別。
+       */
+      function cyclePriority() {
+        var next = nextPriority(prio);
+        setPrio(next);
+        return next;
+      }
       // 切換主題就回到預設 —— 而且**刻意不保存**。
       //
       // 需求：「切換 topic 恢復預設，不用保存它狀態」。
@@ -8322,18 +8437,8 @@ window.__ModuleLoader__.load({
             }),
             e('span', { className: 'ntfy-teams-staybottomtext' }, '永遠滾到最新')
           ),
-          // 推開：讓優先級靠右（窄畫面時這條推擠會先被壓掉）
-          e('span', { className: 'ntfy-teams-spacer' }),
-          // ---- 優先級：四格階梯 ----
-          //
-          // 為什麼是「一個控制項」而不是四個帶文字的按鈕：這是**單一選擇**
-          // （radio 語意），不是四個獨立動作；四組文字並排會非常囉嗦
-          // （回饋：「非常不優雅，囉嗦」）。標籤改放 tooltip 與 aria-label。
-          e(PriorityControl, {
-            value: prio,
-            disabled: !canSend,
-            onChange: setPrio
-          })
+          // 優先級不再自己佔一格 —— 它已經**併進送出鈕**（顏色＝目前級別），
+          // 見下面 SendButton。同一件資訊只出現在一個地方，不必兩處對照。
         ),
         e('div', { className: 'ntfy-teams-composerow' },
           // 沒有名稱時輸入框**仍可打字**：讓使用者先把想說的話寫好，
@@ -8350,15 +8455,16 @@ window.__ModuleLoader__.load({
             onChange: function (ev) { setBody(ev.target.value); },
             onKeyDown: onKeyDown
           }),
-          e('button', {
-            type: 'button',
-            className: 'ntfy-teams-btn ntfy-teams-btn--primary ntfy-teams-sendbtn',
-            disabled: busy || !canSend,
-            title: !canPublish
-              ? '此主題需要認證才能傳送'
-              : (hasName ? '傳送訊息' : '請先設定顯示名稱'),
-            onClick: send
-          }, e(SendGlyph), busy ? '傳送中…' : '傳送')
+          // 送出鈕同時是優先級的顯示器（顏色＝目前級別），見 SendButton 的說明。
+          e(SendButton, {
+            priority: prio,
+            disabled: !canSend,
+            busy: busy,
+            canPublish: canPublish,
+            hasName: hasName,
+            onCycle: cyclePriority,
+            onSend: send
+          })
         ),
         err !== '' ? e('div', { className: 'ntfy-teams-hint ntfy-teams-hint--err' }, err) : null
       );
@@ -9962,6 +10068,11 @@ window.__ModuleLoader__.load({
       SettingsPanel: SettingsPanel,
       SettingsSummary: SettingsSummary,
       Composer: Composer,
+      // 優先級的**純規則**（給離線測試用）—— 模擬點擊在測試替身裡不可靠，
+      // 見 nextPriority 的說明。
+      nextPriority: nextPriority,
+      priorityTone: priorityTone,
+      PRIORITY_OPTIONS: PRIORITY_OPTIONS,
       MessageList: MessageList,
       MessageRow: MessageRow,
       // 「N 則新訊息」提示條（焦點主題收到別人的訊息時浮出）
