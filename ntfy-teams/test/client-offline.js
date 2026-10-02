@@ -2704,15 +2704,17 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     on.core.saveConfig({ stayAtBottom: {} });
     second.core.saveConfig({ stayAtBottom: {} });
   });
-  test('優先級併進送出鈕：顏色分級、切換鈕好按、標籤只在 tooltip', () => {
+  test('優先級併進送出鈕：不顯示文字、有前後箭頭、預設黑色', () => {
     // 回饋演進：「預設」下拉框看不出是什麼 → 四段帶文字（囉嗦）
-    // → 四格階梯（**每格只有 7×16px，幾乎按不到**）→ 併進送出鈕。
+    // → 四格階梯（**每格只有 7×16px，幾乎按不到**）→ 併進送出鈕
+    // → 「優先級不顯示文字，加前後箭頭可以調整。button size 80%，預設顏色黑色」。
     //
     // 這條守住：
     //   1. 不可以退回 <select>；
     //   2. 優先級**就是**送出鈕的一部分（同一顆），顏色分級；
-    //   3. 切換用的那一半是**大顆**的（不是 7px 的細線）；
-    //   4. 標籤只放 tooltip／aria-label，畫面不塞四個詞。
+    //   3. **畫面上不顯示級別文字**（只剩格數 + tooltip）；
+    //   4. 有**前後兩顆箭頭**可調，而且到頂／到底會停用；
+    //   5. 預設那一級的顏色是**黑**（ink）。
     const { harness, core, seats } = freshPanel();
     core.store.ensureTopic('pub_prio');
     core.store.setActiveTopic('pub_prio');
@@ -2726,38 +2728,81 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     // 1) 整顆送出鈕帶著目前級別與色調
     const btn = findNode(nodes, 'ntfy-teams-sendbtn');
     assert.ok(btn, '應該有送出鈕');
-    assert.strictEqual(btn.tag, 'span', '送出鈕是一個 span 容器（內含兩顆 button）');
+    assert.strictEqual(btn.tag, 'span', '送出鈕是一個 span 容器');
     assert.ok(String(btn.cls).indexOf('ntfy-teams-sendbtn--p3') !== -1,
       '預設應該是第 3 級，實際 class：' + btn.cls);
-    assert.strictEqual(btn.props['data-tone'], 'amber',
-      '第 3 級的色調應該是 amber（預設值會觸發推播，帶點顏色提醒）');
+    assert.strictEqual(btn.props['data-tone'], 'ink',
+      '★ 第 3 級（預設）的色調應該是 ink＝黑，實際：' + btn.props['data-tone']);
 
-    // 2) 兩顆按鈕：切換級別 + 送出
+    // 2) ★ 兩顆是**獨立的按鈕**：調級別那組與送出各自成塊，中間靠外層的 gap 留白。
+    //
+    // 回饋：「兩個 button 之間反而應該留白，以免誤觸」。
+    // 之前是一整塊用 1px 分隔線切開 —— 兩個動作貼在一起，很容易按錯。
+    // 結構上要守住：級別組是一個**獨立的容器**，送出鈕是它的**兄弟**，
+    // 而不是同一個容器裡用分隔線隔開。
+    const lvlGroup = findNode(nodes, 'ntfy-teams-lvlgroup');
+    assert.ok(lvlGroup, '調級別的那組要是獨立的容器（ntfy-teams-lvlgroup）');
+    assert.ok(!findNode(nodes, 'ntfy-teams-senddiv'),
+      '不該再有分隔線（senddiv）—— 兩顆之間改用留白隔開');
+    const down = findNode(nodes, 'ntfy-teams-priobtn--down');
+    const up = findNode(nodes, 'ntfy-teams-priobtn--up');
     const lvl = findNode(nodes, 'ntfy-teams-sendlvl');
     const go = findNode(nodes, 'ntfy-teams-sendgo');
-    assert.ok(lvl, '要有切換級別的按鈕');
-    assert.ok(go, '要有送出的按鈕');
-    assert.strictEqual(lvl.tag, 'button', '切換級別的要是 button');
+    assert.ok(down, '要有「降低優先級」的箭頭');
+    assert.ok(up, '要有「提高優先級」的箭頭');
+    assert.ok(lvl, '要有級別顯示');
+    assert.ok(go, '要有送出鈕');
+    assert.strictEqual(down.tag, 'button', '箭頭要是 button');
+    assert.strictEqual(up.tag, 'button', '箭頭要是 button');
+    assert.strictEqual(lvl.tag, 'span', '級別顯示是純顯示（不是按鈕）');
     assert.strictEqual(go.tag, 'button', '送出的要是 button');
+    // 送出鈕必須在級別組**之外**（是 sentbtn 的直接子節點，不是塞進級別組）。
+    // ⚠️ `sendBtn.children` 是傳進去的**陣列**（可能還包一層），要先攤平。
+    const sendBtn = findNode(nodes, 'ntfy-teams-sendbtn');
+    const flatKid = (list) => {
+      const out = [];
+      (function flatten(x) {
+        (Array.isArray(x) ? x : [x]).forEach((c) => {
+          if (Array.isArray(c)) { flatten(c); return; }
+          if (c) out.push(String((c.props && c.props.className) || ''));
+        });
+      }(list || []));
+      return out;
+    };
+    const kidCls = flatKid(sendBtn.children);
+    assert.ok(kidCls.some((c) => c.indexOf('ntfy-teams-lvlgroup') !== -1),
+      'sentbtn 的直接子節點要有級別組，實際：' + JSON.stringify(kidCls));
+    assert.ok(kidCls.some((c) => c.indexOf('ntfy-teams-sendgo') !== -1),
+      'sentbtn 的直接子節點要有送出鈕（與級別組是兄弟），實際：' + JSON.stringify(kidCls));
 
-    // 3) 切換鈕有文字（不是只有一條細線）—— 這是「好不好按」的關鍵之一
+    // 3) ★ 畫面上**不顯示文字**：級別那一格只有格數
     const lvlText = walkInto(harness, lvl).filter((n) => n.tag === '#text')
       .map((n) => n.text).join('').trim();
-    assert.strictEqual(lvlText, '預設', '切換鈕要顯示目前級別的名字，實際：' + JSON.stringify(lvlText));
-    assert.ok(String(lvl.props.title).indexOf('切換下一級') !== -1,
-      'tooltip 要說明按一下會切換，實際：' + lvl.props.title);
+    assert.strictEqual(lvlText, '',
+      '★ 級別顯示不該有文字（只剩格數），實際：' + JSON.stringify(lvlText));
+    // 但無障礙與 tooltip 仍要說明（不然使用者不知道那是什麼）
+    assert.ok(String(lvl.props['aria-label']).indexOf('優先級：預設') !== -1,
+      'aria-label 要說明目前級別，實際：' + lvl.props['aria-label']);
+    assert.ok(String(lvl.props.title).indexOf('優先級：預設') !== -1,
+      'tooltip 要說明目前級別，實際：' + lvl.props.title);
     // 四個級別都列在 tooltip 裡（使用者知道有哪些可選）
     ['最低', '低', '預設', '高'].forEach((w) => {
-      assert.ok(String(lvl.props.title).indexOf(w) !== -1,
-        'tooltip 要列出「' + w + '」');
+      assert.ok(String(lvl.props.title).indexOf(w) !== -1, 'tooltip 要列出「' + w + '」');
     });
+    // 箭頭的 tooltip 也要說出「目前是哪一級」
+    assert.ok(String(down.props.title).indexOf('降低') !== -1, '左箭頭要說明是降低');
+    assert.ok(String(up.props.title).indexOf('提高') !== -1, '右箭頭要說明是提高');
 
-    // 4) 送出那一半的文字
+    // 4) 預設是第 3 級 → 兩顆箭頭都可用（還沒到頂也沒到底）
+    assert.strictEqual(down.props.disabled, false, '第 3 級時左箭頭可用');
+    assert.strictEqual(up.props.disabled, false, '第 3 級時右箭頭可用');
+
+    // 5) 送出那一半的文字
     const goText = walkInto(harness, go).filter((n) => n.tag === '#text')
       .map((n) => n.text).join('').trim();
     assert.strictEqual(goText, '傳送', '送出鈕要寫「傳送」，實際：' + JSON.stringify(goText));
 
-    // 5) 上面那一列不該再出現級別文字（優先級已經移出那一列）
+    // 6) 上面那一列不該再出現級別文字（優先級已經移出那一列）
     const meta = findNode(nodes, 'ntfy-teams-composemeta');
     const metaText = walkInto(harness, meta).filter((n) => n.tag === '#text')
       .map((n) => n.text).join(' ');
@@ -2766,15 +2811,17 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
         '那一列不該再出現「' + w + '」，實際：' + metaText);
     });
 
-    // 6) 沒有名稱時兩半都停用（跟舊版一致）
+    // 7) 沒有名稱時整組停用（跟舊版一致）
     core.setIdentity('');
     const offNodes = [];
     walk(harness, harness.render(seats['main:ntfy-teams'].component, {}), offNodes, 0);
     const offBtn = findNode(offNodes, 'ntfy-teams-sendbtn');
     assert.ok(String(offBtn.cls).indexOf('ntfy-teams-sendbtn--p3') !== -1,
       '沒有名稱時級別仍顯示（看得到只是不能用）');
-    assert.strictEqual(findNode(offNodes, 'ntfy-teams-sendlvl').props.disabled, true,
-      '沒有名稱時切換鈕應停用');
+    assert.strictEqual(findNode(offNodes, 'ntfy-teams-priobtn--down').props.disabled, true,
+      '沒有名稱時左箭頭應停用');
+    assert.strictEqual(findNode(offNodes, 'ntfy-teams-priobtn--up').props.disabled, true,
+      '沒有名稱時右箭頭應停用');
     assert.strictEqual(findNode(offNodes, 'ntfy-teams-sendgo').props.disabled, true,
       '沒有名稱時送出鈕應停用');
 
@@ -2782,34 +2829,41 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     core.store.removeTopic('pub_prio');
   });
 
-  test('★ 切換優先級：按一下就前進一級並循環，顏色跟著換', () => {
-    // 需求：「不同優先級，不同的顏色」。這條驗切換規則與顏色對應。
+  test('★ 優先級：箭頭一步一步調整、到頂到底會停用，四色互不相同', () => {
+    // 需求：「加前後箭頭可以調整」、「不同優先級，不同的顏色」。
     //
     // ⚠️ 為什麼不模擬點擊：測試替身的 walker 用一顆用完就丟的 slot 陣列展開
-    //   子元件，在那裡面 setState 的結果不會留下來（實測：按了之後再渲染
-    //   仍是原值）。所以規則抽成純函式驗，實際點擊交給瀏覽器驗。
+    //   子元件，在那裡面 setState 的結果不會留下來。所以規則抽成純函式驗，
+    //   實際點擊交給瀏覽器驗。
     const { exports: mod } = freshPanel();
     const next = mod.__test.nextPriority;
+    const clamp = mod.__test.clampPriority;
     const tone = mod.__test.priorityTone;
-    assert.strictEqual(typeof next, 'function', '應該匯出 nextPriority');
+    assert.strictEqual(typeof clamp, 'function', '應該匯出 clampPriority');
     assert.strictEqual(typeof tone, 'function', '應該匯出 priorityTone');
+    assert.strictEqual(typeof next, 'function', '應該匯出 nextPriority');
 
-    // 循環：3 → 4 → 1 → 2 → 3（到頂之後回到最低）
-    assert.strictEqual(next(3), 4, '3 的下一級是 4');
-    assert.strictEqual(next(4), 1, '4 的下一級回到 1（循環）');
-    assert.strictEqual(next(1), 2, '1 的下一級是 2');
-    assert.strictEqual(next(2), 3, '2 的下一級是 3');
-    // 壞值也安全（回預設，不爆）
-    assert.strictEqual(next(99), 3, '不合法的級別應回到預設 3');
-    assert.strictEqual(next(null), 3, 'null 應回到預設 3');
-
-    // 顏色：每一級都不同 —— 這是「不同優先級不同的顏色」的核心
+    // 顏色：每一級都不同 —— 這是「不同優先級，不同的顏色」的核心
     const tones = [1, 2, 3, 4].map((v) => tone(v));
-    assert.deepStrictEqual(tones, ['muted', 'cool', 'amber', 'hot'],
-      '四級的色調應該是 muted/cool/amber/hot，實際：' + JSON.stringify(tones));
+    assert.deepStrictEqual(tones, ['muted', 'cool', 'ink', 'hot'],
+      '四級的色調應該是 muted/cool/ink/hot，實際：' + JSON.stringify(tones));
     assert.strictEqual(new Set(tones).size, 4, '四個顏色必須互不相同');
-    // 預設那一級是 amber（會觸發推播 → 帶點顏色提醒）
-    assert.strictEqual(tone(3), 'amber', '預設（第 3 級）應該是 amber');
+    // ★ 預設那一級是**黑**（ink）
+    assert.strictEqual(tone(3), 'ink', '★ 預設（第 3 級）應該是黑（ink）');
+
+    // 箭頭是「一步一步」而且**到頂／到底就停**（不是循環）
+    assert.strictEqual(clamp(3 + 1), 4, '提高一級：3 → 4');
+    assert.strictEqual(clamp(4 + 1), 4, '★ 已經最高 → 停在 4（不循環回 1）');
+    assert.strictEqual(clamp(1 - 1), 1, '★ 已經最低 → 停在 1（不循環回 4）');
+    assert.strictEqual(clamp(2 - 1), 1, '降低一級：2 → 1');
+    // 壞值安全
+    assert.strictEqual(clamp(99), 4, '超出上限應夾到 4');
+    assert.strictEqual(clamp(-5), 1, '低於下限應夾到 1');
+    assert.strictEqual(clamp(null), 3, '不合法的值應回到預設 3');
+    assert.strictEqual(clamp('abc'), 3, '非數字應回到預設 3');
+
+    // 保留的循環函式仍可用（未來若要換回循環式控制）
+    assert.strictEqual(next(4), 1, 'nextPriority 仍是循環語意');
   });
 
   test('★ 優先級不進設定：開面板永遠是預設值', () => {

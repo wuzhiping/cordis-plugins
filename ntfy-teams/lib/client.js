@@ -5147,40 +5147,73 @@ window.__ModuleLoader__.load({
       //   * 左半是切換級別、右半是送出，兩個動作各自有文字，
       //     整顆約 130×38px，好按。
       //
-      // 顏色基調（tone）：低→冷灰、預設→琥珀、高→紅。
-      // 琥珀給「預設」而不是灰的，是刻意的：預設值會觸發手機推播，
-      // 讓它帶一點顏色等於提醒「這則會通知別人」。
-      '.ntfy-teams-sendbtn{display:inline-flex;align-items:stretch;flex:0 0 auto;',
-      'height:38px;border-radius:10px;overflow:hidden;',
-      'border:1px solid color-mix(in srgb, var(--ntfy-tone) 45%, transparent);',
-      'background:color-mix(in srgb, var(--ntfy-tone) 13%, var(--dsw-alias-bg-layer-1));',
+      // ---- 送出鈕＝優先級（同一組，但**兩個獨立的按鈕**）----
+      //
+      // 顏色基調（tone）：
+      //   最低→冷灰、低→藍、**預設→黑**、高→紅
+      //
+      // 「預設」用**黑**，而且必須是**會反色的黑**：色票用
+      // `--dsw-alias-label-primary`（淺色主題 `#0f1115`、深色主題 `#f9fafb`）。
+      //
+      // ⚠️ 這裡走過一次冤枉路：我原本用**主題無關**的
+      // `--dsw-static-neutral-900`（固定 `#0f0f0f`）來當「黑」，理由是
+      // 「實測淺色下就是 #0f1115」。結果**深色模式整個壞掉**（實測）：
+      //     深色：底色 rgb(34,34,35)、文字 rgb(57,57,57)  ← 幾乎融在一起
+      //     淺色：底色 #f3f3f3、文字 #0f0f0f              ← 正常
+      // 深色底 + 固定黑字＝看不見。使用者回報「default 看不清楚，應該反色」。
+      //
+      // **規則**：`--dsw-static-*` 是固定色票（用在紅/藍/綠這種「顏色本身就是
+      // 語意」的地方）；`--dsw-alias-*` 是**跟著主題反色**的（用在「黑底白字」
+      // 這種要維持對比的地方）。這裡要的是「一個高對比的中性色」——
+      // 淺色下是黑、深色下就該是白，所以**必須用 alias**。
+      //
+      // ⚠️ **中間一定要留白**（回饋：「兩個 button 之間反而應該留白，以免誤觸」）：
+      // 外層是透明容器，裡面兩個**各自獨立的圓角塊** ——
+      // 左邊那塊調優先級、右邊那塊送出，中間隔 7px 的空隙（`gap:7px`）。
+      // 之前是一整塊用 1px 分隔線切開，兩個動作貼在一起，
+      // 想按送出卻按到箭頭、或反過來，都很容易發生。
+      //
+      // 尺寸 90%：高 38 → 34px、字級 13 → 12、圖示 16 → 14。
+      '.ntfy-teams-sendbtn{display:inline-flex;align-items:stretch;flex:0 0 auto;gap:7px;',
+      'height:34px;',
       '--ntfy-tone:var(--dsw-alias-label-secondary);}',
-      '.ntfy-teams-sendbtn[data-tone="muted"]{--ntfy-tone:var(--dsw-alias-label-secondary);}',
+      // 左邊那塊：前後箭頭 + 級別格數
+      '.ntfy-teams-lvlgroup{display:inline-flex;align-items:stretch;flex:0 0 auto;',
+      'border-radius:9px;overflow:hidden;',
+      'border:1px solid color-mix(in srgb, var(--ntfy-tone) 45%, transparent);',
+      'background:color-mix(in srgb, var(--ntfy-tone) 7%, var(--dsw-alias-bg-layer-1));}',
+      '.ntfy-teams-sendbtn[data-tone="muted"]{--ntfy-tone:var(--dsw-alias-label-tertiary);}',
       '.ntfy-teams-sendbtn[data-tone="cool"]{--ntfy-tone:var(--dsw-static-blue-500);}',
-      '.ntfy-teams-sendbtn[data-tone="amber"]{--ntfy-tone:var(--dsw-alias-state-warn-primary);}',
-      '.ntfy-teams-sendbtn[data-tone="hot"]{--ntfy-tone:var(--dsw-alias-state-error-primary);}',
-      // 左半：切換級別。刻意比右半窄，視覺上「送出」才是主要動作。
-      '.ntfy-teams-sendlvl{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;',
-      'padding:0 10px;margin:0;border:0;cursor:pointer;font:inherit;font-size:11px;',
-      'line-height:1;white-space:nowrap;',
-      'color:color-mix(in srgb, var(--ntfy-tone) 78%, var(--dsw-alias-label-primary));',
+      '.ntfy-teams-sendbtn[data-tone="ink"]{--ntfy-tone:var(--dsw-alias-label-primary);}',
+      '.ntfy-teams-sendbtn[data-tone="hot"]{--ntfy-tone:var(--dsw-static-red-500);}',
+      // 左右箭頭（前後調整優先級）。
+      //
+      // ⚠️ 這一區**沒有左邊留白**（回饋：「優先級 button 前面的留白不需要」）——
+      // 左箭頭直接貼著按鈕左緣。
+      '.ntfy-teams-priobtn{display:inline-flex;align-items:center;justify-content:center;',
+      'flex:0 0 auto;width:22px;padding:0;margin:0;border:0;cursor:pointer;',
+      'color:color-mix(in srgb, var(--ntfy-tone) 72%, var(--dsw-alias-label-primary));',
       'background:transparent;}',
-      '.ntfy-teams-sendlvl:hover:not(:disabled){',
+      '.ntfy-teams-priobtn:hover:not(:disabled){',
       'background:color-mix(in srgb, var(--ntfy-tone) 16%, transparent);}',
-      '.ntfy-teams-sendlvl:disabled{cursor:default;opacity:.45;}',
-      '.ntfy-teams-sendlvl:focus-visible{outline:2px solid var(--dsw-static-blue-500);outline-offset:-2px;}',
-      // 分隔線：用 tone 的淡色，讓兩半看起來是「同一顆按鈕的兩個區」
-      '.ntfy-teams-senddiv{width:1px;flex:0 0 auto;',
-      'background:color-mix(in srgb, var(--ntfy-tone) 30%, transparent);}',
-      '.ntfy-teams-sendgo{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;',
-      'padding:0 14px;margin:0;border:0;cursor:pointer;font:inherit;font-size:13px;',
+      '.ntfy-teams-priobtn:disabled{cursor:default;opacity:.3;}',
+      '.ntfy-teams-priobtn:focus-visible{outline:2px solid var(--dsw-static-blue-500);outline-offset:-2px;}',
+      // 目前級別：**只有格數、沒有文字**（回饋：「優先級不顯示文字」）。
+      // 它是純顯示，所以不吃點擊（箭頭才是可點的）。
+      '.ntfy-teams-sendlvl{display:inline-flex;align-items:center;justify-content:center;',
+      'flex:0 0 auto;min-width:16px;padding:0 3px;}',
+      // 右邊那塊：送出（自己一個圓角塊，跟左邊隔著 7px）
+      '.ntfy-teams-sendgo{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;',
+      'padding:0 12px;margin:0;border-radius:9px;cursor:pointer;font:inherit;font-size:12px;',
       'font-weight:600;line-height:1;white-space:nowrap;',
+      'border:1px solid color-mix(in srgb, var(--ntfy-tone) 45%, transparent);',
       'color:color-mix(in srgb, var(--ntfy-tone) 82%, var(--dsw-alias-label-primary));',
-      'background:transparent;}',
+      'background:color-mix(in srgb, var(--ntfy-tone) 5%, var(--dsw-alias-bg-layer-1));}',
       '.ntfy-teams-sendgo:hover:not(:disabled){',
-      'background:color-mix(in srgb, var(--ntfy-tone) 18%, transparent);}',
+      'background:color-mix(in srgb, var(--ntfy-tone) 14%, transparent);}',
       '.ntfy-teams-sendgo:disabled{cursor:default;opacity:.45;}',
-      '.ntfy-teams-sendgo:focus-visible{outline:2px solid var(--dsw-static-blue-500);outline-offset:-2px;}',
+      '.ntfy-teams-sendgo:focus-visible{outline:2px solid var(--dsw-static-blue-500);outline-offset:1px;}',
+      '.ntfy-teams-sendgo svg{width:14px;height:14px;}',
       // 強度格：4 格，高度由矮到高（階梯）
       '.ntfy-teams-pribars{display:inline-flex;align-items:flex-end;gap:1.5px;height:12px;}',
       '.ntfy-teams-pribar{display:block;width:2.5px;border-radius:1px;',
@@ -8088,9 +8121,29 @@ window.__ModuleLoader__.load({
     var PRIORITY_OPTIONS = [
       { value: 1, label: '最低', level: 1, tone: 'muted' },
       { value: 2, label: '低', level: 2, tone: 'cool' },
-      { value: 3, label: '預設', level: 3, tone: 'amber' },
+      { value: 3, label: '預設', level: 3, tone: 'ink' },
       { value: 4, label: '高', level: 4, tone: 'hot' }
     ];
+
+    /**
+     * 左右箭頭用的箭頭符號（行內 SVG）。
+     *
+     * 不用「‹」「›」這些字元：它們的大小與基線隨字型而變，
+     * 在某些字型下會偏一邊或變成全形寬度（實測看起來歪歪的）。
+     * 自己畫就沒有這個問題。
+     *
+     * @param props - { dir }：'left' 或 'right'。
+     * @returns SVG 元素。
+     */
+    function ChevronGlyph(props) {
+      var left = props.dir === 'left';
+      return e('svg', {
+        width: 10, height: 10, viewBox: '0 0 10 10', fill: 'none',
+        stroke: 'currentColor', strokeWidth: 1.8,
+        strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': 'true'
+      }, e('path', { d: left ? 'M6.5 1.5 L3 5 L6.5 8.5' : 'M3.5 1.5 L7 5 L3.5 8.5' }));
+    }
+
 
     /**
      * 找出某一級的設定。
@@ -8108,6 +8161,8 @@ window.__ModuleLoader__.load({
     /**
      * 下一個優先級（循環）。
      *
+     * 保留給其他地方用（目前 UI 用的是 clampPriority + 箭頭）。
+     *
      * 抽成純函式是為了**可離線測試**：測試替身的 walker 會用一顆用完就丟的
      * slot 陣列展開子元件，在那裡面 `setState` 的結果不會留下來 ——
      * 所以「按一下會不會前進一級」沒辦法靠模擬點擊來驗（實測踩過）。
@@ -8123,6 +8178,32 @@ window.__ModuleLoader__.load({
         }
       }
       return DEFAULT_PRIORITY;
+    }
+
+    /**
+     * 把任意數值夾到合法的優先級範圍（1..4）。
+     *
+     * ⚠️ 不能借用 core 的 `toFiniteNumber` —— 那個函式在內嵌的 core 模組**裡面**，
+     * client 這一側看不到（實測：呼叫會丟 `toFiniteNumber is not defined`）。
+     * 所以這裡自己判斷。
+     *
+     * @param value - 任何輸入。
+     * @returns 合法的級別。
+     */
+    function clampPriority(value) {
+      var min = PRIORITY_OPTIONS[0].value;
+      var max = PRIORITY_OPTIONS[PRIORITY_OPTIONS.length - 1].value;
+      // ⚠️ 先擋掉 null / undefined / '' / true 這些「Number() 會給 0 或 1」
+      // 的輸入 —— 不然 null 會被當成 0 再夾到 1（實測踩過：
+      // clampPriority(null) 回 1，應該是預設值）。
+      if (value === null || value === undefined || value === '' || typeof value === 'boolean') {
+        return DEFAULT_PRIORITY;
+      }
+      var n = typeof value === 'number' ? value : Number(value);
+      if (!isFinite(n)) return DEFAULT_PRIORITY;
+      if (n < min) return min;
+      if (n > max) return max;
+      return Math.round(n);
     }
 
     /**
@@ -8176,7 +8257,7 @@ window.__ModuleLoader__.load({
      * 把「打字打到一半誤觸」變成「送出一則錯誤訊息」，代價太高。
      * 顏色已經讓它合為一體了，不需要連動作也合併。
      *
-     * @param props - { priority, disabled, busy, canPublish, hasName, onCycle, onSend }。
+     * @param props - { priority, disabled, busy, canPublish, hasName, onStep, onSend }。
      * @returns 按鈕元素。
      */
     function SendButton(props) {
@@ -8188,23 +8269,42 @@ window.__ModuleLoader__.load({
       var sendTitle = !props.canPublish
         ? '此主題需要認證才能傳送'
         : (props.hasName === false ? '請先設定顯示名稱' : '傳送訊息');
-      var groups = [];
-      // 設定 key 避免 React 對同一組兄弟節點發出警告。
-      groups.push(e('button', {
-        key: 'lvl',
-        type: 'button',
-        className: 'ntfy-teams-sendlvl',
-        disabled: disabled,
-        'aria-label': '優先級：' + opt.label + '（按一下切換下一級）',
-        title: '優先級：' + opt.label + '。按一下切換下一級（'
-          + PRIORITY_OPTIONS.map(function (o) { return o.label; }).join(' → ') + '，循環）',
-        onClick: function () { props.onCycle(); }
-      },
-        e(PriorityBars, { level: level }),
-        e('span', { className: 'ntfy-teams-sendlvltext' }, opt.label)
-      ));
-      groups.push(e('span', { key: 'div', className: 'ntfy-teams-senddiv', 'aria-hidden': 'true' }));
-      groups.push(e('button', {
+      var labels = PRIORITY_OPTIONS.map(function (o) { return o.label; }).join(' → ');
+      var canDown = !disabled && level > PRIORITY_OPTIONS[0].value;
+      var canUp = !disabled && level < PRIORITY_OPTIONS[PRIORITY_OPTIONS.length - 1].value;
+      // 左邊那塊：前後箭頭 + 級別格數。
+      //
+      // ⚠️ 它跟「傳送」是**兩個獨立的按鈕**，中間留 7px 空隙（見 CSS 的說明）——
+      // 一整塊用分隔線切開會讓兩個動作貼在一起，很容易想按送出卻按到箭頭。
+      var lvlGroup = e('span', { className: 'ntfy-teams-lvlgroup' },
+        e('button', {
+          key: 'down',
+          type: 'button',
+          className: 'ntfy-teams-priobtn ntfy-teams-priobtn--down',
+          disabled: !canDown,
+          'aria-label': '降低優先級',
+          title: '降低優先級（目前：' + opt.label + '）',
+          onClick: function () { props.onStep(-1); }
+        }, e(ChevronGlyph, { dir: 'left' })),
+        // 目前級別：只有格數，**沒有文字**（回饋：「優先級不顯示文字」）。
+        e('span', {
+          key: 'bars',
+          className: 'ntfy-teams-sendlvl',
+          // 給螢幕閱讀器與 tooltip 用的說明；畫面上不顯示文字。
+          'aria-label': '優先級：' + opt.label,
+          title: '優先級：' + opt.label + '（' + labels + '，用左右箭頭調整）'
+        }, e(PriorityBars, { level: level })),
+        e('button', {
+          key: 'up',
+          type: 'button',
+          className: 'ntfy-teams-priobtn ntfy-teams-priobtn--up',
+          disabled: !canUp,
+          'aria-label': '提高優先級',
+          title: '提高優先級（目前：' + opt.label + '）',
+          onClick: function () { props.onStep(1); }
+        }, e(ChevronGlyph, { dir: 'right' }))
+      );
+      var sendBtn = e('button', {
         key: 'send',
         type: 'button',
         className: 'ntfy-teams-sendgo',
@@ -8214,11 +8314,11 @@ window.__ModuleLoader__.load({
       },
         e(SendGlyph),
         e('span', null, props.busy ? '傳送中…' : '傳送')
-      ));
+      );
       return e('span', {
         className: 'ntfy-teams-sendbtn ntfy-teams-sendbtn--p' + level,
         'data-tone': tone
-      }, groups);
+      }, [lvlGroup, sendBtn]);
     }
 
     /**
@@ -8238,17 +8338,20 @@ window.__ModuleLoader__.load({
       var setPrio = prioState[1];
 
       /**
-       * 切換到下一級優先級（循環）。
+       * 調整優先級：`dir` 為 -1（降低）或 +1（提高）。
        *
-       * 為什麼用「循環」而不是展開一個清單：送出鈕上面那個區塊很小，
-       * 展開清單會把它變成一個浮層（多一層要處理定位與關閉）。
-       * 四級循環最多按 3 下就到想要的，而且每一級的名字都顯示在按鈕上，
-       * 按的時候看得到自己在哪一級。
+       * 需求：「加前後箭頭可以調整」。
        *
-       * @returns 切換後的級別。
+       * 從「循環」改成「到頂就停」：箭頭是**有方向**的，使用者預期
+       * 「按左邊就到低一級」；如果按左邊會從「最低」跳到「高」，那是違反直覺的
+       * （循環只在「單一按鈕、不知道自己是哪一級」時才合理）。
+       * 所以到頂／到底時把那顆箭頭**停用**，讓「已經到底了」這件事看得出來。
+       *
+       * @param dir - -1 或 +1。
+       * @returns 調整後的級別。
        */
-      function cyclePriority() {
-        var next = nextPriority(prio);
+      function stepPriority(dir) {
+        var next = clampPriority(prio + (dir < 0 ? -1 : 1));
         setPrio(next);
         return next;
       }
@@ -8464,7 +8567,7 @@ window.__ModuleLoader__.load({
             busy: busy,
             canPublish: canPublish,
             hasName: hasName,
-            onCycle: cyclePriority,
+            onStep: stepPriority,
             onSend: send
           })
         ),
@@ -10074,6 +10177,7 @@ window.__ModuleLoader__.load({
       // 優先級的**純規則**（給離線測試用）—— 模擬點擊在測試替身裡不可靠，
       // 見 nextPriority 的說明。
       nextPriority: nextPriority,
+      clampPriority: clampPriority,
       priorityTone: priorityTone,
       PRIORITY_OPTIONS: PRIORITY_OPTIONS,
       MessageList: MessageList,
