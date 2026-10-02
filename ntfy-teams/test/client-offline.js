@@ -2640,6 +2640,66 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     on.core.saveConfig({ stayAtBottom: {} });
     second.core.saveConfig({ stayAtBottom: {} });
   });
+  test('優先級是分段控制（不是下拉框），四個選項都看得見且可切換', () => {
+    // 回饋：「預設」那個下拉框看不出是什麼。改成優先級的分段控制。
+    //
+    // 這條測試同時守住一件事：**不可以退回 <select>** ——
+    // 下拉框平常只看得到選中那一項，看不出有哪幾種可選，也沒有強度回饋。
+    const { harness, core, seats } = freshPanel();
+    core.store.ensureTopic('pub_prio');
+    core.store.setActiveTopic('pub_prio');
+    core.setIdentity('shawoo');
+    const nodes = [];
+    walk(harness, harness.render(seats['main:ntfy-teams'].component, {}), nodes, 0);
+
+    // 1) 傳送區裡不該再有 select
+    const selects = nodes.filter((n) => n.tag === 'select');
+    assert.strictEqual(selects.length, 0,
+      '傳送區不該再有用來選優先級的下拉框，實際找到 ' + selects.length + ' 個');
+
+    // 2) 四個優先級按鈕都在，而且順序／標籤正確
+    const prio = nodes.filter((n) => n.tag === 'button'
+      && n.cls && String(n.cls).indexOf('ntfy-teams-priobtn') !== -1);
+    assert.strictEqual(prio.length, 4, '應該有四個優先級選項，實際 ' + prio.length);
+    const labels = prio.map((n) => n.props['aria-label']);
+    assert.deepStrictEqual(labels,
+      ['優先級：最低', '優先級：低', '優先級：預設', '優先級：高'],
+      '四段應由低到高，實際：' + JSON.stringify(labels));
+
+    // 3) 預設選中「預設」（ntfy 的 normal = 3）
+    const pressed = prio.map((n) => n.props['aria-pressed']);
+    assert.deepStrictEqual(pressed, ['false', 'false', 'true', 'false'],
+      '預設應該選中第三段（預設），實際：' + JSON.stringify(pressed));
+
+    // 4) 每一段都有強度指示（格數 1..4）—— 這是「看得出大小」的關鍵
+    const meters = nodes.filter((n) => n.cls && String(n.cls).indexOf('ntfy-teams-primeter') !== -1);
+    assert.strictEqual(meters.length, 4, '每一段都應該有強度指示，實際 ' + meters.length);
+    const litCounts = prio.map((btn) => {
+      // 注意：`nodes` 是**已走訪過的平坦清單**，節點之間不再有 parent/children 關係，
+      // 所以不能用 `walk(harness, btn, ...)` 再走一次（那裡拿到的是節點不是元素）。
+      // 直接數每個按鈕自己的強度格：`data-level` 就是它該亮的格數。
+      return Number(btn.props['data-level']);
+    });
+    assert.deepStrictEqual(litCounts, [1, 2, 3, 4],
+      '強度格數應該是 1/2/3/4，實際 ' + JSON.stringify(litCounts));
+    // 而且每一格真的畫出來了（總共 4 格，亮的格數由 CSS 依 data-level 決定）
+    const allBars = nodes.filter((n) => n.cls && String(n.cls).indexOf('ntfy-teams-priobar') !== -1);
+    assert.strictEqual(allBars.length, 16, '四段各 4 格，共 16 格，實際 ' + allBars.length);
+
+    // 5) 沒有名稱時整組應該停用（跟送出鈕一致）
+    core.setIdentity('');
+    const offNodes = [];
+    walk(harness, harness.render(seats['main:ntfy-teams'].component, {}), offNodes, 0);
+    const offPrio = offNodes.filter((n) => n.tag === 'button'
+      && n.cls && String(n.cls).indexOf('ntfy-teams-priobtn') !== -1);
+    assert.strictEqual(offPrio.length, 4, '沒有名稱時選項仍在（看得到只是不能用）');
+    assert.ok(offPrio.every((n) => n.props.disabled === true),
+      '沒有顯示名稱時整組優先級應該停用');
+
+    core.setIdentity('shawoo');
+    core.store.removeTopic('pub_prio');
+  });
+
   test('不再有任何 localStorage 持久化入口（單一真相 = 宿主 YAML）', () => {
     const { exports: mod, core } = freshPanel();
     // 一次性遷移用的 readLegacyTopics 已經移除（它讀的是 localStorage）。

@@ -5057,7 +5057,49 @@ window.__ModuleLoader__.load({
       'background:color-mix(in srgb, var(--dsw-static-green-500) 10%, transparent);}',
       '.ntfy-teams-staybottombox{flex:0 0 auto;width:14px;height:14px;margin:0;cursor:pointer;',
       'accent-color:var(--dsw-static-green-500);}',
-      '.ntfy-teams-staybottomtext{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}'
+      '.ntfy-teams-staybottomtext{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+
+      // ---- 優先級：分段控制 ----
+      //
+      // 視覺語言：強度用「格數」表達（1..4 格實心），顏色用紅色系深淺
+      // （只有 state-error 那個紅是主題令牌；深浅用 color-mix 疊出來，
+      //  所以不引入新的寫死色碼）。
+      '.ntfy-teams-primetro{flex:0 0 auto;font-size:11.5px;color:var(--dsw-alias-label-secondary);}',
+      '.ntfy-teams-prioseg{display:inline-flex;align-items:stretch;gap:2px;flex:0 0 auto;',
+      'padding:2px;border-radius:9px;border:1px solid var(--dsw-alias-border-l1);',
+      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent);}',
+      '.ntfy-teams-priobtn{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;',
+      'height:24px;padding:0 8px;margin:0;border:0;border-radius:7px;cursor:pointer;',
+      'font:inherit;font-size:11px;line-height:1;white-space:nowrap;',
+      'color:var(--dsw-alias-label-secondary);background:transparent;',
+      'transition:background .12s ease, color .12s ease;}',
+      '.ntfy-teams-priobtn:hover:not(:disabled){background:color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent);}',
+      '.ntfy-teams-priobtn:focus-visible{outline:2px solid var(--dsw-static-blue-500);outline-offset:1px;}',
+      '.ntfy-teams-priobtn:disabled{cursor:default;opacity:.45;}',
+      // 選中的那一格：上色 + 白底，清楚到一眼看得出來現在選的是什麼
+      '.ntfy-teams-priobtn--on{color:var(--dsw-alias-label-primary);',
+      'background:var(--dsw-alias-bg-layer-1);',
+      'box-shadow:0 1px 2px color-mix(in srgb, var(--dsw-alias-label-primary) 14%, transparent);}',
+      // 強度格：4 格，實心的那幾格依 level 疊深淺
+      '.ntfy-teams-primeter{display:inline-flex;align-items:flex-end;gap:1.5px;height:11px;}',
+      '.ntfy-teams-priobar{width:2.5px;border-radius:1px;',
+      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);}',
+      '.ntfy-teams-priobar:nth-child(1){height:4px;}',
+      '.ntfy-teams-priobar:nth-child(2){height:6px;}',
+      '.ntfy-teams-priobar:nth-child(3){height:8px;}',
+      '.ntfy-teams-priobar:nth-child(4){height:10px;}',
+      '.ntfy-teams-priobar--on{background:var(--dsw-alias-label-secondary);}',
+      // 依強度上紅：越高越紅（level 由 data-level 帶進來）
+      '[data-level="1"] .ntfy-teams-priobar--on{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 40%, var(--dsw-alias-label-secondary));}',
+      '[data-level="2"] .ntfy-teams-priobar--on{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 60%, var(--dsw-alias-label-secondary));}',
+      '[data-level="3"] .ntfy-teams-priobar--on{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 80%, var(--dsw-alias-label-secondary));}',
+      '[data-level="4"] .ntfy-teams-priobar--on{background:var(--dsw-alias-state-error-primary);}',
+      // 選中且是高優先級時，文字也跟著紅，視線會被抓到
+      '.ntfy-teams-priobtn--on[data-level="4"]{color:var(--dsw-alias-state-error-primary);}',
+      '.ntfy-teams-priobtn--on[data-level="4"] .ntfy-teams-priobar--on{background:var(--dsw-alias-state-error-primary);}',
+      // 窄畫面時只留格數，文字讓位（避免擠壓輸入框）
+      '@media (max-width:820px){.ntfy-teams-priotext{display:none;}',
+      '.ntfy-teams-priobtn{padding:0 6px;}}'
     ].concat(AVATAR_CSS).join('');
 
     // =========================================================================
@@ -7902,12 +7944,53 @@ window.__ModuleLoader__.load({
     // 7. 面板：傳送区
     // =========================================================================
 
+    /**
+     * 送出的訊息預設用哪個優先級。
+     *
+     * 這個值是跟著 POST 送給 ntfy 的 `priority`（1..4），由 ntfy 決定**它自己**的
+     * 推播行為（手機通知的大小聲、是否打穿勿擾）。面板的訊息物件也帶著
+     * `priority`（`parseServerMessage` 會讀），所以要把它呈現到時間軸上是做得到的。
+     *
+     * 預設 3 = ntfy 的 normal。
+     *
+     * @type {number}
+     */
+    var DEFAULT_PRIORITY = 3;
+
+    /**
+     * 優先級的選項。
+     *
+     * `bars` 是強度（1..4）：畫成幾格實心，右邊的 CSS 讓格數越多的越紅、越少越淡。
+     * 用「格數」而不是只用顏色，是因為顏色單獨一種編碼對色弱不友善，
+     * 而且四個色階在小尺寸下很難分辨。
+     *
+     * @type {Array<{value:number, label:string, bars:number}>}
+     */
     var PRIORITY_OPTIONS = [
-      { value: 1, label: '最低' },
-      { value: 2, label: '低' },
-      { value: 3, label: '預設' },
-      { value: 4, label: '高' }
+      { value: 1, label: '最低', bars: 1 },
+      { value: 2, label: '低', bars: 2 },
+      { value: 3, label: '預設', bars: 3 },
+      { value: 4, label: '高', bars: 4 }
     ];
+
+    /**
+     * 優先級強度指示（幾格實心）。
+     *
+     * @param props - { bars, total }。
+     * @returns 指示元素。
+     */
+    function PriorityMeter(props) {
+      var total = props.total || 4;
+      var bars = Math.max(0, Math.min(total, props.bars || 0));
+      var cells = [];
+      for (var i = 0; i < total; i += 1) {
+        cells.push(e('i', {
+          key: 'b' + i,
+          className: 'ntfy-teams-priobar' + (i < bars ? ' ntfy-teams-priobar--on' : '')
+        }));
+      }
+      return e('span', { className: 'ntfy-teams-primeter', 'aria-hidden': 'true' }, cells);
+    }
 
     /**
      * 傳送区：白名单只在 topic 名字以 pub_ 开头或已設定認證时开放送出。
@@ -7921,7 +8004,7 @@ window.__ModuleLoader__.load({
       var bodyState = React.useState(function () { return givePendingDraft(props.topic); });
       var body = bodyState[0];
       var setBody = bodyState[1];
-      var prioState = React.useState(3);
+      var prioState = React.useState(DEFAULT_PRIORITY);
       var prio = prioState[0];
       var setPrio = prioState[1];
       var busyState = React.useState(false);
@@ -8052,14 +8135,30 @@ window.__ModuleLoader__.load({
             ? e('span', null, '到上方「共用設定」填顯示名稱，訊息才會顯示你是誰')
             : null,
           e('span', { className: 'ntfy-teams-spacer' }),
-          e('select', {
-            className: 'ntfy-teams-select',
-            title: '優先級',
-            value: String(prio),
-            disabled: !canSend,
-            onChange: function (ev) { setPrio(Number(ev.target.value) || 3); }
+          // ---- 優先級：分段控制（不是下拉框）----
+          //
+          // 為什麼用分段控制而不是 <select>：這是四個固定選項、而且**選了要看得出
+          // 差別**的設定。下拉框平常只看得到「預設」一個字，其他選項要點開才知道，
+          // 而且選了之後畫面上沒有任何回饋。分段控制則是一次看到全部、
+          // 用強度格數與顏色直接表達大小。
+          e('span', { className: 'ntfy-teams-primetro', id: 'ntfy-teams-prio-label' }, '優先級'),
+          e('span', {
+            className: 'ntfy-teams-prioseg',
+            role: 'group',
+            'aria-labelledby': 'ntfy-teams-prio-label'
           }, PRIORITY_OPTIONS.map(function (opt) {
-            return e('option', { key: opt.value, value: String(opt.value) }, opt.label);
+            var on = opt.value === prio;
+            return e('button', {
+              key: opt.value,
+              type: 'button',
+              className: 'ntfy-teams-priobtn' + (on ? ' ntfy-teams-priobtn--on' : ''),
+              'data-level': String(opt.bars),
+              disabled: !canSend,
+              'aria-pressed': on ? 'true' : 'false',
+              'aria-label': '優先級：' + opt.label,
+              title: '優先級：' + opt.label,
+              onClick: function () { setPrio(opt.value); }
+            }, e(PriorityMeter, { bars: opt.bars }), e('span', { className: 'ntfy-teams-priotext' }, opt.label));
           }))
         ),
         e('div', { className: 'ntfy-teams-composerow' },
