@@ -25,15 +25,28 @@ var assert = require('assert');
 var core = require('../lib/core.js');
 
 /**
- * 宣告「面板正顯示著」。
+ * 宣告「面板正顯示著，而且貼在底部」。
  *
  * store 預設是「看不到面板」——它本身不知道有沒有人在看。未讀要不要累加、
- * 「讀到哪」要不要前進，都取決於這個旗標。client 掛載時會自己設定，
+ * 「讀到哪」要不要前進，都取決於這兩個旗標。client 掛載時會自己設定，
  * 這裡的測試等於扮演那個 client，所以要明說「我正在看」。
+ *
+ * ⚠️ 這是**兩個**旗標，不是一個：
+ *   * `isPanelVisible` —— 面板開著、而且正在看這個主題；
+ *   * `isFollowing`    —— **而且貼在底部**（正在看最新）。
+ *
+ * 只有「看得到 + 貼底」才算真的看到。少了第二層，使用者往上翻歷史時
+ * 別人的訊息會被默默吃掉（舊行為就是這樣，已改成要提示未讀）。
+ *
  * @param visible - 是否可見。
+ * @param following - 是否貼著底部；省略時跟隨 visible。
  */
-function viewing(visible) {
-  core.store.setViewHooks({ isPanelVisible: function () { return visible === true; } });
+function viewing(visible, following) {
+  var follow = following === undefined ? visible === true : following === true;
+  core.store.setViewHooks({
+    isPanelVisible: function () { return visible === true; },
+    isFollowing: function () { return follow; }
+  });
 }
 viewing(true);
 
@@ -549,17 +562,67 @@ check('addMessages 返回新增条数并去重', function () {
   assert.strictEqual(core.store.addMessage('t1', { id: 'm3', time: 300, message: 'three' }), false);
 });
 
-check('未读只在 SSE 实时到达且非当前主题时累加', function () {
+check('未读只在 SSE 实时到达、且「没看到最新」时累加', function () {
   core.store.ensureTopic('t2');
   core.store.setActiveTopic('t1');
+  // 自己發的訊息（title 是 #自己）才算「一定看得到」；這裡用別人的訊息測未讀規則。
+  core.saveConfig({ identity: 'me' });
   assert.strictEqual(core.store.addMessages('t2', [{ id: 'u1', time: 10 }], 'history'), 1);
   assert.strictEqual(core.store.getSnapshot().unreadByTopic.t2, 0, '历史加载不产生未读');
   assert.strictEqual(core.store.addMessages('t2', [{ id: 'u2', time: 11 }], 'sse'), 1);
   assert.strictEqual(core.store.getSnapshot().unreadByTopic.t2, 1, 'SSE 且非当前主题 → 未读 +1');
   assert.strictEqual(core.store.addMessages('t1', [{ id: 'u3', time: 12 }], 'sse'), 1);
-  assert.strictEqual(core.store.getSnapshot().unreadByTopic.t1, 0, '当前主题不产生未读');
+  assert.strictEqual(core.store.getSnapshot().unreadByTopic.t1, 0,
+    '当前主题 + 貼著底部 → 看到最新，不产生未读');
   core.store.markRead('t2');
   assert.strictEqual(core.store.getSnapshot().unreadByTopic.t2, 0);
+});
+
+check('★ 焦点中的主题：別人的訊息在「沒貼底」時要算未讀（新規則）', function () {
+  // 這條是需求的核心：
+  //   自己發的        → 一律已讀（自己剛送出去的）
+  //   別人發的 + 貼底  → 已讀（你正看著它出現）
+  //   別人發的 + 沒貼底 → 未讀（提示你，讓你自己決定要不要跳過去）
+  core.saveConfig({ identity: 'me' });
+  (core.store.getSnapshot().topics || []).slice().forEach(function (t) { core.store.removeTopic(t); });
+  core.store.ensureTopic('focus_a');
+  core.store.setActiveTopic('focus_a');
+
+  // 1) 貼著底部時，別人發的算已讀
+  viewing(true, true);
+  core.store.addMessages('focus_a', [{ id: 'f1', time: 1, title: '#bob' }], 'sse');
+  assert.strictEqual(core.store.getSnapshot().unreadByTopic.focus_a, 0,
+    '貼底看得到 → 別人的訊息也算已讀');
+  assert.strictEqual(core.store.getSnapshot().lastReadIdByTopic.focus_a, 'f1', '並推進「讀到哪」');
+
+  // 2) 往上翻歷史（不再貼底）→ 別人的訊息要算未讀
+  viewing(true, false);
+  core.store.addMessages('focus_a', [
+    { id: 'f2', time: 2, title: '#bob' }, { id: 'f3', time: 3, title: '#cid' }
+  ], 'sse');
+  assert.strictEqual(core.store.getSnapshot().unreadByTopic.focus_a, 2,
+    '沒貼底時別人的訊息要算未讀（提示使用者）');
+  assert.strictEqual(core.store.getSnapshot().lastReadIdByTopic.focus_a, 'f1',
+    '沒貼底時「讀到哪」不該前進（否則未讀提示會消失）');
+
+  // 3) 即使沒貼底，**自己發的**也要算已讀（不然自己剛送的那條會變成未讀）
+  core.store.addMessages('focus_a', [{ id: 'f4', time: 4, title: '#me' }], 'sse');
+  assert.strictEqual(core.store.getSnapshot().unreadByTopic.focus_a, 2,
+    '自己發的不增加未讀');
+  assert.strictEqual(core.store.getSnapshot().lastReadIdByTopic.focus_a, 'f4',
+    '自己發的要把「讀到哪」推到那一則');
+
+  // 4) 大小寫不在意（跟 UI 的 senderOf 一致）
+  core.store.addMessages('focus_a', [{ id: 'f5', time: 5, title: '#ME' }], 'sse');
+  assert.strictEqual(core.store.getSnapshot().unreadByTopic.focus_a, 2, '#ME 也算自己');
+
+  // 5) 沒設定顯示名稱時，任何訊息都不能被誤認成自己發的
+  core.saveConfig({ identity: '' });
+  core.store.addMessages('focus_a', [{ id: 'f6', time: 6, title: '#me' }], 'sse');
+  assert.strictEqual(core.store.getSnapshot().unreadByTopic.focus_a, 3,
+    '沒有顯示名稱時，別人的訊息不能被誤標成已讀');
+  core.saveConfig({ identity: 'me' });
+  core.store.removeTopic('focus_a');
 });
 
 check('setActiveTopic 换主题并清掉该主题未读', function () {
@@ -1405,14 +1468,16 @@ check('別名持久化：reload（重讀 config）後還在，且不破壞其它
 group('未讀的第二層提示：記錄「上次讀到哪一則」');
 
 check('切到某主題不會清掉「讀到哪」，未讀數會歸零（捲動前還看得到未讀線）', function () {
-  core.saveConfig({ aliases: {} });
+  core.saveConfig({ aliases: {}, identity: 'me' });
   (core.store.getSnapshot().topics || []).slice().forEach(function (t) { core.store.removeTopic(t); });
   core.store.ensureTopic('rd_a');
   core.store.ensureTopic('rd_b');
   core.store.setActiveTopic('rd_b');
+  // 「看得到 + 貼著底部」才算真的看到（見 viewing 的說明）。
+  viewing(true, true);
   core.store.addMessages('rd_b', [{ id: 'b1', time: 100 }], 'sse');
   assert.strictEqual(core.store.getSnapshot().lastReadIdByTopic.rd_b, 'b1',
-    '看得到的主題：新訊息進來就等於讀到了');
+    '看得到且貼底：新訊息進來就等於讀到了');
   assert.strictEqual(core.store.getSnapshot().unreadByTopic.rd_b, 0, '正在看的主題不累加未讀');
 
   // rd_a 不是當前主題 → 累加未讀，且「讀到哪」不前進
@@ -1435,14 +1500,41 @@ check('切到某主題不會清掉「讀到哪」，未讀數會歸零（捲動�
   core.store.removeTopic('rd_b');
 });
 
+check('★ markReadToLatest 也要清未讀（點「N 則新訊息」跳過去之後靠它收尾）', function () {
+  // 為什麼要單獨驗這一條：使用者點提示條跳到未讀處時，**訊息數沒有變化** ——
+  // 而面板那個「貼底就清未讀」的 effect 只在訊息數變化時才跑。所以「跳過去之後
+  // 未讀要歸零」只能靠 markReadToLatest，它如果只推進邊界、不清未讀，
+  // 提示條就會永遠掛在畫面上（實測：捲到未讀處後仍是 3）。
+  core.saveConfig({ identity: 'me' });
+  (core.store.getSnapshot().topics || []).slice().forEach(function (t) { core.store.removeTopic(t); });
+  core.store.ensureTopic('rdc');
+  core.store.setActiveTopic('rdc');
+  viewing(true, false);   // 沒貼底 → 別人的訊息算未讀
+  core.store.addMessages('rdc', [
+    { id: 'c1', time: 1, title: '#bob' }, { id: 'c2', time: 2, title: '#bob' }
+  ], 'sse');
+  assert.strictEqual(core.store.getSnapshot().unreadByTopic.rdc, 2, '前置：應累加 2 則未讀');
+
+  core.store.markReadToLatest('rdc');
+  assert.strictEqual(core.store.getSnapshot().unreadByTopic.rdc, 0,
+    'markReadToLatest 必須把未讀清掉，否則提示條不會消失');
+  assert.strictEqual(core.store.getSnapshot().lastReadIdByTopic.rdc, 'c2',
+    '並把「讀到哪」推進到最新');
+
+  // 沒有未讀時重複呼叫也不該出錯（而且不該亂發通知）
+  core.store.markReadToLatest('rdc');
+  assert.strictEqual(core.store.getSnapshot().unreadByTopic.rdc, 0, '重複呼叫仍為 0');
+  core.store.removeTopic('rdc');
+});
+
 check('「讀到哪」在同一 session 內保留，但不再跨重新整理（不再用 localStorage）', function () {
   // 舊行為：lastReadIdByTopic 會被寫進 localStorage，重開後還原。
   // 新行為：這個外掛不使用 localStorage，所以「讀到哪」只活在記憶體 ——
   // 重新整理後從頭開始（未讀線不會跨重新整理保留）。
   core.store.ensureTopic('rd_p2');
-  if (core.store.setViewHooks) {
-    core.store.setViewHooks({ isPanelVisible: function () { return true; } });
-  }
+  // 「看得到 + 貼著底部」才算真的看到 —— 要用 viewing() 把**兩個**旗標都設好，
+  // 不要在這裡自己 setViewHooks（那只設 isPanelVisible，會把 isFollowing 清掉）。
+  viewing(true, true);
   core.store.addMessage('rd_p2', { id: 'p1', time: 1, message: 'a' });
   core.store.setActiveTopic('rd_p2');
   core.store.addMessage('rd_p2', { id: 'p2', time: 2, message: 'b' });
@@ -1459,6 +1551,7 @@ check('移除主題時「讀到哪」一起清掉，不留孤兒', function () {
   (core.store.getSnapshot().topics || []).slice().forEach(function (t) { core.store.removeTopic(t); });
   core.store.ensureTopic('rd_x');
   core.store.setActiveTopic('rd_x');
+  viewing(true, true);
   core.store.addMessages('rd_x', [{ id: 'x1', time: 300 }], 'sse');
   assert.strictEqual(core.store.getSnapshot().lastReadIdByTopic.rd_x, 'x1');
   core.store.removeTopic('rd_x');

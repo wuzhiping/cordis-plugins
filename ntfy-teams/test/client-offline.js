@@ -241,7 +241,13 @@ function makeCtx() {
   const announce = (visible) => {
     try {
       if (typeof core !== 'undefined' && core && core.store && typeof core.store.setViewHooks === 'function') {
-        core.store.setViewHooks({ isPanelVisible: () => visible === true });
+        // 兩個旗標都要給：`isPanelVisible`（面板開著、正在看這個主題）與
+        // `isFollowing`（**而且貼在底部**）。少了後者會變成「沒在看最新」，
+        // 別人的訊息就一律算未讀 —— 那會讓一堆既有測試的預期落差。
+        core.store.setViewHooks({
+          isPanelVisible: () => visible === true,
+          isFollowing: () => visible === true
+        });
       }
     } catch (err) { /* 沒 core 時不影響 */ }
   };
@@ -884,6 +890,29 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     return nodes.filter((n) => n.tag === '#text').map((n) => n.text).join(' ');
   }
 
+  /**
+   * 這個節點是不是**日期抬頭**（`.ntfy-teams-day`，可帶 `--today` / `--collapsed`）。
+   *
+   * ⚠️ 不能用 `cls.indexOf('ntfy-teams-day') !== -1`：那個前綴會**誤中**
+   * 日期跳轉列的按鈕 `.ntfy-teams-daynavbtn`（實測：3 天被算成 6 個）。
+   * 這跟 `ntfy-teams-header` 誤中 `ntfy-teams-headeracts` 是同一類陷阱。
+   *
+   * 這裡用「切 token」比對：`ntfy-teams-day` 本身要是獨立的一個 class，
+   * 而且不能是 `ntfy-teams-daynav*` 家族。
+   *
+   * @param n - walk 出來的節點。
+   * @returns 是否為日期抬頭。
+   */
+  function hasDayToken(n) {
+    if (!n || !n.cls) return false;
+    const tokens = String(n.cls).split(/\s+/).filter(Boolean);
+    if (tokens.indexOf('ntfy-teams-daynav') !== -1) return false;
+    if (tokens.some((t) => t.indexOf('ntfy-teams-daynav') === 0)) return false;
+    return tokens.indexOf('ntfy-teams-day') !== -1
+      || tokens.indexOf('ntfy-teams-day--today') !== -1
+      || tokens.indexOf('ntfy-teams-day--collapsed') !== -1;
+  }
+
   /** @param nodes - walk 结果。 @param tag - 元素名。 @returns 该元素出现次数。 */
   function countTag(nodes, tag) {
     return nodes.filter((n) => n.tag === tag).length;
@@ -921,7 +950,11 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     const seats = {};
     const setVisible = (v) => {
       if (core && core.store && typeof core.store.setViewHooks === 'function') {
-        core.store.setViewHooks({ isPanelVisible: () => v !== false });
+        // 同 announce：兩個旗標一起設（可見且貼底 = 正在看最新）。
+        core.store.setViewHooks({
+          isPanelVisible: () => v !== false,
+          isFollowing: () => v !== false
+        });
       }
     };
     mod.apply({
@@ -1872,7 +1905,7 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
       return nodes;
     };
     const dayButtons = (nodes) => nodes.filter((n) => n.tag === 'button'
-      && n.cls && n.cls.indexOf('ntfy-teams-day') !== -1);
+      && hasDayToken(n));
     // 只算訊息「列」本身：子元素（sender／msgbody…）的類名也是 ntfy-teams-msg 開頭，
     // 放寬成 indexOf 會把它們全算進來（實測：5 則被算成 15 個）。
     const msgCount = (nodes) => nodes.filter((n) => n.cls
@@ -2016,7 +2049,7 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     // 3) 線要畫在「第一則新訊息」前面（r2 之前）
     const order = nodes.filter((n) => n.cls && (n.cls.indexOf('ntfy-teams-newline') !== -1
       || n.cls === 'ntfy-teams-msg' || n.cls.indexOf('ntfy-teams-msg ') === 0
-      || n.cls.indexOf('ntfy-teams-day') !== -1));
+      || hasDayToken(n)));
     // 找出線後面第一個訊息列的文字
     const lineIdx = order.findIndex((n) => n.cls.indexOf('ntfy-teams-newline') !== -1);
     const texts = allText(nodes);
@@ -2222,6 +2255,129 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     }, undefined), nodes, 0);
     assert.strictEqual(nodes.filter((n) => n.cls === 'ntfy-teams-dashfoot').length, 1,
       '看板內容區應有一個 dashfoot 節點');
+  });
+
+  test('訊息串右側的日期跳轉列：第一則／上一天／下一天／最後一則', () => {
+    // 需求：「message list 右側中間，加向上／向下／END 的 icon，
+    // 點一下就跳轉到上一天和下一天的第一條以及最後一條」，
+    // 以及後續追加：「最前面加一個 START，跳轉到第一條」。
+    //
+    // 這裡驗**結構**（四顆按鈕、標籤、可不可按、節點順序）；真正的捲動位置
+    // 由瀏覽器端驗證（需要真的 DOM：offsetTop / scrollTop，測試替身沒有）。
+    const { harness, exports: mod } = freshPanel();
+    const MessageList = mod.__test.MessageList;
+    const day = (offset, hh) => {
+      const base = new Date();
+      base.setHours(0, 0, 0, 0);
+      return Math.floor(base.getTime() / 1000) - offset * 86400 + hh * 3600;
+    };
+    const msgs = [
+      { id: 'n3', time: day(2, 9), topic: 'pub_nav', title: '#a', message: '前天' },
+      { id: 'n2', time: day(1, 9), topic: 'pub_nav', title: '#a', message: '昨天' },
+      { id: 'n1', time: day(0, 9), topic: 'pub_nav', title: '#a', message: '今天' }
+    ];
+    const draw = (list) => {
+      const nodes = [];
+      walk(harness, harness.render(function listUnderTest() {
+        return MessageList({
+          topic: 'pub_nav', messages: list, selfName: '', loading: false,
+          unread: 0, lastReadId: ''
+        });
+      }, undefined), nodes, 0);
+      return nodes;
+    };
+
+    const navs = (nodes) => nodes.filter((n) => n.cls && n.cls.split(/\s+/)
+      .indexOf('ntfy-teams-daynavbtn') !== -1);
+
+    // 1) 多天：四顆按鈕都在（START 在最前面），而且上／下一天可按
+    let nodes = draw(msgs);
+    let btns = navs(nodes);
+    assert.strictEqual(btns.length, 4, '跳轉列應有四顆按鈕，實際 ' + btns.length);
+    const labels = btns.map((b) => b.props['aria-label']);
+    assert.ok(labels[0].indexOf('第一則') !== -1,
+      '第 1 顆應是 START（跳到第一則），實際：' + labels[0]);
+    assert.ok(labels[1].indexOf('上一天') !== -1, '第 2 顆應是上一天，實際：' + labels[1]);
+    assert.ok(labels[2].indexOf('下一天') !== -1, '第 3 顆應是下一天，實際：' + labels[2]);
+    assert.ok(labels[3].indexOf('最後一則') !== -1, '第 4 顆應是最後一則，實際：' + labels[3]);
+    btns.forEach((b) => {
+      assert.ok(b.props.title, '每顆都要有 tooltip');
+      assert.strictEqual(typeof b.props.onClick, 'function', '每顆都要能點');
+    });
+
+    // 2) 只有一天時：沒有上／下一天可言 → 那兩顆變淡不可按；
+    //    「最後一則」永遠有意義，所以一直可按。
+    const oneDay = msgs.filter((m) => m.id === 'n1');
+    const btns1 = navs(draw(oneDay));
+    assert.strictEqual(btns1.length, 4, '只有一天時仍應有四顆（位置不要跳動）');
+    assert.strictEqual(!!btns1[0].props.disabled, true, 'START 看捲動位置，這裡沒捲過所以不可按');
+    assert.strictEqual(!!btns1[1].props.disabled, true, '只有一天時「上一天」不可按');
+    assert.strictEqual(!!btns1[2].props.disabled, true, '只有一天時「下一天」不可按');
+    assert.ok(!btns1[3].props.disabled, '「最後一則」永遠可按');
+
+    // 3) 完全沒有訊息時不畫跳轉列（沒有東西可跳）
+    assert.strictEqual(navs(draw([])).length, 0, '沒有訊息時不該有跳轉列');
+
+    // 4) 跳轉列必須在**訊息串裡面** —— sticky 要跟著這個捲動容器才有效。
+    //    驗「stream → 跳轉列 → 第一個日期分段」的節點順序。
+    //
+    // ⚠️ 用**日期分段**當基準而不是訊息列：預設只有「今天」展開，
+    //    所以舊日子的訊息列根本不會被渲染（實測：找不到 .ntfy-teams-msg）。
+    //    日期分段則是每一天都會畫，順序穩定。
+    const ordered = draw(msgs);
+    const streamIdx = ordered.findIndex((n) => n.cls === 'ntfy-teams-stream');
+    const navIdx = ordered.findIndex((n) => n.cls === 'ntfy-teams-daynav');
+    const firstDayIdx = ordered.findIndex((n) => hasDayToken(n));
+    assert.ok(streamIdx >= 0, '應有 .ntfy-teams-stream');
+    assert.ok(navIdx > streamIdx, '跳轉列應在 stream 內（sticky 才有效）');
+    assert.ok(firstDayIdx >= 0, '這一輪應該有日期分段');
+    assert.ok(navIdx < firstDayIdx, '跳轉列應排在內容之前（才不會被推著跑）');
+  });
+
+  test('★ 焦點中收到別人的訊息：浮出「N 則新訊息」提示條，貼底時不顯示', () => {
+    // 需求：「當前 topic 處於焦點時，希望可以適時追蹤最新推送 ——
+    //       如果是我發的就自動滾屏到那條之後，如果是其他人發的就提示未讀」。
+    //
+    // 這條驗提示條本身的行為：
+    //   * 有未讀 + 沒貼底 → 顯示，寫出則數，可點；
+    //   * 貼底（訊息就在眼前）→ 不顯示（再提示一次是噪音）；
+    //   * 沒有未讀 → 不顯示。
+    const { harness, exports: mod, core } = freshPanel();
+    const UnreadPill = mod.__test.UnreadPill;
+    assert.strictEqual(typeof UnreadPill, 'function', '應匯出 UnreadPill');
+
+    const draw = (props) => {
+      const nodes = [];
+      walk(harness, harness.render(function pillUnderTest() {
+        return UnreadPill(props);
+      }, undefined), nodes, 0);
+      return nodes;
+    };
+    const texts = (nodes) => nodes.filter((n) => n.tag === '#text').map((n) => n.text).join(' ');
+
+    // 1) 未讀 3 則 → 顯示、寫出則數、可點
+    let clicked = 0;
+    let nodes = draw({ count: 3, onClick: () => { clicked += 1; } });
+    assert.ok(nodes.some((n) => n.cls === 'ntfy-teams-unreadpill'),
+      '有未讀時應顯示提示條');
+    assert.ok(texts(nodes).indexOf('3 則新訊息') !== -1,
+      '應寫出則數，實際：' + texts(nodes));
+    const btn = nodes.find((n) => n.cls === 'ntfy-teams-unreadpillbtn');
+    assert.ok(btn, '應有一顆可點的按鈕');
+    assert.ok(String(btn.props['aria-label']).indexOf('3') !== -1, '無障礙標籤要有則數');
+    btn.props.onClick();
+    assert.strictEqual(clicked, 1, '點下去要呼叫 onClick');
+
+    // 2) 沒有未讀 → 不顯示
+    assert.strictEqual(draw({ count: 0, onClick: () => {} }).length, 0, '沒有未讀時不該顯示');
+
+    // 3) 兩個位數以上也要正常（badgeText 會處理 99+）
+    nodes = draw({ count: 150, onClick: () => {} });
+    assert.ok(texts(nodes).indexOf('99+') !== -1,
+      '超過 99 要用 99+，實際：' + texts(nodes));
+
+    core.store.removeTopic('pub_a');
+    core.store.removeTopic('pub_b');
   });
 
   test('markdown 表格渲染成真正的 table，且不注入 HTML', () => {

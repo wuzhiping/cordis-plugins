@@ -348,6 +348,113 @@ performance.getEntriesByType('resource')
 見 §2.1。如果哪天想拆檔，先確認 `dsh-client-modules` 是否已經支援多檔；
 在它支援之前，**拆檔 = 那個檔不會被執行**。
 
+### I. ★ 兩個「留白／容差」方向相反，功能就永遠差一步
+
+**症狀**：訊息串右側的日期跳轉列（見 README「日期跳轉列」）裡
+「下一天」能動、「最後一則」能動，但**「上一天」只往上挪一點點**，
+永遠回不到真正的上一天。
+
+**根因**：兩個常數方向相反。
+
+```js
+jumpTo(wrap)          → box.scrollTop = wrap.offsetTop - 8   // 往上留 8px 白
+currentDayIndex(box)  → wraps[i].offsetTop <= box.scrollTop + 8   // 往下容差 8px
+```
+
+「跳到某一天」會停在 `offsetTop - 8`；而判斷「目前在哪一天」時用 `+8`，
+於是**剛跳過去的那一天被算成「還沒到」**，系統認為還在前一天 →
+按「上一天」只是把捲動位置拉回當天開頭（實測：151 → 119，而不是回到第一天）。
+
+**修法**：容差改成 **18px**（> 8px 留白 + 次像素誤差），且**方向一致** ——
+讓「剛跳到某天」時它的 `offsetTop` 仍大於 `scrollTop`，
+那一天就被認成「目前這一天」。
+
+**教訓**：
+* 只要有一組常數是「留白」而另一組是「容差」，**就要驗證它們的方向關係**，
+  不能各自看起來合理就放過；
+* 這種 bug 的特徵是「**差一步**」而不是「完全沒反應」——
+  按鈕會動、只是動得不對，比完全不動更難察覺。
+
+### J. class 前綴誤中（第三次了，所以寫進這裡）
+
+`ntfy-teams-day` 這個前綴在新增 `.ntfy-teams-daynavbtn`（日期跳轉列按鈕）之後，
+**同時命中了兩種節點**，於是「應分成 3 天」變成 6。
+
+同一個家族已經踩過三次，方向兩種：
+
+| 前綴 | 誤中的 | 後果 |
+|---|---|---|
+| `ntfy-teams-header` | `ntfy-teams-headeracts` | **多算** |
+| `ntfy-teams-msg` | `ntfy-teams-msgbody` 等子元素 | **多算**（5 則算成 15 個） |
+| `ntfy-teams-day` | `ntfy-teams-daynavbtn` | **多算**（3 天算成 6 個） |
+
+**對策**：`client-offline.js` 裡已經有一個共用的 `hasDayToken()`；
+新寫的比對請**切成 token 再比**，不要用 `indexOf`：
+
+```js
+const has = (n, token) => (n.cls || '').split(/\s+/).indexOf(token) !== -1;
+```
+
+### K. 測試替身沒有 DOM：`ref.current` 是 null
+
+訊息串的捲動邏輯（跳到某一天、捲到底）需要 `boxRef.current.querySelectorAll`、
+`offsetTop`、`scrollTop`… 這些在 `client-offline.js` 的測試替身裡**都不存在**，
+所以**離線測試驗不到捲動行為**。
+
+**對策**：
+* 離線測試只驗**結構**（三顆按鈕、標籤、可不可按、節點順序）；
+* 捲動**位置**交給真實瀏覽器（`browser-verify.js`）驗，並在測試註解裡寫清楚
+  為什麼不在這裡驗，避免下一個人以為「漏了」而補一個假 DOM 進去。
+
+### L. ★ 有**兩個**地方會把未讀歸零，少改一個就等於沒改
+
+**症狀**：store 的未讀明明 +1 了（有 log 為證），但面板上「N 則新訊息」提示條
+永遠不出現，`unreadByTopic` 讀回來又是 0。
+
+**根因**：清未讀的入口有兩個，而且**在不同的層**：
+
+| # | 位置 | 條件 |
+|---|---|---|
+| 1 | `core.addMessages` 的 `seesLatest` | 看得到 **且貼底** 才算已讀（新規則） |
+| 2 | `MainPanel` 的 `readRef` effect | 原本是「面板每次多了新訊息就 `markRead(active)`」——**無條件** |
+
+只改 (1) 的話，(2) 會在下一輪把剛累加的未讀清掉。實測抓到的方式是
+**攔截 `markRead` / `markReadToLatest` / `setActiveTopic` / `removeTopic`，
+比對呼叫前後的未讀值** —— 一眼看出是 `markRead` 把 1 變 0。
+
+**連帶的第二個坑**：`markReadToLatest` 原本**只推進「讀到哪」、不清未讀**
+（`markRead` 才是清未讀的那個）。於是「點提示條跳過去」之後未讀留著、
+提示條不會消失 —— 因為 (2) 那個 effect 只在**訊息數變化**時才跑，
+而「跳過去」只是捲動、訊息數沒變。
+
+修法：`markReadToLatest` 也清未讀（「讀到最新」語意上就等於沒有未讀）。
+
+**教訓**：
+* 「同一個狀態有兩個地方會寫」跟「同一份資料有兩份表示法」一樣危險 ——
+  **改規則之前先把所有寫入點找出來**（grep 那個函式名，不要只改你看到的那個）；
+* 遇到「明明設了卻沒生效」，最快的方式是**攔截所有可能的寫入點、
+  記錄呼叫前後的值**，而不是繼續讀程式碼猜。
+
+### M. 別人的訊息「送達了但沒算未讀」——先確認判定值，不要猜
+
+這一輪的排錯靠的是**把判定印出來**，而不是讀程式碼推理。插入一行 log
+（`isViewing` / `isFollowing` / `seesLatest` / `mine` / `newCount` / `source`）
+之後一次就定位：
+
+```
+{ newCount: 1, source: "sse", isViewing: true, isFollowing: false,
+  seesLatest: false, mine: false }     ← 判定完全正確，問題在別處
+```
+
+**兩個教訓**：
+* **先確認「判定對不對」，再懷疑「判定之後的事」。** 這裡判定是對的，
+  所以 bug 一定在「誰把結果改掉了」；
+* ⚠️ **插 log 要插對檔案**：`lib/client.js` 的 `@@CORE_BEGIN/END` 之間是
+  **建置產物**，改那裡會被 `node build.js` 覆蓋掉。`addMessages` 的真正來源是
+  `lib/core.js`（實測：插在 client.js 的版本永遠沒被執行到，白白多繞一圈）。
+
+
+
 ---
 
 ## 4. 動這份程式之前要知道的細節
@@ -439,13 +546,15 @@ performance.getEntriesByType('resource')
 
 ### 4.7 class 比對要**以 token 為單位**，不能用 `indexOf`
 
-`className` 是**空格串接**的多個 class。踩過兩次、方向相反：
+`className` 是**空格串接**的多個 class。踩過**三次**、方向兩種：
 
 * `indexOf('ntfy-teams-header')` 會**誤中** `ntfy-teams-headeracts`（多算）；
+* `indexOf('ntfy-teams-msg')` 會**誤中** `ntfy-teams-msgbody` 等子元素（多算）；
+* `indexOf('ntfy-teams-day')` 會**誤中** `ntfy-teams-daynavbtn`（多算）；
 * `indexOf('ntfy-teams-dseg--') === 0` 會**漏掉**
   `"ntfy-teams-dseg ntfy-teams-dseg--0"`（前綴不在字串開頭，少算）。
 
-**正確寫法**：切成 token 再比。
+**正確寫法**：切成 token 再比。詳見 §3.J。
 
 ```js
 const has = (n, token) => (n.cls || '').split(/\s+/).indexOf(token) !== -1;
@@ -466,8 +575,7 @@ const has = (n, token) => (n.cls || '').split(/\s+/).indexOf(token) !== -1;
   否則會蓋掉抬頭右側的連線狀態；
 * 最小寬度 300px（`core.CONFIG.dashboardMinWidth`，**單一來源**，
   UI 不要另寫數字，`aria-valuemin` 與 tooltip 都從那裡拿）；
-* 底部有 **130px 保留區**，上緣 `1px solid #eee`；
-* 底部保留區存在之後，`dashbody` 的 `padding-bottom` 要歸零，
+* 底部有 **130px 保留區**，上緣 `1px solid #eee`；* 底部保留區存在之後，`dashbody` 的 `padding-bottom` 要歸零，
   否則會變成「130px + 18px」兩段留白疊在一起。
 
 ### 4.10 四個「使用者欽定的視覺規格」（不要擅自改回令牌）
@@ -507,6 +615,8 @@ const has = (n, token) => (n.cls || '').split(/\s+/).indexOf(token) !== -1;
 * 切換主題要**捲到「已讀的最新一則」**；
 * 自己的訊息**靠右**，而且**頭像也要在右邊**；
 * 看板最小 300px；看板底部 130px 保留區 + `1px solid #eee`；
+* 訊息串**右側中央**要有跳轉列：**START（第一則）**／向上（上一天第一則）／向下（下一天第一則）／END（最後一則）；
+* 焦點中的主題：**自己發的**自動捲過去；**別人發的**不要搶走畫面，改浮出「N 則新訊息」提示條讓使用者自己點；
 * 看板的圖表是**示範**，必須標示「示範」。
 
 ---

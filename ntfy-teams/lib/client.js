@@ -1503,6 +1503,15 @@ window.__ModuleLoader__.load({
         /**
          * 記下「這個主題讀到最新一則了」。
          * 只在实际看到訊息、或把某主題設為當前主題时呼叫，不会被别处的重绘误触发。
+         *
+         * ⚠️ 這裡**也要把未讀清掉**，不只是推進「讀到哪」。
+         *
+         * 「讀到最新」在語意上就等於「沒有未讀了」（`markRead` 清未讀、這裡推進邊界，
+         * 兩者本來是同一件事的兩半）。少了清未讀會有一個很明顯的漏洞：
+         * 使用者點「N 則新訊息」提示條跳到未讀處時，訊息數沒有變化 ——
+         * 而面板那個「貼底就清未讀」的 effect 只在**訊息數變化**時才跑，
+         * 於是未讀永遠留著、提示條一直掛在畫面上（實測：捲到未讀處後仍是 3）。
+         *
          * @param topic - 主題名。
          */
         function markReadToLatest(topic) {
@@ -1511,7 +1520,12 @@ window.__ModuleLoader__.load({
           var list = state.messagesByTopic[name] || [];
           var newest = list.length ? messageKey(list[list.length - 1]) : '';
           if (!newest) return;
-          if (state.lastReadIdByTopic[name] === newest) return;
+          var hadUnread = (state.unreadByTopic[name] || 0) > 0;
+          if (hadUnread) state.unreadByTopic[name] = 0;
+          if (state.lastReadIdByTopic[name] === newest) {
+            if (hadUnread) emit();
+            return;
+          }
           state.lastReadIdByTopic[name] = newest;
           emit();
         }
@@ -1640,10 +1654,13 @@ window.__ModuleLoader__.load({
           // 預設「看不到」：store 本身不知道有沒有 UI 在顯示。client 掛載時會
           // 用 setViewHooks 覆蓋掉。預設成 true 會讓「沒人告知」被誤當成「正在看」，
           // 那就回到原本「面板關著也把訊息標成已讀」的老問題。
-          isPanelVisible: function () { return false; }
+          isPanelVisible: function () { return false; },
+          // 預設「沒貼著底部」：不確定時**保守**處理 —— 當成沒在看最新，
+          // 於是別人的訊息會算未讀。寧可多一個提示，也不要漏掉訊息。
+          isFollowing: function () { return false; }
         };
 
-        /** 設定「面板是否可見」的查詢（client 端注入）。 @param hooks - { isPanelVisible }。 */
+        /** 設定「面板是否可見／是否貼著底部」的查詢（client 端注入）。 @param hooks - { isPanelVisible, isFollowing }。 */
         function setViewHooks(hooks) {
           if (hooks && typeof hooks.isPanelVisible === 'function') {
             viewHooks = hooks;
@@ -1658,6 +1675,46 @@ window.__ModuleLoader__.load({
           } catch (e) {
             return true;
           }
+        }
+
+        /**
+         * 使用者是不是**貼在底部**（正在看最新訊息）。
+         *
+         * 這是「要不要自動跟隨」的第二層條件：面板開著而且貼底，才算真的看到最新；
+         * 往上翻歷史時別人的訊息應該變成未讀提示，而不是被默默吃掉。
+         *
+         * 回傳 false 的情況：沒人告知（預設）、面板沒開、或不在底部。
+         *
+         * @returns 是否貼著底部。
+         */
+        function isFollowing() {
+          try {
+            return viewHooks.isFollowing() === true;
+          } catch (e) {
+            return false;
+          }
+        }
+
+        /**
+         * 這則訊息是不是**自己發的**。
+         *
+         * 判定與 UI 一致：title 必須是 `#handle` 形式，且 handle 等於目前設定的顯示名稱
+         * （大小寫不在意）。沒有 title、或 title 不是 `#` 開頭的一律當成別人的訊息 ——
+         * 寧可多提示一次，也不要把別人的訊息誤認成自己發的而標成已讀。
+         *
+         * @param msg - 正規化訊息。
+         * @returns 是否自己發的。
+         */
+        function isOwnMessage(msg) {
+          if (!msg) return false;
+          var self = normalizeIdentity(readConfig().identity);
+          if (self === '') return false;
+          // 用 core 自己的權威解析器（`parseIdentity`），不要在這裡另寫一套 ——
+          // UI 的 `senderOf` 也是走它，兩邊不一致就會出現「畫面說是我發的、
+          // 未讀判定卻說不是」這種鬼故事。
+          var parsed = parseIdentity(msg.title);
+          if (!parsed.isMention || parsed.handle === '') return false;
+          return parsed.handle.toLowerCase() === self.toLowerCase();
         }
 
         function addMessages(topic, msgs, source) {
@@ -1702,15 +1759,39 @@ window.__ModuleLoader__.load({
           state.messagesByTopic[name] = merged;
 
           var previousUnread = state.unreadByTopic[name] || 0;
-          if (newCount > 0 && source === SOURCE.SSE && !isViewing(name)) {
+
+          // ---- 未讀怎麼算（「焦點中要不要自動跟隨」的規則在這裡）----
+          //
+          // 需求：「當前 topic 處於焦點時，希望可以適時追蹤最新推送 ——
+          //       如果是我發的就自動滾屏到那條之後，如果是其他人發的就提示未讀」。
+          //
+          // 判定分成兩層：
+          //
+          //   1. `isViewing(name)`：面板開著，而且正在看這個主題。
+          //   2. `isFollowing()`：**而且貼在底部**（正在看最新）。
+          //
+          // 只有「看得到 + 貼著底部」才算真的看到；少了第二層，使用者往上翻歷史時
+          // 別人的訊息會被默默吃掉（舊行為就是這樣）。
+          //
+          //   自己發的        → 一律算已讀（那是你自己剛送出去的）
+          //   別人發的 + 貼底  → 算已讀、自動跟隨（你正看著它出現）
+          //   別人發的 + 沒貼底 → **算未讀**（提示你，讓你自己決定要不要跳過去）
+          //   不在看這個主題   → 算未讀
+          var seesLatest = isViewing(name) && isFollowing();
+          var mine = isOwnMessage(incoming[incoming.length - 1]);
+          if (newCount > 0 && source === SOURCE.SSE && !seesLatest && !mine) {
             state.unreadByTopic[name] = previousUnread + newCount;
           }
           var unreadChanged = (state.unreadByTopic[name] || 0) !== previousUnread;
 
           // 訊息是送進「目前正在看的主題」，就代表使用者看到了 ——
-          // 把「讀到哪」推進到最新一則（反正面板會自動捲到底）。
-          // 沒在看的主題不動：那正是未讀要留下來的地方。
-          if (isViewing(name) && merged.length) {
+          // 把「讀到哪」推進到最新一則。
+          //
+          // ⚠️ 只有在 `seesLatest`（看得到 + 貼底）或「自己發的」時才推進。
+          // 舊行為是 `isViewing` 就算 —— 那樣使用者往上翻歷史時，
+          // 別人的訊息一進來就被標成已讀，未讀提示永遠不會出現。
+          // 沒在看的主題當然也不動：那正是未讀要留下來的地方。
+          if ((seesLatest || mine) && isViewing(name) && merged.length) {
             state.lastReadIdByTopic[name] = messageKey(merged[merged.length - 1]);
           }
 
@@ -4481,9 +4562,65 @@ window.__ModuleLoader__.load({
       'color:var(--dsw-alias-label-secondary);}',
       '.ntfy-teams-lgdot{width:8px;height:8px;border-radius:999px;flex:0 0 auto;}',
 
+      // ---- 「N 則新訊息」提示條 ----
+      //
+      // 需求：「當前 topic 處於焦點時…如果是其他人發的就提示未讀」。
+      // 這條就是那個提示：焦點中的主題收到別人的訊息、而使用者沒貼在底部時，
+      // 底部浮出這顆藥丸；點一下跳到第一則未讀。
+      //
+      // 定位跟日期跳轉列同一招：`sticky` + `bottom:0` + `margin:auto 0 auto auto`
+      // （水平靠 auto margin 推到右邊），所以它一定在可視範圍的底部，
+      // 不會因為內容長短跑到看不到的地方。
+      '.ntfy-teams-unreadpill{position:sticky;bottom:0;z-index:4;float:right;',
+      'width:0;height:100%;margin:auto 0 auto auto;pointer-events:none;}',
+      '.ntfy-teams-unreadpillbtn{position:absolute;bottom:10px;right:-36px;pointer-events:auto;',
+      'display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 13px;white-space:nowrap;',
+      'border:1px solid var(--dsw-static-blue-500);border-radius:999px;cursor:pointer;font:inherit;',
+      'font-size:12px;font-weight:600;color:var(--dsw-alias-bg-base);',
+      'background:var(--dsw-static-blue-500);',
+      'box-shadow:0 3px 10px color-mix(in srgb, var(--dsw-alias-label-primary) 22%, transparent);',
+      'transition:background .12s ease;}',
+      '.ntfy-teams-unreadpillbtn:hover{background:var(--dsw-static-blue-600);',
+      'border-color:var(--dsw-static-blue-600);}',
+      '.ntfy-teams-unreadpillbtn:focus-visible{outline:2px solid var(--dsw-static-blue-500);outline-offset:2px;}',
+      '.ntfy-teams-unreadpillarrow{flex:0 0 auto;line-height:1;}',
+
       // 訊息串（在並排版面裡自己撐開；本身仍可垂直捲動）
       '.ntfy-teams-stream{flex:1 1 auto;min-height:0;overflow-y:auto;padding:16px 44px 20px 26px;',
-      'scroll-behavior:smooth;}',
+      'scroll-behavior:smooth;',
+      // 關掉瀏覽器的**滾動錨定**。
+      //
+      // 為什麼：展開一天會在某個錨點元素之前插入大量內容，Chrome 會自動調整
+      // `scrollTop` 去「保持畫面不動」。但我們正要**主動跳到某一天**，
+      // 那個自動補償會把剛捲好的位置推走。
+      // 實測：目標 153 被補償成 42（差 111px，剛好是展開一天的抬頭高度）。
+      'overflow-anchor:none;}',
+      // 右側的日期跳轉列：用掉 stream 右邊那 44px 內距（原本是空的）。
+      //
+      // 為什麼是 `position:sticky` 而不是 absolute：stream 本身就是滾動容器，
+      // sticky + `margin:auto 0`（配合 top/bottom:0）會讓它**永遠停在可視範圍
+      // 的垂直中央**，而且跟著捲動內容一起被裁切 —— 不需要另開一層 wrapper
+      // 去當定位祖先，也不必處理「哪個祖先才是 offsetParent」。
+      //
+      // `right:-36px`：sticky 元素在**內容盒**裡（26px 左內距、44px 右內距），
+      // 往右推 36px 剛好落在右側那個空隙中（34px 寬的按鈕 → 距面板右緣約 10px）。
+      '.ntfy-teams-daynav{position:sticky;top:0;bottom:0;z-index:3;float:right;',
+      'width:0;height:100%;margin:auto 0;}',
+      '.ntfy-teams-daynavcol{position:absolute;right:-36px;top:50%;transform:translateY(-50%);',
+      'display:flex;flex-direction:column;gap:6px;}',
+      '.ntfy-teams-daynavbtn{display:inline-flex;align-items:center;justify-content:center;',
+      'width:34px;height:34px;padding:0;border:1px solid var(--dsw-alias-border-l2);',
+      'border-radius:9px;cursor:pointer;background:var(--dsw-alias-bg-base);',
+      'color:var(--dsw-alias-label-secondary);line-height:1;',
+      'box-shadow:0 1px 3px color-mix(in srgb, var(--dsw-alias-label-primary) 12%, transparent);',
+      'transition:background .12s ease,color .12s ease,border-color .12s ease;}',
+      '.ntfy-teams-daynavbtn:hover{background:var(--dsw-alias-bg-layer-2);',
+      'color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-border-l1);}',
+      '.ntfy-teams-daynavbtn:focus-visible{outline:2px solid var(--dsw-static-blue-500);outline-offset:1px;}',
+      // 沒有上一天／下一天時：留著按鈕（位置不跳動）但變淡、不可按。
+      '.ntfy-teams-daynavbtn:disabled{opacity:.32;cursor:default;}',
+      '.ntfy-teams-daynavbtn:disabled:hover{background:var(--dsw-alias-bg-base);',
+      'color:var(--dsw-alias-label-secondary);border-color:var(--dsw-alias-border-l2);}',
       '.ntfy-teams-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;',
       'height:100%;color:var(--dsw-alias-label-secondary);font-size:12.5px;text-align:center;}',
       '.ntfy-teams-emptytitle{font-size:13.5px;font-weight:600;color:var(--dsw-alias-label-primary);}',
@@ -6171,6 +6308,119 @@ window.__ModuleLoader__.load({
       return e('div', { className: cls }, avatarBox, body);
     }
 
+    // =========================================================================
+    // 訊息串的日期跳轉列（右側中央）
+    // =========================================================================
+
+    /**
+     * 「訊息串現在貼著底部嗎」的即時旗標（模組層）。
+     *
+     * 為什麼是模組層而不是元件內的 ref：寫入端是 `MessageList`（捲動事件在它身上），
+     * 讀取端是 `MainPanel` 那個「把未讀歸零」的 effect —— 兩個是不同的元件，
+     * 元件內的 ref 傳不過去。
+     *
+     * 為什麼不讓 effect 當場查 DOM（`panelIsFollowing()`）：effect 的執行時機
+     * 跟捲動不同步，當場查會拿到過期的值。這裡由捲動事件即時更新，讀到的就是對的。
+     *
+     * 初始值是 `true`：剛開啟面板時會自動捲到底，等於正在看最新 —— 這樣才不會
+     * 一開啟就把既有訊息全部當成「未讀」。
+     *
+     * @type {{ current: boolean }}
+     */
+    var streamFollowingRef = { current: true };
+
+    /**
+     * 一顆跳轉用的箭頭／符號圖示。
+     *
+     * @param props - { dir }：`'up'` 上箭頭、`'down'` 下箭頭、`'end'` 底部橫線。
+     * @returns SVG 元素。
+     */
+    function JumpGlyph(props) {
+      var d = (props && props.dir) || 'down';
+      var shape = d === 'up'
+        ? e('path', { d: 'M8 12.6V4.2M4.3 7.9 8 4.2l3.7 3.7' })
+        : d === 'down'
+          ? e('path', { d: 'M8 3.4v8.4M4.3 8.1 8 11.8l3.7-3.7' })
+          // START：箭頭頂到上方橫線，「跳到第一則」比單純箭頭清楚（跟 END 對稱）
+          : d === 'start'
+            ? e('g', null,
+              e('path', { d: 'M8 13v-7.4M4.4 9.1 8 5.5l3.6 3.6' }),
+              e('path', { d: 'M3.6 3.1h8.8' })
+            )
+            // END：箭頭壓到底部橫線上
+            : e('g', null,
+              e('path', { d: 'M8 3v7.4M4.4 6.9 8 10.5l3.6-3.6' }),
+              e('path', { d: 'M3.6 12.9h8.8' })
+            );
+      return e('svg', {
+        width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor',
+        strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round',
+        'aria-hidden': 'true', focusable: 'false'
+      }, shape);
+    }
+
+    /**
+     * 訊息串右側的日期跳轉列：第一則／上一天／下一天／最後一則。
+     *
+     * 需求：「message list 右側中間，利用已經空出的空間，加個向上／向下／END 的 icon，
+     * 點一下就跳轉到上一天和下一天的第一條以及最後一條」，
+     * 之後追加：「最前面加一個 START，跳轉到第一條」。
+     *
+     * 位置：`position:sticky` + `margin:auto 0` 讓它停在可視範圍的垂直中央，
+     * 並落在 stream 右側那 44px 內距的空隙裡（見 `.ntfy-teams-daynav`）。
+     *
+     * @param props - { hasDays, hasPrev, atStart, onPrev, onNext, onStart, onEnd }。
+     * @returns 跳轉列元素。
+     */
+    function DayNav(props) {
+      /** 做一顆按鈕。 @param dir - 圖示方向。 @param label - tooltip／aria。 @param fn - 動作。 @param off - 是否不可按。 @returns 按鈕元素。 */
+      function btn(dir, label, fn, off) {
+        return e('button', {
+          type: 'button',
+          className: 'ntfy-teams-daynavbtn',
+          title: label,
+          'aria-label': label,
+          disabled: !!off,
+          onClick: function () { if (!off && typeof fn === 'function') fn(); }
+        }, e(JumpGlyph, { dir: dir }));
+      }
+      return e('div', { className: 'ntfy-teams-daynav' },
+        e('div', { className: 'ntfy-teams-daynavcol' },
+          // START 排在最前面（需求）。已經在最上面時變淡不可按。
+          btn('start', '跳到第一則訊息', props && props.onStart, props && props.atStart),
+          btn('up', '跳到上一天的第一則訊息', props && props.onPrev, !(props && props.hasPrev)),
+          btn('down', '跳到下一天的第一則訊息', props && props.onNext, !(props && props.hasNext)),
+          btn('end', '跳到最後一則訊息', props && props.onEnd, false)
+        )
+      );
+    }
+
+    /**
+     * 「N 則新訊息」提示條（浮在訊息串底部）。
+     *
+     * 需求：焦點中的主題收到**別人**的訊息、而使用者沒貼在底部時要提示未讀。
+     * 點一下跳到第一則未讀（並把這些訊息標成已讀）。
+     *
+     * @param props - { count, onClick }。
+     * @returns 提示條元素。
+     */
+    function UnreadPill(props) {
+      var count = props && typeof props.count === 'number' ? props.count : 0;
+      if (count <= 0) return null;
+      return e('div', { className: 'ntfy-teams-unreadpill' },
+        e('button', {
+          type: 'button',
+          className: 'ntfy-teams-unreadpillbtn',
+          title: '跳到第一則未讀訊息',
+          'aria-label': '跳到 ' + count + ' 則未讀訊息',
+          onClick: function () { if (typeof props.onClick === 'function') props.onClick(); }
+        },
+          e('span', { className: 'ntfy-teams-unreadpillarrow', 'aria-hidden': 'true' }, '↓'),
+          e('span', null, badgeText(count) + ' 則新訊息')
+        )
+      );
+    }
+
     /**
      * 訊息串：切換主題時捲到「上次讀到的地方」，新訊息才貼到底。
      *
@@ -6225,6 +6475,12 @@ window.__ModuleLoader__.load({
       var seenRef = React.useRef('');
       seenRef.current = seenId;
 
+      // 「現在能不能往上捲」——用來決定 START 按鈕可不可按。
+      // 這是**狀態**不是 ref：按鈕的 disabled 要跟著它重繪。
+      var canUpState = React.useState(false);
+      var canScrollUp = canUpState[0];
+      var setCanScrollUp = canUpState[1];
+
       // 這一輪的邊界 = max(store 的上次讀到, 本輪已讀)；找不到就退回 store 的值。
       var storeLastReadId = text(props.lastReadId);
       var boundaryId = storeLastReadId;
@@ -6243,6 +6499,8 @@ window.__ModuleLoader__.load({
         }
       }
       var unreadCount = typeof props.unread === 'number' && props.unread > 0 ? props.unread : 0;
+      // 提示條用的即時未讀數（見 listProps.unreadLive 的說明：跟畫線用的那個分開）。
+      var unreadLive = typeof props.unreadLive === 'number' && props.unreadLive > 0 ? props.unreadLive : 0;
       // 有未讀、而且邊界還在這串裡、而且後面真的還有東西 —— 三者都成立才畫線。
       // 最後那個條件就是「讀到最新就消失」。
       var hasUnreadMark = unreadCount > 0 && boundaryIndex >= 0 && boundaryIndex < count - 1;
@@ -6268,14 +6526,33 @@ window.__ModuleLoader__.load({
         }
       }
 
-      // 新訊息進來時：貼著底部就自動跟到底，並把「本輪讀到哪」一起推到最新。
+      // 新訊息進來時：**只跟隨「最新的那一則是自己發的」**。
       //
-      // 少了後半段會有個很明顯的毛病：人明明在底部看著新訊息進來，邊界卻停在上一輪
-      // 的位置，未讀線於是重新冒出來（實測：讀到底後再來一則，divider 由 0 變 1）。
+      // 需求：「當前 topic 處於焦點時…如果是我發的就自動滾屏到那條之後，
+      //       如果是其他人發的就提示未讀」。
+      //
+      // 所以這裡的條件比舊版嚴格，三個都要成立：
+      //   1. `stickRef.current` —— 使用者還貼著底部（往上翻歷史時不打擾他）；
+      //   2. 這一輪真的是「有新訊息」（不是切換主題或摺疊造成的重繪）；
+      //   3. 最新那一則是**自己發的**（`senderOf(..., selfName).isSelf`）。
+      //
+      // 別人的訊息不捲 —— 由 store 累加未讀、由 `UnreadPill` 浮出提示條，
+      // 讓使用者自己決定什麼時候跳過去。
+      //
+      // 為什麼還要 `syncSeenToViewport()`：自己發的那條捲到底之後，
+      // 「讀到哪」要跟著推進到最新，否則未讀線會停在上一輪的位置又冒出來
+      // （實測：讀到底後再來一則，divider 由 0 變 1）。
       React.useEffect(function () {
         var box = boxRef.current;
         if (!box) return;
         if (!stickRef.current) return;
+        var lastMsg = count > 0 ? messages[count - 1] : null;
+        if (!lastMsg) return;
+        // 只認「剛剛新增的那一則」：id 沒變就代表只是重繪，不要動捲動位置。
+        var lastId = text(lastMsg.id);
+        if (lastId === lastAutoScrollIdRef.current) return;
+        lastAutoScrollIdRef.current = lastId;
+        if (!senderOf(lastMsg, props.selfName).isSelf) return;
         box.scrollTop = box.scrollHeight;
         syncSeenToViewport();
       }, [count, props.topic]);
@@ -6451,11 +6728,100 @@ window.__ModuleLoader__.load({
         return mr.top >= br.top - 2 && mr.top <= br.bottom;
       }
 
+      // 跳轉期間為 true：擋掉「使用者捲動」的誤判，並讓捲動行為暫時變瞬時。
+      var jumpingRef = React.useRef(false);
+
+      // 上一次「自動跟隨」過的訊息 id。用來分辨「真的來了新訊息」與「只是重繪」——
+      // 少了它，任何重繪都會把畫面拉到底，使用者的捲動位置會被一直搶走。
+      var lastAutoScrollIdRef = React.useRef('');
+
+      // 「現在貼不貼著底部」——用來決定要不要顯示「N 則新訊息」提示條。
+      // 這是**狀態**不是 ref：提示條的顯示要跟著它重繪。
+      // 初始 true（剛開啟面板時捲到底，等於正在看最新）。
+      var nearBottomState = React.useState(true);
+      var nearBottom = nearBottomState[0];
+      var setNearBottom = nearBottomState[1];
+
+      /** 捲到未讀邊界（「N 則新訊息」提示條點下去用）。 */
+      function jumpToUnread() {
+        var box = boxRef.current;
+        if (!box) return;
+        var line = box.querySelector('.ntfy-teams-newline');
+        if (!line) {
+          // 沒有未讀線（例如這一輪的邊界已經被清掉）→ 退回捲到底。
+          jumpTo('');
+          markSeenNow();
+          return;
+        }
+        dropStick();
+        scrollToSettled(box, function (b) {
+          var l = b.querySelector('.ntfy-teams-newline');
+          return l ? scrollTopFor(b, l, 12) : b.scrollHeight;
+        });
+        // 捲過去之後**主動**把未讀清掉。
+        //
+        // 為什麼不能只靠「貼底就清」的那個 effect（MainPanel 的 readRef）：
+        // 它只在**訊息數變化**時才跑（依賴 `[active, activeCount]`），
+        // 而點提示條只是捲動、訊息數沒變 —— 於是它永遠不會再跑一次，
+        // 未讀就留在那裡（實測：捲到未讀處之後 store 的未讀仍是 3、提示條還掛著）。
+        markSeenNow();
+      }
+
+      /**
+       * 立刻把「這個主題讀到最新」。
+       *
+       * 通知 store（清未讀 + 推進「讀到哪」），並把本輪的 `seenId` 推上去，
+       * 讓未讀線一起消失。
+       */
+      function markSeenNow() {
+        if (count > 0) advanceSeen(text(messages[count - 1].id));
+        if (typeof props.onSeen === 'function') props.onSeen(props.topic);
+      }
+
+      /**
+       * 把某個位置換算成 `scrollTop`（**相對內容頂端**，不含捲動容器的內距）。
+       *
+       * ⚠️ 這裡是先前一直差幾 px 的根源：
+       * stream 有 `padding:16px 44px 20px 26px`，而**內容頂端在內距之內** ——
+       * 也就是「scrollTop = 0」時，第一個元素的 `rect.top - box.top` 是 **16**
+       * 而不是 0。所以直接寫 `scrollTop + (er.top - br.top) - 6` 時，
+       * 實際得到的留白是「16 - 6 = 10」而不是 6，位置永遠差一格。
+       * （需求「跳轉後抬頭要貼頂、分割線看得到」看起來是對的，但一要求
+       *  「START 要精確回到 0」就露出來了 —— 同一個公式不可能同時滿足兩者。）
+       *
+       * 修法：先把元素的視窗座標換算成「相對內容頂端」，再減掉想要的留白。
+       *
+       * @param b - 捲動容器。
+       * @param el - 目標元素。
+       * @param gap - 目標元素頂端與內容頂端的距離（px，可為負）。
+       * @returns 對應的 scrollTop。
+       */
+      function scrollTopFor(b, el, gap) {
+        var br = b.getBoundingClientRect();
+        var er = el.getBoundingClientRect();
+        var padTop = b.clientTop || 0;   // border 寬；padding 要用 computed style
+        try { padTop = parseFloat(getComputedStyle(b).paddingTop) || 0; } catch (err) { padTop = b.clientTop || 0; }
+        // 元素目前「相對內容頂端」的位置 = 目前 scrollTop + (它相對 border 盒的偏移 - 內距)
+        var contentOffset = b.scrollTop + (er.top - br.top) - padTop;
+        return contentOffset - gap;
+      }
+
       /** 記錄使用者是否還貼著底部，並把讀到的範圍往外推。 */
       function onScroll() {
         var box = boxRef.current;
         if (!box) return;
-        stickRef.current = box.scrollHeight - box.scrollTop - box.clientHeight < 48;
+        // 跳轉自己造成的 scroll 事件不算「使用者捲動」：不能把 smooth 還原，
+        // 更不能再觸發一次捲動（那會跟跳轉互相打架）。
+        if (!jumpingRef.current) {
+          if (box.style.scrollBehavior === 'auto') box.style.scrollBehavior = '';
+          stickRef.current = box.scrollHeight - box.scrollTop - box.clientHeight < 48;
+          // 兩個都要更新：模組層的 `streamFollowingRef` 給「未讀歸零」的 effect 用
+          // （同步、不查 DOM），store 的 hook 則給「下一則訊息算未讀還是已讀」用。
+          streamFollowingRef.current = stickRef.current;
+          if (stickRef.current !== nearBottom) setNearBottom(stickRef.current);
+          var up = box.scrollTop > 4;
+          if (up !== canScrollUp) setCanScrollUp(up);
+        }
         syncSeenToViewport();
       }
 
@@ -6510,7 +6876,9 @@ window.__ModuleLoader__.load({
             + (isCollapsed ? ' ntfy-teams-day--collapsed' : '');
           // 抬頭是「收合／展開」，右邊另外一顆問號是「用這一天開新 session 復盤」。
           // 兩個動作分開，避免按收合時誤觸復盤。
-          rows.push(e('div', { key: 'day_' + key, className: 'ntfy-teams-daywrap' },
+          // `data-daykey` 是給日期跳轉列用的：跳到某一天時要能把那一天**展開**
+          // （只靠 DOM 位置認不出是哪一天；key 是摺疊狀態的唯一識別）。
+          rows.push(e('div', { key: 'day_' + key, className: 'ntfy-teams-daywrap', 'data-daykey': key },
             e('button', {
               type: 'button',
               className: dayCls,
@@ -6572,7 +6940,286 @@ window.__ModuleLoader__.load({
         body = rows;
       }
 
-      return e('div', { className: 'ntfy-teams-stream', ref: boxRef, onScroll: onScroll }, body);
+      // ---- 日期跳轉：上一天／下一天／最後一則 ----
+      //
+      // 日期分段在 DOM 裡是 `.ntfy-teams-daywrap`（一天一個），所以「目前在哪一天」
+      // 直接用量到的位置判斷，不用另外維護一份 state（那份 state 會跟捲動不同步）。
+      //
+      // 捲動定位用 `box.scrollTop` 而不是 `scrollIntoView`：
+      //   * `scrollIntoView` 會把**所有**可捲動祖先一起捲（包含外層頁面），
+      //     實測會讓整個 GUI 跟著跳；
+      //   * `scrollTop` 只動這個 stream，行為可預期。
+      // 平滑捲動由 CSS 的 `scroll-behavior:smooth` 負責（本來就有）。
+      //
+      // 為什麼用 `offsetTop` 而不是 `getBoundingClientRect`：`.ntfy-teams-daywrap` 的
+      // offsetParent 就是這個 stream（stream 不是 static），所以 offsetTop 是
+      // 「距離內容頂端」的穩定座標，不受目前捲到哪裡影響。
+
+      /**
+       * 目前停在「哪一天」（語意判斷，不是算索引）。
+       *
+       * 為什麼要用語意而不是把捲動位置換算成索引：
+       * 捲動位置會被**內容高度變化**影響（展開／收合一天、新訊息進來），
+       * 事先算好的索引會跟現場對不上 —— 實測踩過：`afterNext.scrollTop = 964`
+       * 而 `maxScroll = 225`，完全錯位。
+       *
+       * 改用「哪一天的抬頭中心最接近視窗頂端」來回答「我在哪一天」，
+       * 這個答案只依賴**當下實際的 DOM 位置**，不怕內容變高變矮。
+       *
+       * @param box - 捲動容器。
+       * @param wraps - 日期分段元素。
+       * @returns 目前那一天的索引（找不到回 0）。
+       */
+      function currentDayIndex(box, wraps) {
+        var br = box.getBoundingClientRect();
+        var best = 0;
+        var bestDist = Infinity;
+        for (var i = 0; i < wraps.length; i += 1) {
+          var h = wraps[i].querySelector ? wraps[i].querySelector('.ntfy-teams-day') : null;
+          if (!h) continue;
+          var hr = h.getBoundingClientRect();
+          // 距離視窗頂端（也就是捲動起點）多遠；取最近的那一天
+          var dist = Math.abs(hr.top - br.top);
+          if (dist < bestDist) { bestDist = dist; best = i; }
+        }
+        return best;
+      }
+
+      /**
+       * 使用者主動跳轉時，先關掉「貼著底部自動跟到底」。
+       *
+       * ⚠️ 這一步是必要的，不是保險：**展開一天會讓 DOM 裡的訊息變多**，
+       * 於是上面那個 `[count, props.topic]` 的 effect 會被觸發；
+       * 只要 `stickRef.current` 還是 true，它就會把 `scrollTop` 設成
+       * `scrollHeight`，**直接蓋掉剛捲好的位置**。
+       *
+       * 實測（2 天各 14 則、昨天預設收合）：
+       * ```
+       * 按「上一天」→ 先展開 → 捲到 932（正確）
+       *            → 訊息數變多觸發 effect → 被覆寫成 121
+       * 結果：內容已經長到 1742，停在 121 —— 畫面上什麼都看不到。
+       * ```
+       * 「跳過去」是明確的使用者意圖，所以不再是「跟著底部」的狀態。
+       */
+      function dropStick() {
+        stickRef.current = false;
+      }
+
+      /**
+       * 把捲動容器送到某個元素的位置（**瞬時**，而且會等到版面穩定才停）。
+       *
+       * ⚠️ 為什麼不能只寫一次 `box.scrollTop = wrap.offsetTop - 6`：
+       *
+       * 有兩個獨立的坑疊在一起：
+       *
+       * 1. **`scrollTop` 會被當下的 `scrollHeight` 夾住。** 設一個超過上限的值
+       *    會被截斷，而且內容之後長高也不會自動補上。
+       *
+       * 2. **展開一天會改變所有「之後」元素的 `offsetTop`。** 這是真正咬人的那個：
+       *    實測（2 天各 14 則、昨天預設收合）——
+       *
+       *    ```
+       *    按「下一天」：scrollTop 153、maxScroll 225、day0.offsetTop = 127
+       *    按「上一天」：展開昨天 → 內容從 911 長到 1742
+       *                 day0.offsetTop 127 → 127（自己在最前面，不變）
+       *                 day1.offsetTop 159 → 970（被推下去了！）
+       *    結果：捲到 121，而目標位置的內容已經跑到 964 —— 差 843px，畫面完全不對。
+       *    ```
+       *
+       *    也就是說：**即使在點擊當下讀一次 `offsetTop`，那個值也可能在展開的
+       *    那次重繪之後失效。** 所以這裡改成在 rAF 迴圈裡**每輪重新量**、
+       *    一路修正到「目標位置不再變動」才停手（最多 20 輪保險）。
+       *
+       * 這比 `scrollIntoView` 好：後者會把**所有**可捲動祖先一起捲
+       * （包含外層頁面），實測整個 GUI 都會跟著跳。
+       *
+       * 另外這裡**暫時關掉** `scroll-behavior:smooth`，而且**不還原** ——
+       * 還原成 `smooth` 的那一瞬間瀏覽器會從「目前值」開始做動畫，
+       * 把剛捲好的位置又帶走（實測：目標 153 最後停在 42）。
+       * 改由 `onScroll` 在使用者真的自己捲動時才還原成平滑（見那裡）。
+       *
+       * @param box - 捲動容器。
+       * @param read - 每輪重新計算目標位置的函式；回傳 null 表示改用「最尾端」。
+       * @param fixed - 直接指定的位置（給「捲到最上面」用）。
+       */
+      function scrollToSettled(box, read, fixed) {
+        box.style.scrollBehavior = 'auto';
+        jumpingRef.current = true;
+        var last = null;
+        var tries = 0;
+        /** 一輪：量目標 → 捲 → 若還在變就下一輪。 */
+        function step() {
+          var b = boxRef.current;
+          if (!b) { jumpingRef.current = false; return; }
+          tries += 1;
+          var target = (fixed === undefined) ? read(b) : fixed;
+          if (target === null || target === undefined) target = 0;
+          target = Math.max(0, target);
+          b.scrollTop = target;
+          // 捲完再看一次：目標位置若又變了（展開造成的），就再修一輪。
+          var now = (fixed === undefined) ? read(b) : fixed;
+          now = Math.max(0, now === null || now === undefined ? 0 : now);
+          var settled = (last !== null && Math.abs(now - last) < 1 && Math.abs(b.scrollTop - now) < 1);
+          last = now;
+          if (settled || tries >= 20) {
+            jumpingRef.current = false;
+            return;
+          }
+          if (typeof requestAnimationFrame === 'function') requestAnimationFrame(step);
+          else setTimeout(step, 16);
+        }
+        step();
+      }
+
+      /**
+       * 跳轉（捲到某一天的頂端），並**確保那一天是展開的**。
+       *
+       * 留白刻意只留 6px（也就是抬頭自己的 `margin-top`）：
+       * 使用者的要求是「上一天至少要看得到那天的分割線」。
+       * 實測座標：第一天 wrap.offsetTop = 127、抬頭在 wrap 內再 +6，
+       * 所以留 6px 時抬頭剛好貼在視窗頂端，那條**分割線在視窗內看得到**。
+       *
+       * ⚠️ 這裡**刻意只傳 `dayKey`，不傳元素參照**：
+       * 展開一天會讓 React 重繪整串訊息，**我們先前抓到的 `wrap` 參照會被換掉**
+       * —— 之後再讀它的 `offsetTop` 拿到的是「已經脫離文件的那顆舊節點」，
+       * 值永遠是展開前的舊位置。實測就是這個造成「上一天」永遠差一大截：
+       * ```
+       * 按住的那顆舊節點 offsetTop 一直是 127 → 目標算成 121
+       * 真正在文件裡的新節點 offsetTop 是 970 → 應該捲到 964
+       * ```
+       * 所以每一輪都用 `data-daykey` **重新查詢**當下的節點。
+       *
+       * @param dayKey - 目標那天的 key；空 = 捲到最後。
+       */
+      function jumpTo(dayKey) {
+        var box = boxRef.current;
+        if (!box) return;
+        dropStick();
+        if (!dayKey) {
+          scrollToSettled(box, function (b) { return b.scrollHeight; });
+          return;
+        }
+        // 收起來的日子要先展開 —— 不然「跳過去」只看到一條抬頭，
+        // 使用者要的內容還是被折在裡面（需求：跳過去要看得到並展開）。
+        setCollapsed(function (prev) {
+          if (!prev[dayKey]) return prev;
+          var next = {};
+          for (var k in prev) if (Object.prototype.hasOwnProperty.call(prev, k)) next[k] = prev[k];
+          next[dayKey] = false;
+          return next;
+        });
+        // 每一輪都重新查詢節點並重新量位置 —— 見上面說明。
+        //
+        // 位置用 `getBoundingClientRect()` 換算（**不用 `offsetTop`**）：
+        // `offsetTop` 是相對 `offsetParent` 的，而右側那個 `float:right` 的
+        // 日期跳轉列會讓 `offsetParent` 不是我們以為的 stream
+        // （實測：`offsetTop` 說 127，實際幾何是 16 —— 差 111px）。
+        // 走 `scrollTopFor` 則只依賴當下真實的幾何。
+        scrollToSettled(box, function (b) {
+          var el = b.querySelector('.ntfy-teams-daywrap[data-daykey="' + dayKey + '"]');
+          if (!el) return b.scrollHeight;
+          // gap = 6：讓日期抬頭貼在內容頂端下方 6px（它自己的 margin-top），
+          // 那條分割線就會落在視窗裡看得到。
+          return scrollTopFor(b, el, 6);
+        });
+      }
+
+      /** 這一輪的日期分段。 @returns {Array} 元素清單。 */
+      function dayWraps() {
+        var box = boxRef.current;
+        if (!box || typeof box.querySelectorAll !== 'function') return [];
+        return Array.prototype.slice.call(box.querySelectorAll('.ntfy-teams-daywrap'));
+      }
+
+      /**
+       * 某個日期分段的 dayKey。
+       *
+       * ⚠️ `jumpTo` 收的是**字串 key**（見它的說明：展開會換掉節點，所以不能存參照）。
+       * 從元素轉成 key 一定要經過這裡 —— 直接把元素傳進 `jumpTo` 會變成
+       * `querySelector('[data-daykey="[object HTMLDivElement]"]')`，選不到東西，
+       * 目標就退化成 scrollHeight（實測踩過：目標 911、實際上限 225）。
+       *
+       * @param wrap - 日期分段元素。
+       * @returns dayKey 字串。
+       */
+      function keyOfWrap(wrap) {
+        if (!wrap || typeof wrap.getAttribute !== 'function') return '';
+        return wrap.getAttribute('data-daykey') || '';
+      }
+
+      /** 跳到上一天的第一則（在第一天的話就一路退到最上面）。 */
+      function jumpPrevDay() {
+        var box = boxRef.current;
+        if (!box) return;
+        var wraps = dayWraps();
+        if (!wraps.length) return;
+        var i = currentDayIndex(box, wraps);
+        jumpTo(keyOfWrap(wraps[Math.max(0, i - 1)]));
+      }
+
+      /** 跳到下一天的第一則（在最後一天的話就一路到底部）。 */
+      function jumpNextDay() {
+        var box = boxRef.current;
+        if (!box) return;
+        var wraps = dayWraps();
+        if (!wraps.length) return;
+        var i = currentDayIndex(box, wraps);
+        if (i >= wraps.length - 1) jumpTo('');
+        else jumpTo(keyOfWrap(wraps[i + 1]));
+      }
+
+      /** 跳到第一則。 */
+      function jumpFirst() {
+        var box = boxRef.current;
+        if (!box) return;
+        dropStick();
+        scrollToSettled(box, null, 0);
+      }
+
+      /**
+       * 畫面上的日期分段數（用來決定上／下一天可不可按）。
+       *
+       * 這裡刻意**不**查 DOM：render 期間查 DOM 會多一次 layout，
+       * 而且測試替身也沒有真的 DOM。用已經算好的 `groups` 就夠了
+       * （它跟 `.ntfy-teams-daywrap` 是一對一的）。
+       *
+       * @returns 日期段數。
+       */
+      function dayGroupCount() {
+        if (typeof groupByDay !== 'function' || !Array.isArray(messages)) return 0;
+        return groupByDay(messages).length;
+      }
+
+      var dayCount = dayGroupCount();
+
+      return e('div', { className: 'ntfy-teams-stream', ref: boxRef, onScroll: onScroll },
+        // 日期跳轉列：一定要放在 stream **裡面**，sticky 才會跟著這個捲動容器。
+        dayCount > 0
+          ? e(DayNav, {
+            key: 'daynav',
+            hasDays: dayCount > 0,
+            // 只有一天時沒有「上／下一天」可言（按鈕會變淡不可按）。
+            hasPrev: dayCount > 1,
+            hasNext: dayCount > 1,
+            // 已經在最上面時 START 也變淡（沒有東西可以再往上）。
+            atStart: !canScrollUp,
+            onStart: jumpFirst,
+            onPrev: jumpPrevDay,
+            onNext: jumpNextDay,
+            onEnd: function () { jumpTo(''); }
+          })
+          : null,
+        // 「N 則新訊息」提示條：只有「沒貼在底部」時才需要提示 ——
+        // 貼著底部時訊息就在你眼前，再提示一次反而是噪音。
+        // 用**即時的**未讀數（unreadLive），不是畫線用的黏住快照。
+        !nearBottom && unreadLive > 0
+          ? e(UnreadPill, {
+            key: 'unreadpill',
+            count: unreadLive,
+            onClick: jumpToUnread
+          })
+          : null,
+        body);
     }
 
     // =========================================================================
@@ -7423,6 +8070,16 @@ window.__ModuleLoader__.load({
       // ---- 面板每次「真的多了新訊息」时，把该 topic 的未读归零 ----
       // 用 ref 记住上次处理的则数：否则 markRead → store 变更 → 重绘 → effect
       // 再跑一次，会变成无穷回圈。
+      //
+      // ⚠️ 這裡**必須加上「貼在底部」的條件**（需求：「如果是我發的就自動滾屏到
+      // 那條之後，如果是其他人發的就提示未讀」）。少了它會有兩個後果：
+      //   1. 使用者往上翻歷史時，別人的訊息一進來就被清成已讀 ——
+      //      store 明明把未讀 +1，立刻被這裡歸零，「N 則新訊息」提示永遠不會出現
+      //      （實測就是這個：unread 1 → 0，而 isFollowing 是 false）；
+      //   2. 提示條的顯示條件（`!nearBottom && unreadLive > 0`）永遠不成立。
+      //
+      // 用 `followRef`（跟著捲動即時更新）而不是當場查 DOM：effect 執行時機
+      // 跟捲動不同步，當場查會拿到過期的值。
       var readRef = React.useRef({});
       var activeCount = (active && snapshot.messagesByTopic && snapshot.messagesByTopic[active]
         ? snapshot.messagesByTopic[active].length
@@ -7431,6 +8088,8 @@ window.__ModuleLoader__.load({
         if (!active) return;
         if (readRef.current[active] === activeCount) return;
         readRef.current[active] = activeCount;
+        // 沒貼在底部 → 不清未讀。store 會把它累加起來，由提示條呈现。
+        if (!streamFollowingRef.current) return;
         if (core && core.store && typeof core.store.markRead === 'function') {
           core.store.markRead(active);
         }
@@ -7575,6 +8234,13 @@ window.__ModuleLoader__.load({
         selfName: identity,
         // 未讀邊界要用「打開的那一刻」的值（見上面 pendingUnreadRef 的說明）。
         unread: pendingForActive.count,
+        // ⚠️ 「N 則新訊息」提示條要用**即時的**未讀數，不能用上面那個黏住的快照。
+        //
+        // 為什麼不能共用：`pendingForActive.count` 是為了畫未讀線而**黏在開啟那一刻**
+        // 的值（見上面那段說明），它刻意不跟著 store 變動。但提示條要反映「現在還有
+        // 幾則新訊息」，store 才是真相；共用會出現「store 說有 2 則未讀、提示條卻不顯示」
+        // （實測就是這個：storeUnread 2，pill 卻因為 count=0 而不畫）。
+        unreadLive: unreadOfActive,
         lastReadId: pendingForActive.lastReadId,
         // 某一天抬頭上的問號：把那天整理成復盤材料，交給宿主建立一個帶著它的工作階段。
         onDayReview: function (day) {
@@ -7686,6 +8352,29 @@ window.__ModuleLoader__.load({
       try {
         if (typeof document === 'undefined' || !document.querySelector) return false;
         return !!document.querySelector('.ntfy-teams-root');
+      } catch (err) {
+        return false;
+      }
+    }
+
+    /**
+     * 使用者是不是**貼在訊息串底部**（正在看最新訊息）。
+     *
+     * 這是「要不要自動跟隨」的第二層條件，跟 `panelIsVisible` 一樣用 DOM 查詢 ——
+     * 只有**正在顯示的那一個**面板實例的捲動位置才算數，所以不能存在模組層旗標
+     * （多個實例會互相蓋掉，這裡以前踩過）。
+     *
+     * 預設回 false：查不到就當成「沒在看最新」，寧可多一個未讀提示，
+     * 也不要漏掉別人的訊息。
+     *
+     * @returns 是否貼著底部。
+     */
+    function panelIsFollowing() {
+      try {
+        if (typeof document === 'undefined' || !document.querySelector) return false;
+        var box = document.querySelector('.ntfy-teams-stream');
+        if (!box) return false;
+        return box.scrollHeight - box.scrollTop - box.clientHeight < 48;
       } catch (err) {
         return false;
       }
@@ -8330,7 +9019,9 @@ window.__ModuleLoader__.load({
       if (core && typeof core.store === 'object' && core.store !== null
         && typeof core.store.setViewHooks === 'function') {
         core.store.setViewHooks({
-          isPanelVisible: panelIsVisible
+          isPanelVisible: panelIsVisible,
+          // 「貼著底部」只有顯示中的那個實例算數 —— 用 DOM 查詢而不是模組旗標。
+          isFollowing: panelIsFollowing
         });
       }
       ctx.effect(installStyles, PANEL_ID + ': styles');
@@ -8409,6 +9100,8 @@ window.__ModuleLoader__.load({
       Composer: Composer,
       MessageList: MessageList,
       MessageRow: MessageRow,
+      // 「N 則新訊息」提示條（焦點主題收到別人的訊息時浮出）
+      UnreadPill: UnreadPill,
       // 看板：示範圖表（測試要能驗結構與「示範」標示）
       DashDemo: DashDemo,
       buildDemoData: buildDemoData,

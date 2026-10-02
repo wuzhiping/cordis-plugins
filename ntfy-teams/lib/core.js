@@ -1451,6 +1451,15 @@
     /**
      * 記下「這個主題讀到最新一則了」。
      * 只在实际看到訊息、或把某主題設為當前主題时呼叫，不会被别处的重绘误触发。
+     *
+     * ⚠️ 這裡**也要把未讀清掉**，不只是推進「讀到哪」。
+     *
+     * 「讀到最新」在語意上就等於「沒有未讀了」（`markRead` 清未讀、這裡推進邊界，
+     * 兩者本來是同一件事的兩半）。少了清未讀會有一個很明顯的漏洞：
+     * 使用者點「N 則新訊息」提示條跳到未讀處時，訊息數沒有變化 ——
+     * 而面板那個「貼底就清未讀」的 effect 只在**訊息數變化**時才跑，
+     * 於是未讀永遠留著、提示條一直掛在畫面上（實測：捲到未讀處後仍是 3）。
+     *
      * @param topic - 主題名。
      */
     function markReadToLatest(topic) {
@@ -1459,7 +1468,12 @@
       var list = state.messagesByTopic[name] || [];
       var newest = list.length ? messageKey(list[list.length - 1]) : '';
       if (!newest) return;
-      if (state.lastReadIdByTopic[name] === newest) return;
+      var hadUnread = (state.unreadByTopic[name] || 0) > 0;
+      if (hadUnread) state.unreadByTopic[name] = 0;
+      if (state.lastReadIdByTopic[name] === newest) {
+        if (hadUnread) emit();
+        return;
+      }
       state.lastReadIdByTopic[name] = newest;
       emit();
     }
@@ -1588,10 +1602,13 @@
       // 預設「看不到」：store 本身不知道有沒有 UI 在顯示。client 掛載時會
       // 用 setViewHooks 覆蓋掉。預設成 true 會讓「沒人告知」被誤當成「正在看」，
       // 那就回到原本「面板關著也把訊息標成已讀」的老問題。
-      isPanelVisible: function () { return false; }
+      isPanelVisible: function () { return false; },
+      // 預設「沒貼著底部」：不確定時**保守**處理 —— 當成沒在看最新，
+      // 於是別人的訊息會算未讀。寧可多一個提示，也不要漏掉訊息。
+      isFollowing: function () { return false; }
     };
 
-    /** 設定「面板是否可見」的查詢（client 端注入）。 @param hooks - { isPanelVisible }。 */
+    /** 設定「面板是否可見／是否貼著底部」的查詢（client 端注入）。 @param hooks - { isPanelVisible, isFollowing }。 */
     function setViewHooks(hooks) {
       if (hooks && typeof hooks.isPanelVisible === 'function') {
         viewHooks = hooks;
@@ -1606,6 +1623,46 @@
       } catch (e) {
         return true;
       }
+    }
+
+    /**
+     * 使用者是不是**貼在底部**（正在看最新訊息）。
+     *
+     * 這是「要不要自動跟隨」的第二層條件：面板開著而且貼底，才算真的看到最新；
+     * 往上翻歷史時別人的訊息應該變成未讀提示，而不是被默默吃掉。
+     *
+     * 回傳 false 的情況：沒人告知（預設）、面板沒開、或不在底部。
+     *
+     * @returns 是否貼著底部。
+     */
+    function isFollowing() {
+      try {
+        return viewHooks.isFollowing() === true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    /**
+     * 這則訊息是不是**自己發的**。
+     *
+     * 判定與 UI 一致：title 必須是 `#handle` 形式，且 handle 等於目前設定的顯示名稱
+     * （大小寫不在意）。沒有 title、或 title 不是 `#` 開頭的一律當成別人的訊息 ——
+     * 寧可多提示一次，也不要把別人的訊息誤認成自己發的而標成已讀。
+     *
+     * @param msg - 正規化訊息。
+     * @returns 是否自己發的。
+     */
+    function isOwnMessage(msg) {
+      if (!msg) return false;
+      var self = normalizeIdentity(readConfig().identity);
+      if (self === '') return false;
+      // 用 core 自己的權威解析器（`parseIdentity`），不要在這裡另寫一套 ——
+      // UI 的 `senderOf` 也是走它，兩邊不一致就會出現「畫面說是我發的、
+      // 未讀判定卻說不是」這種鬼故事。
+      var parsed = parseIdentity(msg.title);
+      if (!parsed.isMention || parsed.handle === '') return false;
+      return parsed.handle.toLowerCase() === self.toLowerCase();
     }
 
     function addMessages(topic, msgs, source) {
@@ -1650,15 +1707,39 @@
       state.messagesByTopic[name] = merged;
 
       var previousUnread = state.unreadByTopic[name] || 0;
-      if (newCount > 0 && source === SOURCE.SSE && !isViewing(name)) {
+
+      // ---- 未讀怎麼算（「焦點中要不要自動跟隨」的規則在這裡）----
+      //
+      // 需求：「當前 topic 處於焦點時，希望可以適時追蹤最新推送 ——
+      //       如果是我發的就自動滾屏到那條之後，如果是其他人發的就提示未讀」。
+      //
+      // 判定分成兩層：
+      //
+      //   1. `isViewing(name)`：面板開著，而且正在看這個主題。
+      //   2. `isFollowing()`：**而且貼在底部**（正在看最新）。
+      //
+      // 只有「看得到 + 貼著底部」才算真的看到；少了第二層，使用者往上翻歷史時
+      // 別人的訊息會被默默吃掉（舊行為就是這樣）。
+      //
+      //   自己發的        → 一律算已讀（那是你自己剛送出去的）
+      //   別人發的 + 貼底  → 算已讀、自動跟隨（你正看著它出現）
+      //   別人發的 + 沒貼底 → **算未讀**（提示你，讓你自己決定要不要跳過去）
+      //   不在看這個主題   → 算未讀
+      var seesLatest = isViewing(name) && isFollowing();
+      var mine = isOwnMessage(incoming[incoming.length - 1]);
+      if (newCount > 0 && source === SOURCE.SSE && !seesLatest && !mine) {
         state.unreadByTopic[name] = previousUnread + newCount;
       }
       var unreadChanged = (state.unreadByTopic[name] || 0) !== previousUnread;
 
       // 訊息是送進「目前正在看的主題」，就代表使用者看到了 ——
-      // 把「讀到哪」推進到最新一則（反正面板會自動捲到底）。
-      // 沒在看的主題不動：那正是未讀要留下來的地方。
-      if (isViewing(name) && merged.length) {
+      // 把「讀到哪」推進到最新一則。
+      //
+      // ⚠️ 只有在 `seesLatest`（看得到 + 貼底）或「自己發的」時才推進。
+      // 舊行為是 `isViewing` 就算 —— 那樣使用者往上翻歷史時，
+      // 別人的訊息一進來就被標成已讀，未讀提示永遠不會出現。
+      // 沒在看的主題當然也不動：那正是未讀要留下來的地方。
+      if ((seesLatest || mine) && isViewing(name) && merged.length) {
         state.lastReadIdByTopic[name] = messageKey(merged[merged.length - 1]);
       }
 
