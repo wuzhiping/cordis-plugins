@@ -1135,7 +1135,13 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     walk(harness, tree, nodes, 0);
     const txt = allText(nodes);
     assert.ok(txt.indexOf('#shawoo') !== -1, '撰寫區應顯示 #shawoo，實際：' + txt.slice(0, 300));
-    assert.ok(txt.indexOf('的身分傳送') !== -1, '應說明以誰的身分傳送');
+    // 身分說明現在是**行內簡短版**（只有 `#名稱`），完整句子（「以…的身分傳送」）
+    // 搬到 tooltip —— 那一段每一眼都要重讀，但只在真的要確認時才有用。
+    const sendAsNode = nodes.filter((n) => n.cls
+      && String(n.cls).split(/\s+/).indexOf('ntfy-teams-sendas') !== -1)[0];
+    assert.ok(sendAsNode, '應該有身分顯示');
+    assert.ok(String(sendAsNode.props.title || '').indexOf('的身分傳送') !== -1,
+      'tooltip 應說明以誰的身分傳送，實際：' + sendAsNode.props.title);
 
     // core 的規則
     assert.strictEqual(core.getIdentity(), 'shawoo', 'setIdentity 應存下 shawoo');
@@ -2608,14 +2614,11 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
       .filter((n) => n.tag === '#text').map((n) => n.text).join(' ');
     assert.ok(text.indexOf('自動批準') !== -1,
       '標籤要看得出這是「自動批準」，實際：' + JSON.stringify(text));
-    assert.ok(text.indexOf('/approve') !== -1, '標籤要顯示會送出什麼指令');
     assert.ok(text.length < 30,
       '標籤應該簡短（不要一整句解釋），實際 ' + text.length + ' 字：' + JSON.stringify(text));
-    assert.ok(text.indexOf('自動批準') !== -1,
-      '標籤要看得出這是「自動批準」，實際：' + JSON.stringify(text));
-    assert.ok(text.indexOf('/approve') !== -1, '標籤要顯示會送出什麼指令');
-    assert.ok(text.length < 30,
-      '標籤應該簡短（不要一整句解釋），實際 ' + text.length + ' 字：' + JSON.stringify(text));
+    // 「會送出什麼指令」現在放在 tooltip（標籤只留名字），所以驗 tooltip。
+    assert.ok(String(labelNode.props.title || '').indexOf('/approve') !== -1,
+      'tooltip 要顯示會送出什麼指令，實際：' + labelNode.props.title);
     assert.ok(String(labelNode.props.title || '').indexOf('/approve session') !== -1,
       '完整規則（含觸發字串）要放在 tooltip，實際：' + labelNode.props.title);
     // ★ tooltip 必須寫出「還要帶 hermes-agent 標籤」—— 少了這句，使用者會以為
@@ -2701,11 +2704,14 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     on.core.saveConfig({ stayAtBottom: {} });
     second.core.saveConfig({ stayAtBottom: {} });
   });
-  test('優先級是分段控制（不是下拉框），四個選項都看得見且可切換', () => {
-    // 回饋：「預設」那個下拉框看不出是什麼。改成優先級的分段控制。
+  test('優先級：四格階梯（單一控制項、預設高亮、標籤只在 tooltip）', () => {
+    // 回饋演進：「預設」下拉框看不出是什麼 → 改成四段帶文字的分段控制
+    // → 「非常不優雅，囉嗦，預設值請高亮」→ 收成**四格階梯**。
     //
-    // 這條測試同時守住一件事：**不可以退回 <select>** ——
-    // 下拉框平常只看得到選中那一項，看不出有哪幾種可選，也沒有強度回饋。
+    // 這條測試同時守住三件事：
+    //   1. 不可以退回 <select>（看不出有哪幾種可選、選了也沒回饋）；
+    //   2. 標籤**不可以**再回到「每一格都掛文字」那種囉嗦寫法；
+    //   3. 「預設」那一格要有可辨識的標記（高亮）。
     const { harness, core, seats } = freshPanel();
     core.store.ensureTopic('pub_prio');
     core.store.setActiveTopic('pub_prio');
@@ -2713,52 +2719,154 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     const nodes = [];
     walk(harness, harness.render(seats['main:ntfy-teams'].component, {}), nodes, 0);
 
-    // 1) 傳送區裡不該再有 select
-    const selects = nodes.filter((n) => n.tag === 'select');
-    assert.strictEqual(selects.length, 0,
-      '傳送區不該再有用來選優先級的下拉框，實際找到 ' + selects.length + ' 個');
+    // 1) 沒有 select
+    assert.strictEqual(nodes.filter((n) => n.tag === 'select').length, 0,
+      '傳送區不該有下拉框');
 
-    // 2) 四個優先級按鈕都在，而且順序／標籤正確
-    const prio = nodes.filter((n) => n.tag === 'button'
-      && n.cls && String(n.cls).indexOf('ntfy-teams-priobtn') !== -1);
-    assert.strictEqual(prio.length, 4, '應該有四個優先級選項，實際 ' + prio.length);
-    const labels = prio.map((n) => n.props['aria-label']);
-    assert.deepStrictEqual(labels,
+    // 2) 一個 radiogroup 裡有四格
+    const group = findNode(nodes, 'ntfy-teams-prio');
+    assert.ok(group, '應該有優先級控制項');
+    assert.strictEqual(group.props.role, 'radiogroup', '整組是 radiogroup');
+    const levels = nodes.filter((n) => n.tag === 'button'
+      && n.cls && String(n.cls).indexOf('ntfy-teams-priolevel') !== -1);
+    assert.strictEqual(levels.length, 4, '應該有四格，實際 ' + levels.length);
+    assert.ok(levels.every((n) => n.props.role === 'radio'), '每一格是 radio');
+    assert.deepStrictEqual(levels.map((n) => n.props['aria-label']),
       ['優先級：最低', '優先級：低', '優先級：預設', '優先級：高'],
-      '四段應由低到高，實際：' + JSON.stringify(labels));
+      '四格由低到高');
+    assert.deepStrictEqual(levels.map((n) => n.props['data-level']),
+      ['1', '2', '3', '4'], '階梯高度依序 1..4');
 
-    // 3) 預設選中「預設」（ntfy 的 normal = 3）
-    const pressed = prio.map((n) => n.props['aria-pressed']);
-    assert.deepStrictEqual(pressed, ['false', 'false', 'true', 'false'],
-      '預設應該選中第三段（預設），實際：' + JSON.stringify(pressed));
+    // 3) 預設選中第三格（ntfy normal = 3）
+    assert.deepStrictEqual(levels.map((n) => n.props['aria-checked']),
+      ['false', 'false', 'true', 'false'], '預設應選中第三格');
 
-    // 4) 每一段都有強度指示（格數 1..4）—— 這是「看得出大小」的關鍵
-    const meters = nodes.filter((n) => n.cls && String(n.cls).indexOf('ntfy-teams-primeter') !== -1);
-    assert.strictEqual(meters.length, 4, '每一段都應該有強度指示，實際 ' + meters.length);
-    const litCounts = prio.map((btn) => {
-      // 注意：`nodes` 是**已走訪過的平坦清單**，節點之間不再有 parent/children 關係，
-      // 所以不能用 `walk(harness, btn, ...)` 再走一次（那裡拿到的是節點不是元素）。
-      // 直接數每個按鈕自己的強度格：`data-level` 就是它該亮的格數。
-      return Number(btn.props['data-level']);
-    });
-    assert.deepStrictEqual(litCounts, [1, 2, 3, 4],
-      '強度格數應該是 1/2/3/4，實際 ' + JSON.stringify(litCounts));
-    // 而且每一格真的畫出來了（總共 4 格，亮的格數由 CSS 依 data-level 決定）
-    const allBars = nodes.filter((n) => n.cls && String(n.cls).indexOf('ntfy-teams-priobar') !== -1);
-    assert.strictEqual(allBars.length, 16, '四段各 4 格，共 16 格，實際 ' + allBars.length);
+    // 4) ★「預設」那一格要有高亮標記 —— 使用者永遠知道回到哪裡
+    const defaults = levels.filter((n) => n.props.className
+      && String(n.props.className).indexOf('ntfy-teams-priolevel--default') !== -1);
+    assert.strictEqual(defaults.length, 1, '恰好一格標成「預設」，實際 ' + defaults.length);
+    assert.strictEqual(defaults[0].props['aria-label'], '優先級：預設',
+      '標成預設的要是第三格');
 
-    // 5) 沒有名稱時整組應該停用（跟送出鈕一致）
+    // 5) 標籤只留 tooltip／aria-label，畫面**不**顯示「最低／低／預設／高」四個詞
+    const allText = walkInto(harness, group).filter((n) => n.tag === '#text')
+      .map((n) => n.text).join(' ').trim();
+    assert.strictEqual(allText, '', '四格裡不該有可見文字（囉嗦），實際：' + JSON.stringify(allText));
+
+    // 6) 沒有名稱時整格停用（跟送出鈕一致）
     core.setIdentity('');
     const offNodes = [];
     walk(harness, harness.render(seats['main:ntfy-teams'].component, {}), offNodes, 0);
-    const offPrio = offNodes.filter((n) => n.tag === 'button'
-      && n.cls && String(n.cls).indexOf('ntfy-teams-priobtn') !== -1);
-    assert.strictEqual(offPrio.length, 4, '沒有名稱時選項仍在（看得到只是不能用）');
-    assert.ok(offPrio.every((n) => n.props.disabled === true),
-      '沒有顯示名稱時整組優先級應該停用');
+    const offLevels = offNodes.filter((n) => n.tag === 'button'
+      && n.cls && String(n.cls).indexOf('ntfy-teams-priolevel') !== -1);
+    assert.strictEqual(offLevels.length, 4, '沒有名稱時四格仍在（看得到只是不能用）');
+    assert.ok(offLevels.every((n) => n.props.disabled === true), '沒有顯示名稱時整組停用');
 
     core.setIdentity('shawoo');
     core.store.removeTopic('pub_prio');
+  });
+
+  test('★ 優先級不進設定：開面板永遠是預設值', () => {
+    // 需求：「切換 topic 恢復預設，不用保存它狀態」。
+    //
+    // 「不保存」在這裡驗兩件事：
+    //   1. config 裡**沒有** priority 欄位（不進 YAML）；
+    //   2. 每次渲染都從預設值開始（第三格）。
+    //
+    // ⚠️ 「點一格之後切主題會不會回到預設」**不在這裡驗**：
+    // 測試替身的 walker 會用一顆用完就丟的 slot 陣列展開子元件，
+    // 在那裡面 setState 的結果不會留下來（實測：點了「高」再渲染仍是預設）。
+    // 那件事交給真實瀏覽器驗（見 test/browser 的「切換主題恢復預設」）。
+    const { harness, core, seats } = freshPanel();
+    core.store.ensureTopic('pub_p1');
+    core.store.ensureTopic('pub_p2');
+    core.setIdentity('shawoo');
+
+    assert.strictEqual(core.readConfig().priority, undefined,
+      '設定裡不該有 priority（優先級不是持久設定）');
+
+    /** 目前選中第幾格。 @returns 四個 aria-checked。 */
+    const checkedNow = (topic) => {
+      core.store.setActiveTopic(topic);
+      const out = [];
+      walk(harness, harness.render(seats['main:ntfy-teams'].component, {}), out, 0);
+      return out.filter((n) => n.tag === 'button'
+        && n.cls && String(n.cls).indexOf('ntfy-teams-priolevel') !== -1)
+        .map((n) => n.props['aria-checked']);
+    };
+
+    // 兩個主題各自打開都是預設（第三格）
+    assert.deepStrictEqual(checkedNow('pub_p1'), ['false', 'false', 'true', 'false'],
+      'pub_p1 打開時應是預設');
+    assert.deepStrictEqual(checkedNow('pub_p2'), ['false', 'false', 'true', 'false'],
+      'pub_p2 打開時也應是預設（沒有沿用前一個主題）');
+
+    // 來回切幾次都一樣
+    assert.deepStrictEqual(checkedNow('pub_p1'), ['false', 'false', 'true', 'false'],
+      '切回 pub_p1 仍是預設');
+
+    assert.strictEqual(core.readConfig().priority, undefined,
+      '切換主題後仍不該把優先級寫進設定');
+
+    core.store.removeTopic('pub_p1');
+    core.store.removeTopic('pub_p2');
+  });
+
+  test('★ 身分／自動批準／永遠滾到最新／優先級 都在同一列', () => {
+    // 需求：「身分說明、自動回覆、自動滾屏、優先級放在同一行，文本簡約」。
+    //
+    // 之前是兩列（兩個 checkbox 一列、身分＋優先級一列）。
+    // 這條測試釘住「同一列」這件事 —— 不然很容易改著改著又拆成兩列。
+    //
+    // 實際的「有沒有折行／會不會溢出」由瀏覽器量（`flex-wrap:nowrap` +
+    // media query 的省略策略）；這裡驗**結構**：四組東西都在 composemeta 裡，
+    // 而且沒有被包進另一個 flex 容器（那才是折行的來源）。
+    const { harness, core, seats } = freshPanel();
+    core.store.ensureTopic('pub_onerow');
+    core.store.setActiveTopic('pub_onerow');
+    core.setIdentity('shawoo');
+    const nodes = [];
+    walk(harness, harness.render(seats['main:ntfy-teams'].component, {}), nodes, 0);
+
+    const meta = findNode(nodes, 'ntfy-teams-composemeta');
+    assert.ok(meta, '應該有 composemeta 這一列');
+
+    // 四組東西都在 composemeta 的直接子節點裡
+    const kidCls = (meta.children || []).map((c) => (c && c.props && c.props.className) || '');
+    const hasKid = (cls) => kidCls.some((c) => String(c).split(/\s+/).indexOf(cls) !== -1);
+    assert.ok(hasKid('ntfy-teams-sendas'), '身分要在這一列裡');
+    assert.ok(hasKid('ntfy-teams-autoapprove'), '自動批準要在這一列裡');
+    assert.ok(hasKid('ntfy-teams-staybottom'), '永遠滾到最新要在這一列裡');
+
+    // 兩個開關不再是獨立的一整列（以前它們各是一個 flex 子項、排在 meta 之前）
+    const metaIdx = nodes.indexOf(meta);
+    const areaIdx = nodes.findIndex((n) => n.tag === 'textarea');
+    const apIdx = nodes.indexOf(findNode(nodes, 'ntfy-teams-autoapprove'));
+    const sbIdx = nodes.indexOf(findNode(nodes, 'ntfy-teams-staybottom'));
+    assert.ok(apIdx > metaIdx && sbIdx > metaIdx,
+      '兩個開關應該排在 composemeta **之內**（節點順序在它之後）');
+
+    // ⚠️ 優先級是**自訂元件**（PriorityControl），`meta.children` 裡拿到的是
+    // 還沒展開的 React 元素 —— 那裡沒有 className。所以用節點順序判斷：
+    // 它在這一列**之內**（節點索引在 meta 之後、且在輸入框之前）。
+    const prioIdx = nodes.indexOf(findNode(nodes, 'ntfy-teams-prio'));
+    assert.ok(prioIdx > metaIdx && prioIdx < areaIdx,
+      '優先級控制要在這一列裡、且在輸入框之前');
+
+    // 身分是簡短版：只顯示 `#名稱`，完整句子搬到 tooltip
+    const sendAs = findNode(nodes, 'ntfy-teams-sendas');
+    const sendText = walkInto(harness, sendAs)
+      .filter((n) => n.tag === '#text').map((n) => n.text).join(' ').trim();
+    assert.strictEqual(sendText, '#shawoo', '身分只留 #名稱，實際：' + JSON.stringify(sendText));
+    assert.ok(String(sendAs.props.title || '').indexOf('的身分傳送') !== -1,
+      '完整說明要在 tooltip');
+
+    // 自動批準不再顯示 /approve（那在 tooltip）
+    const apText = walkInto(harness, findNode(nodes, 'ntfy-teams-autoapprove'))
+      .filter((n) => n.tag === '#text').map((n) => n.text).join(' ').trim();
+    assert.strictEqual(apText, '自動批準', '自動批準只留名字，實際：' + JSON.stringify(apText));
+
+    core.store.removeTopic('pub_onerow');
   });
 
   test('不再有任何 localStorage 持久化入口（單一真相 = 宿主 YAML）', () => {

@@ -5043,10 +5043,27 @@ window.__ModuleLoader__.load({
       // ---- 撰写区 ----
       '.ntfy-teams-compose{flex:0 0 auto;display:flex;flex-direction:column;gap:7px;padding:11px 18px 14px;',
       'border-top:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);}',
-      '.ntfy-teams-composemeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;',
-      'color:var(--dsw-alias-label-secondary);}',
-      '.ntfy-teams-sendas{display:inline-flex;align-items:center;gap:6px;font-weight:600;',
-      'color:var(--dsw-alias-brand-primary);}',
+      // 身分／自動批準／永遠滾到最新／優先級 —— **一列**。
+      //
+      // ⚠️ `flex-wrap:nowrap` 是刻意的：一換行就又變回兩列，這個需求的意義就沒了。
+      // 擠不下時由下面的 media query **依序省略最不重要的文字**（先收「優先級」
+      // 三個字，再收開關的文字只留方框），而不是折行。
+      // 這一列的內容**不換行、也不外溢**：擠不下時靠彈性壓縮 + 省略號吸收
+      // （身分名稱可以縮、優先級文字在更窄時會收起來）。
+      // `overflow:hidden` 是最後防線 —— 萬一還是不夠，寧可夾掉也不要橫向滾動。
+      '.ntfy-teams-composemeta{display:flex;align-items:center;gap:9px;flex-wrap:nowrap;',
+      'font-size:11.5px;color:var(--dsw-alias-label-secondary);min-width:0;overflow:hidden;}',
+      '.ntfy-teams-sendas{display:inline-flex;align-items:center;gap:5px;flex:0 1 auto;',
+      'min-width:0;font-weight:600;color:var(--dsw-alias-brand-primary);}',
+      // 名稱可能很長 → 讓它可以被壓縮並省略，不要推擠後面的控制項
+      '.ntfy-teams-sendastext{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+      // 兩個開關可以縮（文字會先被省略號吃掉），但不隱藏 ——
+      // 它們是「開關」，方框一定要留著。
+      '.ntfy-teams-autoapprove,.ntfy-teams-staybottom{min-width:0;}',
+      '.ntfy-teams-autoapprovetext,.ntfy-teams-staybottomtext{min-width:0;overflow:hidden;',
+      'text-overflow:ellipsis;}',
+      // 優先級控制是最重要的（要看得出選了什麼），最後才動它。
+      '.ntfy-teams-prio{flex-shrink:0;}',
       '.ntfy-teams-composerow{display:flex;align-items:flex-end;gap:9px;}',
       '.ntfy-teams-textarea{flex:1 1 auto;min-height:40px;max-height:180px;resize:vertical;padding:9px 11px;',
       'border-radius:9px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base);',
@@ -5055,86 +5072,92 @@ window.__ModuleLoader__.load({
       '.ntfy-teams-textarea::placeholder{color:var(--dsw-alias-label-secondary);}',
       '.ntfy-teams-sendbtn{height:38px;padding:0 18px;}',
 
-      // ---- 自動回應開關（input 上方）----
+      // ---- 自動批準／永遠滾到最新：行內小膠囊 ----
       //
-      // 它是**會代替使用者發言**的功能，所以視覺上要看得出來「現在是開的」：
-      // 勾選時整列上色（跟齒輪用同一個藍），而不是只有一個小小的打勾。
-      '.ntfy-teams-autoapprove{display:flex;align-items:center;gap:7px;flex:0 0 auto;',
-      'padding:5px 9px;margin-bottom:7px;border:1px solid var(--dsw-alias-border-l1);',
-      'border-radius:8px;cursor:pointer;font-size:11.5px;',
+      // 需求：身分、這兩個開關、優先級要在**同一行**，而且文本簡約。
+      // 所以它們不再是佔滿整列的卡片（會有左右外距、整列可點），
+      // 改成貼在那一行裡的小膠囊。
+      //
+      // 它們是**會改變行為**的開關，所以「開著」要看得出來：
+      // 勾選時整顆上色（自動批準藍、永遠滾到最新綠）。
+      '.ntfy-teams-autoapprove,.ntfy-teams-staybottom{display:inline-flex;align-items:center;',
+      'gap:5px;flex:0 0 auto;padding:3px 8px;border:1px solid var(--dsw-alias-border-l1);',
+      'border-radius:7px;cursor:pointer;font-size:11px;line-height:1;white-space:nowrap;',
       'color:var(--dsw-alias-label-secondary);',
       'background:color-mix(in srgb, var(--dsw-alias-label-primary) 3%, transparent);}',
-      '.ntfy-teams-autoapprove:hover{background:color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);}',
-      // 勾選時：整列變成淡藍（:has 不支援時的退化只是顏色不變，功能不受影響）
+      '.ntfy-teams-autoapprove:hover,.ntfy-teams-staybottom:hover{',
+      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);}',
+      '.ntfy-teams-autoapprovebox,.ntfy-teams-staybottombox{flex:0 0 auto;width:13px;height:13px;',
+      'margin:0;cursor:pointer;}',
+      '.ntfy-teams-autoapprovebox{accent-color:var(--dsw-static-blue-500);}',
+      '.ntfy-teams-staybottombox{accent-color:var(--dsw-static-green-500);}',
+      '.ntfy-teams-autoapprovebox:disabled{cursor:default;opacity:.45;}',
+      // 勾選時整顆上色：:has 不支援時只是顏色不變，功能不受影響
       '.ntfy-teams-autoapprove:has(.ntfy-teams-autoapprovebox:checked){',
       'color:var(--dsw-static-blue-600);',
       'border-color:color-mix(in srgb, var(--dsw-static-blue-500) 45%, transparent);',
       'background:color-mix(in srgb, var(--dsw-static-blue-500) 10%, transparent);}',
-      '.ntfy-teams-autoapprovebox{flex:0 0 auto;width:14px;height:14px;margin:0;cursor:pointer;',
-      'accent-color:var(--dsw-static-blue-500);}',
-      '.ntfy-teams-autoapprovebox:disabled{cursor:default;opacity:.45;}',
-      '.ntfy-teams-autoapprovetext{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
-      '.ntfy-teams-autoapprove code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;',
-      'font-size:11px;padding:0 3px;border-radius:4px;',
-      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);',
-      'color:var(--dsw-alias-label-primary);}',
-
-      // ---- 永遠滾到最新（與自動回應同一套視覺語言，但用綠色區分）----
-      '.ntfy-teams-staybottom{display:flex;align-items:center;gap:7px;flex:0 0 auto;',
-      'padding:5px 9px;margin-bottom:7px;border:1px solid var(--dsw-alias-border-l1);',
-      'border-radius:8px;cursor:pointer;font-size:11.5px;',
-      'color:var(--dsw-alias-label-secondary);',
-      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 3%, transparent);}',
-      '.ntfy-teams-staybottom:hover{background:color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);}',
       '.ntfy-teams-staybottom:has(.ntfy-teams-staybottombox:checked){',
       'color:var(--dsw-static-green-600);',
       'border-color:color-mix(in srgb, var(--dsw-static-green-500) 45%, transparent);',
       'background:color-mix(in srgb, var(--dsw-static-green-500) 10%, transparent);}',
-      '.ntfy-teams-staybottombox{flex:0 0 auto;width:14px;height:14px;margin:0;cursor:pointer;',
-      'accent-color:var(--dsw-static-green-500);}',
-      '.ntfy-teams-staybottomtext{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+      '.ntfy-teams-autoapprovetext,.ntfy-teams-staybottomtext{white-space:nowrap;}',
 
       // ---- 優先級：分段控制 ----
       //
       // 視覺語言：強度用「格數」表達（1..4 格實心），顏色用紅色系深淺
       // （只有 state-error 那個紅是主題令牌；深浅用 color-mix 疊出來，
-      //  所以不引入新的寫死色碼）。
-      '.ntfy-teams-primetro{flex:0 0 auto;font-size:11.5px;color:var(--dsw-alias-label-secondary);}',
-      '.ntfy-teams-prioseg{display:inline-flex;align-items:stretch;gap:2px;flex:0 0 auto;',
-      'padding:2px;border-radius:9px;border:1px solid var(--dsw-alias-border-l1);',
-      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent);}',
-      '.ntfy-teams-priobtn{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;',
-      'height:24px;padding:0 8px;margin:0;border:0;border-radius:7px;cursor:pointer;',
-      'font:inherit;font-size:11px;line-height:1;white-space:nowrap;',
-      'color:var(--dsw-alias-label-secondary);background:transparent;',
-      'transition:background .12s ease, color .12s ease;}',
-      '.ntfy-teams-priobtn:hover:not(:disabled){background:color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent);}',
-      '.ntfy-teams-priobtn:focus-visible{outline:2px solid var(--dsw-static-blue-500);outline-offset:1px;}',
-      '.ntfy-teams-priobtn:disabled{cursor:default;opacity:.45;}',
-      // 選中的那一格：上色 + 白底，清楚到一眼看得出來現在選的是什麼
-      '.ntfy-teams-priobtn--on{color:var(--dsw-alias-label-primary);',
-      'background:var(--dsw-alias-bg-layer-1);',
-      'box-shadow:0 1px 2px color-mix(in srgb, var(--dsw-alias-label-primary) 14%, transparent);}',
-      // 強度格：4 格，實心的那幾格依 level 疊深淺
-      '.ntfy-teams-primeter{display:inline-flex;align-items:flex-end;gap:1.5px;height:11px;}',
-      '.ntfy-teams-priobar{width:2.5px;border-radius:1px;',
-      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);}',
-      '.ntfy-teams-priobar:nth-child(1){height:4px;}',
-      '.ntfy-teams-priobar:nth-child(2){height:6px;}',
-      '.ntfy-teams-priobar:nth-child(3){height:8px;}',
-      '.ntfy-teams-priobar:nth-child(4){height:10px;}',
-      '.ntfy-teams-priobar--on{background:var(--dsw-alias-label-secondary);}',
-      // 依強度上紅：越高越紅（level 由 data-level 帶進來）
-      '[data-level="1"] .ntfy-teams-priobar--on{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 40%, var(--dsw-alias-label-secondary));}',
-      '[data-level="2"] .ntfy-teams-priobar--on{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 60%, var(--dsw-alias-label-secondary));}',
-      '[data-level="3"] .ntfy-teams-priobar--on{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 80%, var(--dsw-alias-label-secondary));}',
-      '[data-level="4"] .ntfy-teams-priobar--on{background:var(--dsw-alias-state-error-primary);}',
-      // 選中且是高優先級時，文字也跟著紅，視線會被抓到
-      '.ntfy-teams-priobtn--on[data-level="4"]{color:var(--dsw-alias-state-error-primary);}',
-      '.ntfy-teams-priobtn--on[data-level="4"] .ntfy-teams-priobar--on{background:var(--dsw-alias-state-error-primary);}',
-      // 窄畫面時只留格數，文字讓位（避免擠壓輸入框）
-      '@media (max-width:820px){.ntfy-teams-priotext{display:none;}',
-      '.ntfy-teams-priobtn{padding:0 6px;}}'
+      // ---- 優先級：四格階梯 ----
+      //
+      // 一個控制項（radiogroup），不是四個帶文字的按鈕。每一格是整塊可點的
+      // 按鈕（好按），但看起來只是四條由矮到高的線（簡約）。
+      // 文字標籤只出現在 tooltip 與 aria-label。
+      '.ntfy-teams-prio{display:inline-flex;align-items:flex-end;gap:2px;flex:0 0 auto;',
+      'height:20px;padding:2px;margin:0;border:0;background:transparent;}',
+      '.ntfy-teams-prio .ntfy-teams-priolevel{display:flex;align-items:flex-end;',
+      'justify-content:center;position:relative;width:7px;height:100%;padding:0;margin:0;',
+      'border:0;border-radius:3px;background:transparent;cursor:pointer;overflow:hidden;',
+      'transition:background .12s ease;}',
+      '.ntfy-teams-prio .ntfy-teams-priolevel:hover:not(:disabled){',
+      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent);}',
+      '.ntfy-teams-prio .ntfy-teams-priolevel:focus-visible{outline:2px solid var(--dsw-static-blue-500);',
+      'outline-offset:1px;}',
+      '.ntfy-teams-prio .ntfy-teams-priolevel:disabled{cursor:default;opacity:.45;}',
+      // 一條線；高度由第幾格決定（階梯）
+      '.ntfy-teams-priolevelbar{display:block;width:3px;border-radius:1.5px;',
+      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 20%, transparent);',
+      'transition:background .12s ease;}',
+      '.ntfy-teams-priolevel[data-level="1"] .ntfy-teams-priolevelbar{height:4px;}',
+      '.ntfy-teams-priolevel[data-level="2"] .ntfy-teams-priolevelbar{height:7px;}',
+      '.ntfy-teams-priolevel[data-level="3"] .ntfy-teams-priolevelbar{height:10px;}',
+      '.ntfy-teams-priolevel[data-level="4"] .ntfy-teams-priolevelbar{height:13px;}',
+      // 四格各自深淺：越高越紅（跟「強度」的直覺一致）
+      '.ntfy-teams-priolevel[data-level="1"] .ntfy-teams-priolevelbar{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 34%, var(--dsw-alias-label-primary) 18%);}',
+      '.ntfy-teams-priolevel[data-level="2"] .ntfy-teams-priolevelbar{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 55%, var(--dsw-alias-label-primary) 14%);}',
+      '.ntfy-teams-priolevel[data-level="3"] .ntfy-teams-priolevelbar{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 78%, var(--dsw-alias-label-primary) 10%);}',
+      '.ntfy-teams-priolevel[data-level="4"] .ntfy-teams-priolevelbar{background:var(--dsw-alias-state-error-primary);}',
+      // 「預設」那一格的標記：**淡淡的一層底**，而不是另外畫一個點。
+      //
+      // 試過兩種「點」的畫法都不行：畫在格線底部之上會疊成一個深色污點，
+      // 畫在它下面又像一個脫離的墨點（都放大截圖看過）。
+      // 用底色最乾淨 —— 它就是那一格本身，而且選中時會自然疊成更明顯的一層。
+      '.ntfy-teams-priolevel--default{',
+      'background:color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);}',
+      // 選中：底色加深（同一條規則也適用於預設那一格）
+      '.ntfy-teams-priolevel--on{background:color-mix(in srgb, var(--dsw-alias-label-primary) 11%, transparent) !important;}',
+      // 讓格線底部留一點空間（避免視覺上貼死底部）
+      '.ntfy-teams-prio .ntfy-teams-priolevel{padding-bottom:2px;}',
+      // 窄畫面時**由外而內依序省略最不重要的文字**，而不是折行。
+      //
+      // 斷點怎麼定的（實測，不是猜的）：這一列全部文字都顯示需要 ~537px
+      // （身分 55 + 自動批準 80 + 永遠滾到最新 102 + 舊的分段控制 220 + 間距）。
+      // 而訊息串那一欄會隨視窗縮小（看板固定 300px），於是視窗 ~1100px 時
+      // 這一列只剩 484px → 溢出。
+      //
+      // 新的四格控制只有 ~38px 寬（舊的 220px），所以餘裕大很多；
+      // 現在只剩兩個開關的文字需要讓位。
+      '@media (max-width:800px){.ntfy-teams-autoapprovetext,.ntfy-teams-staybottomtext{',
+      'display:none;}.ntfy-teams-autoapprove,.ntfy-teams-staybottom{padding:3px 6px;}}'
     ].concat(AVATAR_CSS).join('');
 
     // =========================================================================
@@ -7993,38 +8016,64 @@ window.__ModuleLoader__.load({
     var DEFAULT_PRIORITY = 3;
 
     /**
-     * 優先級的選項。
+     * 優先級的選項（四級）。
      *
-     * `bars` 是強度（1..4）：畫成幾格實心，右邊的 CSS 讓格數越多的越紅、越少越淡。
+     * `level` 同時是「第幾格」與「強度」：四格做出階梯狀，選到第 n 級就亮前 n 格。
      * 用「格數」而不是只用顏色，是因為顏色單獨一種編碼對色弱不友善，
      * 而且四個色階在小尺寸下很難分辨。
      *
-     * @type {Array<{value:number, label:string, bars:number}>}
+     * ⚠️ 這裡沒有「顯示用的文字標籤」欄位 —— 標籤只在 tooltip 與 aria-label 出現。
+     * 之前每一級都掛「最低／低／預設／高」四個字，四組文字並排非常囉嗦
+     * （回饋：「非常不優雅，囉嗦」）。四格的階梯本身就表達了大小。
+     *
+     * @type {Array<{value:number, label:string, level:number}>}
      */
     var PRIORITY_OPTIONS = [
-      { value: 1, label: '最低', bars: 1 },
-      { value: 2, label: '低', bars: 2 },
-      { value: 3, label: '預設', bars: 3 },
-      { value: 4, label: '高', bars: 4 }
+      { value: 1, label: '最低', level: 1 },
+      { value: 2, label: '低', level: 2 },
+      { value: 3, label: '預設', level: 3 },
+      { value: 4, label: '高', level: 4 }
     ];
 
     /**
-     * 優先級強度指示（幾格實心）。
+     * 優先級控制：四格階梯。
      *
-     * @param props - { bars, total }。
-     * @returns 指示元素。
+     * 一個控制項而不是四個按鈕並排 —— 這是**單一選擇**（radio 語意），
+     * 不是四個獨立動作，所以視覺上就該是一組。
+     *
+     * 每一格是 `<button role="radio">`：整格可點（比只點一條細線好按），
+     * 但看起來只是四條由矮到高的線。選中的第 n 格連同左邊的都亮起來，
+     * 所以「現在多大」一眼看得出來。
+     *
+     * 「預設」那一格下方有一個小點 —— 使用者永遠知道回到哪裡。
+     *
+     * @param props - { value, disabled, onChange }。
+     * @returns 控制項元素。
      */
-    function PriorityMeter(props) {
-      var total = props.total || 4;
-      var bars = Math.max(0, Math.min(total, props.bars || 0));
-      var cells = [];
-      for (var i = 0; i < total; i += 1) {
-        cells.push(e('i', {
-          key: 'b' + i,
-          className: 'ntfy-teams-priobar' + (i < bars ? ' ntfy-teams-priobar--on' : '')
-        }));
-      }
-      return e('span', { className: 'ntfy-teams-primeter', 'aria-hidden': 'true' }, cells);
+    function PriorityControl(props) {
+      var value = props.value;
+      var disabled = props.disabled === true;
+      return e('span', {
+        className: 'ntfy-teams-prio',
+        role: 'radiogroup',
+        'aria-label': '優先級'
+      }, PRIORITY_OPTIONS.map(function (opt) {
+        var on = opt.value === value;
+        return e('button', {
+          key: opt.value,
+          type: 'button',
+          role: 'radio',
+          className: 'ntfy-teams-priolevel'
+            + (on ? ' ntfy-teams-priolevel--on' : '')
+            + (opt.value === DEFAULT_PRIORITY ? ' ntfy-teams-priolevel--default' : ''),
+          'data-level': String(opt.level),
+          disabled: disabled,
+          'aria-checked': on ? 'true' : 'false',
+          'aria-label': '優先級：' + opt.label,
+          title: '優先級：' + opt.label,
+          onClick: function () { props.onChange(opt.value); }
+        }, e('i', { key: 'bar', className: 'ntfy-teams-priolevelbar' }));
+      }));
     }
 
     /**
@@ -8042,6 +8091,22 @@ window.__ModuleLoader__.load({
       var prioState = React.useState(DEFAULT_PRIORITY);
       var prio = prioState[0];
       var setPrio = prioState[1];
+      // 切換主題就回到預設 —— 而且**刻意不保存**。
+      //
+      // 需求：「切換 topic 恢復預設，不用保存它狀態」。
+      //
+      // 為什麼要明確重置而不是靠元件重掛：`props.topic` 變的時候
+      // `listProps.key` 也變，React 確實會重掛、state 自然回到初始值 ——
+      // 但那是**實作細節**（依賴 key 的寫法）。這裡再依賴一次 `props.topic`，
+      // 把「換主題就回到預設」寫成明確的行為，key 以後怎麼改都不會壞。
+      //
+      // 不保存也意味著：不進 config.yml、不進 localStorage，重新整理也是預設值。
+      var prioTopicRef = React.useRef(props.topic);
+      React.useEffect(function () {
+        if (prioTopicRef.current === props.topic) return;
+        prioTopicRef.current = props.topic;
+        setPrio(DEFAULT_PRIORITY);
+      }, [props.topic]);
       var busyState = React.useState(false);
       var busy = busyState[0];
       var setBusy = busyState[1];
@@ -8113,89 +8178,86 @@ window.__ModuleLoader__.load({
       var canSend = canPublish && hasName;
 
       return e('div', { className: 'ntfy-teams-compose' },
-        // ---- 自動回應開關（需求：input 上方一個 checkbox）----
+        // ---- 一列：身分／自動批準／永遠滾到最新／優先級 ----
         //
-        // 標籤刻意**簡短**（回饋：「解釋太多了」）：平常只要看得懂「這是什麼開關」，
-        // 詳細規則（觸發字串、回什麼、只認即時推送…）放在 tooltip 裡 ——
-        // 想知道的人滑過去就有，不想知道的人不必每次讀一整句。
-        e('label', {
-          className: 'ntfy-teams-autoapprove',
-          // tooltip 要把「還需要 hermes-agent 標籤」寫出來 —— 少了這句，
-          // 使用者會以為只要有人打出那句話就會被自動回覆。
-          title: '自動批準：收到帶 hermes-agent 標籤、且含「/approve session」的訊息時，自動回覆「/approve」'
-        },
-          e('input', {
-            type: 'checkbox',
-            className: 'ntfy-teams-autoapprovebox',
-            checked: !!props.autoApproveOn,
-            disabled: !canPublish,
-            onChange: function (ev) {
-              if (typeof props.onToggleAutoApprove === 'function') {
-                props.onToggleAutoApprove(ev.target.checked);
-              }
-            }
-          }),
-          e('span', { className: 'ntfy-teams-autoapprovetext' },
-            '自動批準 ',
-            e('code', null, '/approve')
-          )
-        ),
-        // ---- 永遠滾到最新 ----
+        // 需求：「身分說明、自動回覆、自動滾屏、優先級放在同一行，文本簡約」。
         //
-        // 同樣只留標題；「不管誰發的」這個關鍵差別放在 tooltip，
-        // 因為它跟未讀提示條的取捨需要解釋，但不該佔掉每一眼的閱讀成本。
-        e('label', {
-          className: 'ntfy-teams-staybottom',
-          title: '永遠滾到最新：不管訊息是誰發的，都自動捲到最底'
-        },
-          e('input', {
-            type: 'checkbox',
-            className: 'ntfy-teams-staybottombox',
-            checked: !!props.stayAtBottom,
-            onChange: function (ev) {
-              if (typeof props.onToggleStayAtBottom === 'function') {
-                props.onToggleStayAtBottom(ev.target.checked);
-              }
-            }
-          }),
-          e('span', { className: 'ntfy-teams-staybottomtext' },
-            '永遠滾到最新'
-          )
-        ),
+        // 之前是兩列（兩個 checkbox 一列、身分＋優先級一列），高度多花一倍，
+        // 而且「設定」被拆成兩處。合成一列之後閱讀順序是：
+        //     我是誰（左） → 兩個開關 → 優先級（右）
+        //
+        // ⚠️ 擠不下的處理方式是**由外而內依序省略最不重要的文字**（見 CSS 的
+        // media query）：先收「優先級」三個字，再收開關的文字只留方框。
+        // 不做換行 —— 一換行就又變回兩列，這個需求的意義就沒了。
         e('div', { className: 'ntfy-teams-composemeta' },
-          e('span', { className: 'ntfy-teams-sendas' },
-            e(PersonGlyph),
-            sendAs !== '' ? '以 ' + sendAs + ' 的身分傳送' : '尚未設定名稱'),
-          // 名稱是全域一份（不是每個主題各一個），所以只提「設定」，不談主題。
-          sendAs === ''
-            ? e('span', null, '到上方「共用設定」填顯示名稱，訊息才會顯示你是誰')
-            : null,
-          e('span', { className: 'ntfy-teams-spacer' }),
-          // ---- 優先級：分段控制（不是下拉框）----
-          //
-          // 為什麼用分段控制而不是 <select>：這是四個固定選項、而且**選了要看得出
-          // 差別**的設定。下拉框平常只看得到「預設」一個字，其他選項要點開才知道，
-          // 而且選了之後畫面上沒有任何回饋。分段控制則是一次看到全部、
-          // 用強度格數與顏色直接表達大小。
-          e('span', { className: 'ntfy-teams-primetro', id: 'ntfy-teams-prio-label' }, '優先級'),
+          // 身分：只留「以 #名稱 傳送」，前面的「以」「的身分傳送」省掉。
+          // 圖示（人形）已經表達了「這是身分」，所以文字可以再短。
           e('span', {
-            className: 'ntfy-teams-prioseg',
-            role: 'group',
-            'aria-labelledby': 'ntfy-teams-prio-label'
-          }, PRIORITY_OPTIONS.map(function (opt) {
-            var on = opt.value === prio;
-            return e('button', {
-              key: opt.value,
-              type: 'button',
-              className: 'ntfy-teams-priobtn' + (on ? ' ntfy-teams-priobtn--on' : ''),
-              'data-level': String(opt.bars),
-              disabled: !canSend,
-              'aria-pressed': on ? 'true' : 'false',
-              'aria-label': '優先級：' + opt.label,
-              title: '優先級：' + opt.label,
-              onClick: function () { setPrio(opt.value); }
-            }, e(PriorityMeter, { bars: opt.bars }), e('span', { className: 'ntfy-teams-priotext' }, opt.label));
-          }))
+            className: 'ntfy-teams-sendas',
+            title: sendAs !== ''
+              ? '以 ' + sendAs + ' 的身分傳送'
+              : '尚未設定名稱：到上方「共用設定」填寫後才能傳送訊息'
+          },
+            e(PersonGlyph),
+            e('span', { className: 'ntfy-teams-sendastext' },
+              sendAs !== '' ? sendAs : '未設定名稱')),
+          // ---- 自動批準 ----
+          //
+          // 標籤刻意**簡短**（回饋：「解釋太多了」、「文本簡約」）：
+          // 平常只要看得懂「這是什麼開關」，詳細規則（觸發字串、回什麼、
+          // 還需要 hermes-agent 標籤…）放在 tooltip 裡 ——
+          // 想知道的人滑過去就有，不想知道的人不必每次讀一整句。
+          e('label', {
+            className: 'ntfy-teams-autoapprove',
+            // tooltip 要把「還需要 hermes-agent 標籤」寫出來 —— 少了這句，
+            // 使用者會以為只要有人打出那句話就會被自動回覆。
+            title: '自動批準：收到帶 hermes-agent 標籤、且含「/approve session」的訊息時，自動回覆「/approve」'
+          },
+            e('input', {
+              type: 'checkbox',
+              className: 'ntfy-teams-autoapprovebox',
+              checked: !!props.autoApproveOn,
+              disabled: !canPublish,
+              onChange: function (ev) {
+                if (typeof props.onToggleAutoApprove === 'function') {
+                  props.onToggleAutoApprove(ev.target.checked);
+                }
+              }
+            }),
+            e('span', { className: 'ntfy-teams-autoapprovetext' }, '自動批準')
+          ),
+          // ---- 永遠滾到最新 ----
+          //
+          // 「不管誰發的」這個關鍵差別放在 tooltip：它跟未讀提示條的取捨
+          // 需要解釋，但不該佔掉每一眼的閱讀成本。
+          e('label', {
+            className: 'ntfy-teams-staybottom',
+            title: '永遠滾到最新：不管訊息是誰發的，都自動捲到最底'
+          },
+            e('input', {
+              type: 'checkbox',
+              className: 'ntfy-teams-staybottombox',
+              checked: !!props.stayAtBottom,
+              onChange: function (ev) {
+                if (typeof props.onToggleStayAtBottom === 'function') {
+                  props.onToggleStayAtBottom(ev.target.checked);
+                }
+              }
+            }),
+            e('span', { className: 'ntfy-teams-staybottomtext' }, '永遠滾到最新')
+          ),
+          // 推開：讓優先級靠右（窄畫面時這條推擠會先被壓掉）
+          e('span', { className: 'ntfy-teams-spacer' }),
+          // ---- 優先級：四格階梯 ----
+          //
+          // 為什麼是「一個控制項」而不是四個帶文字的按鈕：這是**單一選擇**
+          // （radio 語意），不是四個獨立動作；四組文字並排會非常囉嗦
+          // （回饋：「非常不優雅，囉嗦」）。標籤改放 tooltip 與 aria-label。
+          e(PriorityControl, {
+            value: prio,
+            disabled: !canSend,
+            onChange: setPrio
+          })
         ),
         e('div', { className: 'ntfy-teams-composerow' },
           // 沒有名稱時輸入框**仍可打字**：讓使用者先把想說的話寫好，
