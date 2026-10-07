@@ -96,8 +96,6 @@ window.__ModuleLoader__.load({
         dashboardWidth: 360,
         dashboardMinWidth: 300,
         dashboardMaxWidth: 1300,
-        // 每個主題的「自動回應」設定（見 normalizeAutoApprove 的說明）。
-        autoApprove: {},
         // 每個主題的「永遠滾到最新」開關（見 normalizeStayAtBottom 的說明）。
         stayAtBottom: {}
       };
@@ -134,9 +132,6 @@ window.__ModuleLoader__.load({
       /** 自動回應要送出的內容。 */
       var AUTO_APPROVE_REPLY = '/approve';
 
-      /** `ids` 最多保留幾筆（見 normalizeAutoApprove）。 */
-      var AUTOAPPROVE_MAX_IDS = 50;
-
       /**
        * 訊息是否帶有某個 tag（不分大小寫、忽略前後空白）。
        *
@@ -159,22 +154,27 @@ window.__ModuleLoader__.load({
       /**
        * 判斷一則訊息是否應該觸發自動回應，以及該回什麼。
        *
-       * 這裡刻意做成**純函式**（不碰網路、不改狀態），所以可以離線測試 ——
-       * 這個功能一旦誤觸發或重複觸發，代價是「往群組裡灌訊息」。
+       * 這裡刻意做成**純函式**（不碰網路、不改狀態、**也不讀設定**），
+       * 所以可以離線測試 —— 這個功能一旦誤觸發或重複觸發，
+       * 代價是「往群組裡灌訊息」。
+       *
+       * ⚠️ 「開關」與「已回過哪些」都由**呼叫端**（client）用記憶體狀態決定，
+       * **不進 `config.yml`**。需求：「自動 approve 狀態不用保存，預設不勾選」。
+       * 所以這裡不再讀 `readConfig().autoApprove` —— 設定裡就算還留著舊資料
+       * （升級前寫進去的 `on: true`）也**不會**讓它自己打開。
        *
        * 一律**不回應自己發的訊息**：否則自己送出的內容只要含觸發字串就會無限循環
        * （我回了一則 → 又被判定為觸發 → 再回一則…）。
        *
-       * @param opts - { msg, source, topic, selfName, autoApprove }。
-       * @returns { reply: string } 或 null。
+       * @param opts - { msg, source, topic, selfName, on, repliedIds }。
+       *   `on` 是呼叫端的開關；`repliedIds` 是這次工作階段已經回過的訊息 id。
+       * @returns { reply: string, id: string } 或 null。
        */
       function autoApproveDecision(opts) {
         var o = opts || {};
         var topic = normalizeTopic(o.topic);
         if (!topic) return null;
-        var settings = o.autoApprove && typeof o.autoApprove === 'object' ? o.autoApprove : {};
-        var entry = settings[topic];
-        if (!entry || entry.on !== true) return null;
+        if (o.on !== true) return null;
         // 只有「即時推送」才觸發。歷史載入不算 —— 否則面板一開就把舊訊息
         // 全部回一遍（那些訊息可能好幾天前就在那裡了）。
         if (o.source !== SOURCE.SSE) return null;
@@ -192,9 +192,10 @@ window.__ModuleLoader__.load({
           && parsed.handle.toLowerCase() === self.toLowerCase()) {
           return null;
         }
-        // 同一則只回一次（`ids` 跨重新整理存活）。
+        // 同一則只回一次（`repliedIds` 是這次工作階段的記憶體清單）。
         var id = msg.id === null || msg.id === undefined ? '' : String(msg.id);
-        if (id !== '' && Array.isArray(entry.ids) && entry.ids.indexOf(id) !== -1) return null;
+        var replied = Array.isArray(o.repliedIds) ? o.repliedIds : [];
+        if (id !== '' && replied.indexOf(id) !== -1) return null;
         return { reply: AUTO_APPROVE_REPLY, id: id };
       }
 
@@ -527,7 +528,6 @@ window.__ModuleLoader__.load({
           if (typeof persisted.identity === 'string') out.identity = normalizeIdentity(persisted.identity);
           if (persisted.aliases !== undefined) out.aliases = normalizeTopicAliases(persisted.aliases);
           out.dashboardWidth = clampDashboardWidth(persisted.dashboardWidth, out.dashboardWidth);
-          if (persisted.autoApprove !== undefined) out.autoApprove = normalizeAutoApprove(persisted.autoApprove);
           if (persisted.stayAtBottom !== undefined) out.stayAtBottom = normalizeStayAtBottom(persisted.stayAtBottom);
           if (persisted.defaultTopicAdded === true) out.defaultTopicAdded = true;
         }
@@ -570,22 +570,7 @@ window.__ModuleLoader__.load({
         return out;
       }
 
-      /**
-       * 自動回應設定（每個主題一份）：`{ [topic]: { on: boolean, ids: string[] } }`。
-       *
-       * 這個設定住在 `config.yml` 而不是瀏覽器 —— 它是**行為設定**，
-       * 而且 `ids`（已經回過哪些訊息）必須跨重新整理存活，否則每次重載都可能重複回覆。
-       *
-       * `ids` 只留最近 N 筆：目的是「不要對同一則回兩次」，不是完整歷史。
-       * 留太多會讓 config.yml 膨脹，而且舊訊息本來也不會再被判定為新訊息
-       * （只有 `sse` 來源才觸發）。
-       *
-       * @param value - 任何輸入。
-       * @returns 正規化後的設定物件。
-       */
-      function normalizeAutoApprove(value) {
-        return normalizeTopicToggleMap(value, AUTOAPPROVE_MAX_IDS);
-      }
+
 
       /**
        * 「永遠滾到最新」設定：`{ [topic]: { on: boolean, ids: [] } }`。
@@ -606,7 +591,8 @@ window.__ModuleLoader__.load({
        * @param value - 任何輸入。
        * @param fallback - 回退值。
        * @returns 合法的寬度（整數 px）。
-       */  function clampDashboardWidth(value, fallback) {
+       */
+      function clampDashboardWidth(value, fallback) {
         var n = toFiniteNumber(value);
         var base = toFiniteNumber(fallback);
         if (base === null) base = CONFIG.dashboardWidth;
@@ -616,48 +602,9 @@ window.__ModuleLoader__.load({
         return Math.round(n);
       }
 
-      /**
-       * 開啟／關閉某個主題的自動回應。
-       *
-       * 關掉時**保留** `ids`：使用者可能只是暫時關掉，回來時不該把已經回過的
-       * 訊息再回一遍。要清掉就整張表覆蓋（`saveConfig({ autoApprove: {} })`）。
-       *
-       * @param topic - 主題名。
-       * @param on - 是否開啟。
-       * @returns 更新後的該主題設定。
-       */
-      function setAutoApprove(topic, on) {
-        var name = normalizeTopic(topic);
-        if (!name) return null;
-        var current = normalizeAutoApprove(readConfig().autoApprove);
-        var entry = current[name] || { on: false, ids: [] };
-        entry.on = on === true;
-        current[name] = entry;
-        saveConfig({ autoApprove: current });
-        return entry;
-      }
 
-      /**
-       * 記下「這一則觸發訊息已經回過了」。
-       *
-       * 一定要在**送出成功之後**才呼叫：先記再送的話，送出失敗就永遠不會重試。
-       *
-       * @param topic - 主題名。
-       * @param id - 觸發訊息的 id。
-       * @returns 是否真的記下了。
-       */
-      function markAutoApproveReplied(topic, id) {
-        var name = normalizeTopic(topic);
-        var key = id === null || id === undefined ? '' : String(id);
-        if (!name || key === '') return false;
-        var current = normalizeAutoApprove(readConfig().autoApprove);
-        var entry = current[name] || { on: false, ids: [] };
-        if (entry.ids.indexOf(key) !== -1) return false;
-        entry.ids.push(key);
-        current[name] = entry;
-        saveConfig({ autoApprove: current });
-        return true;
-      }
+
+
 
       /**
        * 開啟／關閉某個主題的「永遠滾到最新」。
@@ -676,7 +623,8 @@ window.__ModuleLoader__.load({
       }
 
       /** 合并写入配置（部分字段即可），返回写入后的完整配置。 */
-      function saveConfig(partial) {    var current = readConfig();
+      function saveConfig(partial) {
+        var current = readConfig();
         if (partial && typeof partial === 'object') {
           if (typeof partial.server === 'string') {
             current.server = normalizeServer(partial.server) || DEFAULT_SERVER;
@@ -699,13 +647,13 @@ window.__ModuleLoader__.load({
           if (partial.dashboardWidth !== undefined) {
             current.dashboardWidth = clampDashboardWidth(partial.dashboardWidth, current.dashboardWidth);
           }
-          // 自動回應設定：整張表替換（語意單純，跟 aliases 一樣）。
-          if (partial.autoApprove !== undefined) {
-            current.autoApprove = normalizeAutoApprove(partial.autoApprove);
-          }
           if (partial.stayAtBottom !== undefined) {
             current.stayAtBottom = normalizeStayAtBottom(partial.stayAtBottom);
           }
+          // 自動回應**不是持久設定**（需求：「自動 approve 狀態不用保存，預設不勾選」）。
+          // `readConfig()` 是整份讀回來的，所以升級前寫進去的 `autoApprove`
+          // 會一直跟著被寫回去 —— 這裡在每次寫入時順手刪掉，免得留下看不懂的殘骸。
+          if (current.autoApprove !== undefined) delete current.autoApprove;
           // 預設主題的「已加過」記號：只寫 true，不寫回 false（加過就是加過）。
           if (partial.defaultTopicAdded === true) current.defaultTopicAdded = true;
         }
@@ -3236,8 +3184,6 @@ window.__ModuleLoader__.load({
 
           // 自動回應（/approve session → /approve）
           autoApproveDecision: autoApproveDecision,
-          setAutoApprove: setAutoApprove,
-          markAutoApproveReplied: markAutoApproveReplied,
           AUTO_APPROVE_TRIGGER: AUTO_APPROVE_TRIGGER,
           AUTO_APPROVE_TAG: AUTO_APPROVE_TAG,
           AUTO_APPROVE_REPLY: AUTO_APPROVE_REPLY,
@@ -3502,7 +3448,6 @@ window.__ModuleLoader__.load({
             if (typeof cfg.identity === 'string') partial.identity = cfg.identity;
             if (cfg.aliases && typeof cfg.aliases === 'object') partial.aliases = cfg.aliases;
             if (cfg.dashboardWidth !== undefined) partial.dashboardWidth = cfg.dashboardWidth;
-            if (cfg.autoApprove !== undefined) partial.autoApprove = cfg.autoApprove;
             if (cfg.stayAtBottom !== undefined) partial.stayAtBottom = cfg.stayAtBottom;
             try { core.saveConfig(partial); } catch (err) { /* 單一欄位壞掉不該讓整次同步失敗 */ }
           }
@@ -3651,7 +3596,6 @@ window.__ModuleLoader__.load({
           // 自動回應（每個主題的開關 + 已回過的訊息 id）。
           // 一定要帶上：`saveConfig` 只寫記憶體，漏了這個欄位
           // 勾選就不會進 config.yml，重新整理就沒了。
-          autoApprove: cfg.autoApprove || {},
           // 「永遠滾到最新」的每個主題開關（同理：漏了就存不進 config.yml）。
           stayAtBottom: cfg.stayAtBottom || {}
         };
@@ -8980,30 +8924,44 @@ window.__ModuleLoader__.load({
       // ⚠️ 三重防護，缺一不可（這功能一旦誤觸發就是往群組灌訊息）：
       //   1. 只認 `sse` 來源 —— 面板一開載入的歷史訊息不會被回一遍；
       //   2. 不回應自己發的 —— 否則「我回了 /approve」又被判定成觸發 → 無限循環；
-      //   3. `ids` 記在 config.yml（跨重新整理存活）—— 同一則只回一次。
-      // ⚠️ 開關的狀態一定要用 React state，**不能**直接讀 `core.readConfig()`。
+      //   3. 同一則只回一次（`repliedRef`，見下面）。
       //
-      // 踩過的 bug：`saveConfig()` 只寫記憶體與宿主，**不會觸發 store 的通知**，
-      // 所以「讀 config 的普通變數」在切換後不會讓元件重繪 ——
-      // 畫面會停在舊的勾選狀態，跟真正的設定不一致（實測：取消勾選後
-      // `設定.on=false` 但 checkbox 仍顯示打勾；第一次之所以看起來正常，
-      // 只是剛好有別的原因讓它重繪了）。
-      var apOnState = React.useState(function () {
-        return !!(core && core.readConfig && core.readConfig().autoApprove
-          && core.readConfig().autoApprove[active]
-          && core.readConfig().autoApprove[active].on === true);
-      });
+      // ⚠️ 開關狀態用 React state，**不讀 `core.readConfig()`**。
+      //
+      // 需求：「自動 approve 狀態不用保存，預設不勾選」。
+      // 所以它**完全不進 config.yml**，而且切換主題一律回到「不勾選」——
+      // 跟優先級一樣，這是每次都要重新決定的東西（它會代替你發言，
+      // 不該在你沒注意的時候還開著）。
+      //
+      // 踩過的 bug（那時還讀 config）：`saveConfig()` 只寫記憶體與宿主，
+      // **不會觸發 store 的通知**，所以「讀 config 的普通變數」在切換後不會
+      // 讓元件重繪 —— 畫面會停在舊的勾選狀態（實測：取消勾選後
+      // `設定.on=false` 但 checkbox 仍顯示打勾）。現在改用 state，沒這問題。
+      var apOnState = React.useState(false);
       var autoApproveOn = apOnState[0];
       var setAutoApproveOn = apOnState[1];
-      // 切換主題時要把開關切到那個主題的設定（同一個元件、不同的主題）。
+      // 切換主題 → 回到預設（不勾選）。**刻意不保存**，理由見上面。
+      var apTopicRef = React.useRef(active);
       React.useEffect(function () {
-        var cfgAp = (core && core.readConfig && core.readConfig().autoApprove) || {};
-        var want = !!(cfgAp[active] && cfgAp[active].on === true);
-        setAutoApproveOn(function (prev) { return prev === want ? prev : want; });
+        if (apTopicRef.current === active) return;
+        apTopicRef.current = active;
+        setAutoApproveOn(false);
       }, [active]);
 
       var approveBusyRef = React.useRef(false);
       var approveIdRef = React.useRef('');
+
+      /**
+       * 這次工作階段已經回過哪些觸發訊息（**記憶體**，不持久化）。
+       *
+       * 為什麼不再寫進 `config.yml`：需求「自動 approve 狀態不用保存」。
+       * 開關不保存、連帶「回過哪些」也不必跨重新整理 —— 反正預設是關的，
+       * 沒有開關就沒有回覆。同一個 panel 開著的時候（換主題、切走再切回）
+       * 這份清單還在，足以防止同一則被回兩次。
+       *
+       * @type {{ current: string[] }}
+       */
+      var repliedRef = React.useRef([]);
 
       /**
        * 待送出的自動批準（延遲期間的狀態）。
@@ -9054,7 +9012,9 @@ window.__ModuleLoader__.load({
           source: last.source,
           topic: active,
           selfName: identity,
-          autoApprove: core.readConfig().autoApprove
+          // 開關與「已回過」都由這裡（記憶體）決定，不讀設定。
+          on: autoApproveOn,
+          repliedIds: repliedRef.current
         });
         // ⚠️ 這裡**即使沒有觸發也要記下 id**：不然每來一則訊息都會重複判定，
         // 而且下一次的判定會被同一則舊訊息佔住。
@@ -9093,11 +9053,12 @@ window.__ModuleLoader__.load({
           // 倒數期間使用者可能已經切走了，那就不該再代替他發言。
           if (approvePending.topic === activeRef.current) {
             approveBusyRef.current = true;
+            var firedId = approvePending.id;
             publishToTopic(approvePending.topic, approvePending.text, {}).then(function (r) {
               approveBusyRef.current = false;
               // 只有**送成功**才記「回過了」：先記再送的話，送失敗就永遠不會重試。
-              if (r && r.ok && core && typeof core.markAutoApproveReplied === 'function') {
-                core.markAutoApproveReplied(approvePending.topic, approvePending.id);
+              if (r && r.ok && firedId !== '' && repliedRef.current.indexOf(firedId) === -1) {
+                repliedRef.current = repliedRef.current.concat([firedId]).slice(-50);
               }
             });
           }
@@ -9126,18 +9087,23 @@ window.__ModuleLoader__.load({
       }
 
       /** 切換自動回應。 @param next - 是否開啟。 */
+      /**
+       * 切換自動批準（**只改記憶體狀態，不寫設定**）。
+       *
+       * 需求：「自動 approve 狀態不用保存，預設不勾選」。
+       * 所以這裡不再呼叫 `core.setAutoApprove`、也不再 `saveSubscriptions()`。
+       *
+       * @param next - 是否開啟。
+       * @returns 切換後的狀態。
+       */
       function toggleAutoApprove(next) {
-        if (!core || typeof core.setAutoApprove !== 'function') return;
         var on = next === true;
-        // 先更新畫面（state），再寫設定 —— 寫入是同步的，但只改 config
-        // 不會讓元件重繪，所以要自己推一下 state。
         setAutoApproveOn(on);
-        var entry = core.setAutoApprove(active, on);
         // 讓下一個訊息可以重新被判定（否則剛勾選時會沿用上一輪的 id）。
         approveIdRef.current = '';
-        // 這跟其他設定一樣要寫回宿主，否則重新整理就沒了。
-        saveSubscriptions();
-        return entry;
+        // 關掉時把待送出的取消掉 —— 使用者剛剛說「不要自動回」了。
+        if (!on) setApprovePending(null);
+        return on;
       }
 
       // ---- 「永遠滾到最新」開關 ----

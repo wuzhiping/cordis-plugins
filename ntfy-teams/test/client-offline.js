@@ -2572,14 +2572,13 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     //
     // 這裡驗 UI：checkbox 在、勾選狀態跟著設定、切換時會回報。
     // 「什麼時候真的該回」是純函式，由 core-node.js 驗（那裡才有完整的防護矩陣）。
-    /** 渲染面板並回傳節點。 @param on - 該主題的自動回應是否開啟。 @returns { nodes, core, harness }。 */
+    /** 渲染面板並回傳節點。 @param on - 保留參數（開關不再由設定驅動，一律從 false 起）。 @returns { nodes, core, harness }。 */
     const render = (on) => {
       const { harness, core, seats } = freshPanel();
       core.store.ensureTopic('pub_ap');
       core.store.setActiveTopic('pub_ap');
       core.setIdentity('shawoo');
-      core.saveConfig({ autoApprove: {} });
-      if (on) core.setAutoApprove('pub_ap', true);
+      // 刻意**不**寫任何 autoApprove 設定 —— 這個開關不该碰 config。
       const nodes = [];
       walk(harness, harness.render(seats['main:ntfy-teams'].component, {}), nodes, 0);
       return { nodes, core, harness };
@@ -2589,12 +2588,12 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     const box = (nodes) => nodes.filter((n) => n.tag === 'input'
       && n.cls && String(n.cls).indexOf('ntfy-teams-autoapprovebox') !== -1)[0];
 
-    // 1) 未開啟：checkbox 存在、未勾選
+    // 1) ★ 預設就是**不勾選**（需求：「預設不勾選」）—— 而且不讀任何設定
     const off = render(false);
     const offBox = box(off.nodes);
     assert.ok(offBox, '應該有自動回應的 checkbox');
     assert.strictEqual(offBox.props.type, 'checkbox', '要是 checkbox');
-    assert.ok(!offBox.props.checked, '未開啟時不該被勾選');
+    assert.ok(!offBox.props.checked, '★ 預設不該被勾選');
     assert.strictEqual(typeof offBox.props.onChange, 'function', '要能切換');
 
     // 2) 標籤要**簡短**，但看得出這是什麼開關；完整規則放 tooltip。
@@ -2626,16 +2625,16 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     assert.ok(String(labelNode.props.title || '').indexOf('hermes-agent') !== -1,
       'tooltip 要說明還需要 hermes-agent 標籤，實際：' + labelNode.props.title);
 
-    // 3) 已開啟：checkbox 打勾（狀態來自設定，不是元件自己的 state）
-    const on = render(true);
-    assert.ok(box(on.nodes).props.checked, '開啟後 checkbox 應該打勾');
-
-    // 4) 切換會把設定寫進去（透過 props 回報，實際寫入由 MainPanel 做）
-    //    直接驗核心的 setter：開啟 → 關閉 → 再開啟都能往返。
-    assert.strictEqual(on.core.readConfig().autoApprove.pub_ap.on, true, '設定應為開啟');
-    on.core.setAutoApprove('pub_ap', false);
-    assert.strictEqual(on.core.readConfig().autoApprove.pub_ap.on, false, '應能關閉');
-    on.core.saveConfig({ autoApprove: {} });
+    // 3) ★ 開關狀態**不進設定**：切換只改記憶體
+    //
+    // 需求：「自動 approve 狀態不用保存，預設不勾選」。
+    // 所以這裡驗的是**反過來**的事：渲染面板之後 config 裡不該有 autoApprove。
+    assert.strictEqual(off.core.readConfig().autoApprove, undefined,
+      '★ 面板打開不該在設定裡留下 autoApprove（開關不是持久設定）');
+    assert.strictEqual(typeof off.core.setAutoApprove, 'undefined',
+      '核心不該再匯出 setAutoApprove');
+    assert.strictEqual(typeof off.core.markAutoApproveReplied, 'undefined',
+      '核心不該再匯出 markAutoApproveReplied（「已回過」只活在記憶體）');
   });
 
   test('永遠滾到最新：另一個 checkbox，且狀態跟著每個主題的設定', () => {

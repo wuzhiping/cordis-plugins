@@ -1469,213 +1469,129 @@ group('自動回應：出現 /approve session 時回 /approve');
 
 check('自動回應：只有「開啟 + 即時來源 + 含觸發字串 + 帶 hermes-agent tag + 不是自己發的」才回，且同一則只回一次', function () {
   // 這個功能一旦誤觸發就是**往群組灌訊息**，所以每一道防護都要釘住。
+  //
+  // ⚠️ 開關（`on`）與「已回過」（`repliedIds`）現在都由**呼叫端**傳進來 ——
+  // 需求「自動 approve 狀態不用保存，預設不勾選」，所以 core 不讀設定。
   core.saveConfig({ identity: 'me' });
-  var on = { t: { on: true, ids: [] } };
-  var off = { t: { on: false, ids: [] } };
-  // 觸發訊息必須**同時**含觸發字串與指定的 tag（見 AUTO_APPROVE_TAG）。
   var trigger = { id: 'm1', time: 1, title: '#bob', message: 'please /approve session now', tags: ['hermes-agent'] };
+  var base = { source: 'sse', topic: 't', selfName: 'me' };
 
-  // 1) 沒開啟 → 不回
-  assert.strictEqual(core.autoApproveDecision({
-    msg: trigger, source: 'sse', topic: 't', selfName: 'me', autoApprove: off
-  }), null, '沒勾選就不該回');
+  // 1) 沒有開啟（預設）→ 不回
+  assert.strictEqual(core.autoApproveDecision(Object.assign({ msg: trigger, on: false, repliedIds: [] }, base)),
+    null, '沒勾選就不該回');
+  assert.strictEqual(core.autoApproveDecision(Object.assign({ msg: trigger }, base)),
+    null, '★ 沒帶 on（預設）也不該回 —— 預設必須是關的');
 
   // 2) 開啟 + 即時 + 含字串 + 帶 tag + 別人發的 → 回 /approve
-  var hit = core.autoApproveDecision({
-    msg: trigger, source: 'sse', topic: 't', selfName: 'me', autoApprove: on
-  });
+  var hit = core.autoApproveDecision(Object.assign({ msg: trigger, on: true, repliedIds: [] }, base));
   assert.ok(hit, '應該判定要回');
   assert.strictEqual(hit.reply, '/approve', '回覆內容應是 /approve');
   assert.strictEqual(hit.id, 'm1', '要帶回觸發訊息的 id（用來記「回過了」）');
 
   // 2b) ★ 一定要有 hermes-agent tag —— 少了就不回。
-  //
-  // `/approve session` 是可以被任何人打出來的普通字串；只認內文的話，
-  // 任何人在這個主題打那句話都會被自動回覆。tag 把觸發面縮到 Hermes agent。
-  assert.strictEqual(core.autoApproveDecision({
-    msg: { id: 'nt1', title: '#bob', message: '/approve session' },
-    source: 'sse', topic: 't', selfName: 'me', autoApprove: on
-  }), null, '沒有 hermes-agent tag 不該觸發');
+  assert.strictEqual(core.autoApproveDecision(Object.assign({
+    msg: { id: 'nt1', title: '#bob', message: '/approve session' }, on: true, repliedIds: []
+  }, base)), null, '沒有 hermes-agent tag 不該觸發');
 
-  // 2c) tag 大小寫與前後空白都不影響（ntfy 的 tag 慣例不分大小寫）
+  // 2c) tag 大小寫與前後空白都不影響
   ['hermes-agent', 'HERMES-AGENT', ' hermes-agent '].forEach(function (v) {
-    assert.ok(core.autoApproveDecision({
-      msg: { id: 'tc' + v, title: '#bob', message: '/approve session', tags: [v] },
-      source: 'sse', topic: 't', selfName: 'me', autoApprove: on
-    }), 'tag「' + v + '」應該算命中');
+    assert.ok(core.autoApproveDecision(Object.assign({
+      msg: { id: 'tc' + v, title: '#bob', message: '/approve session', tags: [v] }, on: true, repliedIds: []
+    }, base)), 'tag「' + v + '」應該算命中');
   });
 
-  // 2d) tag 清單裡有別的 tag 也無所謂，只要**含**目標那一個
-  assert.ok(core.autoApproveDecision({
-    msg: { id: 'tm', title: '#bob', message: '/approve session', tags: ['urgent', 'hermes-agent', 'x'] },
-    source: 'sse', topic: 't', selfName: 'me', autoApprove: on
-  }), '只要清單裡含有目標 tag 就該命中');
+  // 2d) 清單裡有別的 tag 也無所謂，只要含目標那一個
+  assert.ok(core.autoApproveDecision(Object.assign({
+    msg: { id: 'tm', title: '#bob', message: '/approve session', tags: ['urgent', 'hermes-agent'] },
+    on: true, repliedIds: []
+  }, base)), '只要清單裡含有目標 tag 就該命中');
 
   // 2e) 有別的 tag 但沒有目標 tag → 不回
-  assert.strictEqual(core.autoApproveDecision({
+  assert.strictEqual(core.autoApproveDecision(Object.assign({
     msg: { id: 'tw', title: '#bob', message: '/approve session', tags: ['urgent', 'hermes'] },
-    source: 'sse', topic: 't', selfName: 'me', autoApprove: on
-  }), null, '近似的 tag（hermes）不算命中');
+    on: true, repliedIds: []
+  }, base)), null, '近似的 tag（hermes）不算命中');
 
-  // 2f) tags 不是陣列／是空陣列／壞值 → 安全地不回，不爆
+  // 2f) tags 不是陣列／空陣列／壞值 → 安全地不回，不爆
   [undefined, null, '', [], 'hermes-agent', 42].forEach(function (bad) {
-    assert.strictEqual(core.autoApproveDecision({
-      msg: { id: 'tb', title: '#bob', message: '/approve session', tags: bad },
-      source: 'sse', topic: 't', selfName: 'me', autoApprove: on
-    }), null, 'tags=' + JSON.stringify(bad) + ' 不該觸發（只有真的陣列才算）');
+    assert.strictEqual(core.autoApproveDecision(Object.assign({
+      msg: { id: 'tb', title: '#bob', message: '/approve session', tags: bad }, on: true, repliedIds: []
+    }, base)), null, 'tags=' + JSON.stringify(bad) + ' 不該觸發（只有真的陣列才算）');
   });
 
   // 3) 訊息裡沒有觸發字串 → 不回
-  assert.strictEqual(core.autoApproveDecision({
-    msg: { id: 'm2', title: '#bob', message: '只是一般訊息' },
-    source: 'sse', topic: 't', selfName: 'me', autoApprove: on
-  }), null, '沒有觸發字串就不該回');
+  assert.strictEqual(core.autoApproveDecision(Object.assign({
+    msg: { id: 'm2', title: '#bob', message: '只是一般訊息' }, on: true, repliedIds: []
+  }, base)), null, '沒有觸發字串就不該回');
 
   // 3b) 只有 /approve 沒有 session → 不回（觸發字串是完整片語）
-  assert.strictEqual(core.autoApproveDecision({
-    msg: { id: 'm2b', title: '#bob', message: '/approve' },
-    source: 'sse', topic: 't', selfName: 'me', autoApprove: on
-  }), null, '只寫 /approve 不該觸發');
+  assert.strictEqual(core.autoApproveDecision(Object.assign({
+    msg: { id: 'm2b', title: '#bob', message: '/approve' }, on: true, repliedIds: []
+  }, base)), null, '只寫 /approve 不該觸發');
 
   // 4) ★ 歷史載入不算 —— 否則面板一開就把舊訊息全部回一遍
   assert.strictEqual(core.autoApproveDecision({
-    msg: trigger, source: 'history', topic: 't', selfName: 'me', autoApprove: on
+    msg: trigger, source: 'history', topic: 't', selfName: 'me', on: true, repliedIds: []
   }), null, '歷史訊息不該觸發（否則開面板就灌一輪）');
 
   // 5) ★ 自己發的不回 —— 否則「我回的 /approve」又被判定成觸發 → 無限循環
-  //
-  // ⚠️ 這兩則都**刻意帶上 tag**：不然它們會因為「沒有 tag」而不回，
-  // 測試就變成在驗 tag 而不是在驗「自己發的」—— 通過了卻沒守住真正的那條規則。
-  assert.strictEqual(core.autoApproveDecision({
+  //   （刻意帶上 tag，不然它們會因為缺 tag 而不回，測試就變成在驗 tag）
+  assert.strictEqual(core.autoApproveDecision(Object.assign({
     msg: { id: 'm3', title: '#me', message: '有人要我 /approve session', tags: ['hermes-agent'] },
-    source: 'sse', topic: 't', selfName: 'me', autoApprove: on
-  }), null, '自己發的不該觸發（防無限循環）');
-  // 大小寫不在意
-  assert.strictEqual(core.autoApproveDecision({
+    on: true, repliedIds: []
+  }, base)), null, '自己發的不該觸發（防無限循環）');
+  assert.strictEqual(core.autoApproveDecision(Object.assign({
     msg: { id: 'm3b', title: '#ME', message: '/approve session', tags: ['hermes-agent'] },
-    source: 'sse', topic: 't', selfName: 'me', autoApprove: on
-  }), null, '#ME 也算自己');
+    on: true, repliedIds: []
+  }, base)), null, '#ME 也算自己');
 
-  // 6) ★ 已經回過的那一則不再回（ids 跨重新整理存活）
-  var replied = { t: { on: true, ids: ['m1'] } };
-  assert.strictEqual(core.autoApproveDecision({
-    msg: trigger, source: 'sse', topic: 't', selfName: 'me', autoApprove: replied
-  }), null, '同一則不該回第二次');
+  // 6) ★ 已經回過的那一則不再回（repliedIds 由呼叫端持有）
+  assert.strictEqual(core.autoApproveDecision(Object.assign({
+    msg: trigger, on: true, repliedIds: ['m1']
+  }, base)), null, '同一則不該回第二次');
 
   // 7) 沒有顯示名稱 → 不回（送出的訊息會是無名訊息，沒有意義）
   assert.strictEqual(core.autoApproveDecision({
-    msg: trigger, source: 'sse', topic: 't', selfName: '', autoApprove: on
+    msg: trigger, source: 'sse', topic: 't', selfName: '', on: true, repliedIds: []
   }), null, '沒設定顯示名稱就不該自動回');
 
-  // 8) 主題沒開啟（另一張表）→ 不回
+  // 8) 主題名不合法 → 不回
   assert.strictEqual(core.autoApproveDecision({
-    msg: trigger, source: 'sse', topic: 'other', selfName: 'me', autoApprove: on
-  }), null, '沒開啟的主題不該觸發');
-});
+    msg: trigger, source: 'sse', topic: '', selfName: 'me', on: true, repliedIds: []
+  }), null, '沒主題不該觸發');
 
-check('自動回應：開關與「回過了」清單會持久化（重開才不會重複回）', function () {
-  core.saveConfig({ autoApprove: {} });
-  assert.deepStrictEqual(core.readConfig().autoApprove, {}, '起點應為空表');
-
-  core.setAutoApprove('ap_a', true);
-  assert.strictEqual(core.readConfig().autoApprove.ap_a.on, true, '應記下已開啟');
-  assert.deepStrictEqual(core.readConfig().autoApprove.ap_a.ids, [], '還沒回過任何一則');
-
-  // 記下回過哪一則
-  assert.strictEqual(core.markAutoApproveReplied('ap_a', 'x1'), true, '第一次記要成功');
-  assert.strictEqual(core.markAutoApproveReplied('ap_a', 'x1'), false, '同一則記第二次不該重複');
-  assert.deepStrictEqual(core.readConfig().autoApprove.ap_a.ids, ['x1'], 'id 應被記下');
-
-  // 關掉時**保留** ids：暫時關掉再開，不該把已回過的重回一遍
-  core.setAutoApprove('ap_a', false);
-  assert.strictEqual(core.readConfig().autoApprove.ap_a.on, false, '應記下已關閉');
-  assert.deepStrictEqual(core.readConfig().autoApprove.ap_a.ids, ['x1'],
-    '關掉時要保留已回過的清單（否則再打開會重複回）');
-
-  // ids 有上限：不會無限成長
-  for (var i = 0; i < 80; i += 1) core.markAutoApproveReplied('ap_a', 'k' + i);
-  var ids = core.readConfig().autoApprove.ap_a.ids;
-  assert.ok(ids.length <= 50, 'ids 應有上限（實際 ' + ids.length + '）');
-  assert.ok(ids.indexOf('k79') !== -1, '應保留最近的那幾筆');
-  assert.strictEqual(ids.indexOf('x1'), -1, '太舊的應該被丟掉');
-
-  core.saveConfig({ autoApprove: {} });
-});
-
-check('自動回應：設定壞掉（不是物件／主題名不合法）不會讓核心爆掉', function () {
-  // config.yml 是使用者可以手改的檔案，壞掉不該讓整個 store 掛掉。
-  ['', null, 42, 'nope', [], { '': { on: true } }].forEach(function (bad) {
-    var d = core.autoApproveDecision({
-      msg: { id: 'z1', title: '#bob', message: '/approve session' },
-      source: 'sse', topic: 't', selfName: 'me', autoApprove: bad
-    });
-    assert.strictEqual(d, null, '壞掉的設定應安全回 null，實際：' + JSON.stringify(d));
+  // 9) repliedIds 壞值也不會爆
+  [undefined, null, 'm1', 42].forEach(function (bad) {
+    assert.ok(core.autoApproveDecision(Object.assign({
+      msg: trigger, on: true, repliedIds: bad
+    }, base)), 'repliedIds=' + JSON.stringify(bad) + ' 應視為「還沒回過」而不是爆掉');
   });
-  assert.deepStrictEqual(core.readConfig().autoApprove, {}, '壞掉的設定應被正規化成空表');
 });
 
-/* ============================================ 10d. 上次讀到哪（lastReadId） */
-
-group('未讀的第二層提示：記錄「上次讀到哪一則」');
-
-check('切到某主題不會清掉「讀到哪」，未讀數會歸零（捲動前還看得到未讀線）', function () {
-  core.saveConfig({ aliases: {}, identity: 'me' });
-  (core.store.getSnapshot().topics || []).slice().forEach(function (t) { core.store.removeTopic(t); });
-  core.store.ensureTopic('rd_a');
-  core.store.ensureTopic('rd_b');
-  core.store.setActiveTopic('rd_b');
-  // 「看得到 + 貼著底部」才算真的看到（見 viewing 的說明）。
-  viewing(true, true);
-  core.store.addMessages('rd_b', [{ id: 'b1', time: 100 }], 'sse');
-  assert.strictEqual(core.store.getSnapshot().lastReadIdByTopic.rd_b, 'b1',
-    '看得到且貼底：新訊息進來就等於讀到了');
-  assert.strictEqual(core.store.getSnapshot().unreadByTopic.rd_b, 0, '正在看的主題不累加未讀');
-
-  // rd_a 不是當前主題 → 累加未讀，且「讀到哪」不前進
-  core.store.addMessages('rd_a', [{ id: 'a1', time: 101 }, { id: 'a2', time: 102 }], 'sse');
-  assert.strictEqual(core.store.getSnapshot().unreadByTopic.rd_a, 2, '沒在看的主題要累加未讀');
-  assert.strictEqual(core.store.getSnapshot().lastReadIdByTopic.rd_a, '', '沒在看就不該前進「讀到哪」');
-
-  // 切過去：未讀歸零，但 lastReadId 還停在原點 —— 這正是可以捲的位置
-  core.store.setActiveTopic('rd_a');
-  assert.strictEqual(core.store.getSnapshot().unreadByTopic.rd_a, 0, '切過去後未讀歸零');
-  assert.strictEqual(core.store.getSnapshot().lastReadIdByTopic.rd_a, '',
-    '切過去還沒看到，lastReadId 不該被推進（否則就沒有未讀線可以捲）');
-
-  // 使用者捲到未讀線 → 回報已看到
-  core.store.markReadToLatest('rd_a');
-  assert.strictEqual(core.store.getSnapshot().lastReadIdByTopic.rd_a, 'a2',
-    '回報後應推進到最新一則');
-
-  core.store.removeTopic('rd_a');
-  core.store.removeTopic('rd_b');
-});
-
-check('★ markReadToLatest 也要清未讀（點「N 則新訊息」跳過去之後靠它收尾）', function () {
-  // 為什麼要單獨驗這一條：使用者點提示條跳到未讀處時，**訊息數沒有變化** ——
-  // 而面板那個「貼底就清未讀」的 effect 只在訊息數變化時才跑。所以「跳過去之後
-  // 未讀要歸零」只能靠 markReadToLatest，它如果只推進邊界、不清未讀，
-  // 提示條就會永遠掛在畫面上（實測：捲到未讀處後仍是 3）。
-  core.saveConfig({ identity: 'me' });
-  (core.store.getSnapshot().topics || []).slice().forEach(function (t) { core.store.removeTopic(t); });
-  core.store.ensureTopic('rdc');
-  core.store.setActiveTopic('rdc');
-  viewing(true, false);   // 沒貼底 → 別人的訊息算未讀
-  core.store.addMessages('rdc', [
-    { id: 'c1', time: 1, title: '#bob' }, { id: 'c2', time: 2, title: '#bob' }
-  ], 'sse');
-  assert.strictEqual(core.store.getSnapshot().unreadByTopic.rdc, 2, '前置：應累加 2 則未讀');
-
-  core.store.markReadToLatest('rdc');
-  assert.strictEqual(core.store.getSnapshot().unreadByTopic.rdc, 0,
-    'markReadToLatest 必須把未讀清掉，否則提示條不會消失');
-  assert.strictEqual(core.store.getSnapshot().lastReadIdByTopic.rdc, 'c2',
-    '並把「讀到哪」推進到最新');
-
-  // 沒有未讀時重複呼叫也不該出錯（而且不該亂發通知）
-  core.store.markReadToLatest('rdc');
-  assert.strictEqual(core.store.getSnapshot().unreadByTopic.rdc, 0, '重複呼叫仍為 0');
-  core.store.removeTopic('rdc');
+check('★ 自動回應的開關不進設定：核心完全不知道 config 裡有什麼', function () {
+  // 需求：「自動 approve 狀態不用保存，預設不勾選」。
+  //
+  // 這條守住的是一個**架構約束**：core 的判定只認呼叫端傳進來的 `on`，
+  // 不讀 `readConfig()`。所以就算升級前的設定裡還留著 autoApprove.on=true，
+  // 它也不會自己打開。
+  core.saveConfig({
+    autoApprove: { t: { on: true, ids: ['old1'] } }
+  });
+  var trigger = { id: 'x1', title: '#bob', message: '/approve session', tags: ['hermes-agent'] };
+  // 設定裡是 on:true，但呼叫端說關著 → 不回
+  assert.strictEqual(core.autoApproveDecision({
+    msg: trigger, source: 'sse', topic: 't', selfName: 'me', on: false, repliedIds: []
+  }), null, '★ 呼叫端說關就是關，不受設定影響');
+  // 舊設定裡的 ids 也不該被拿來去重（呼叫端說沒回過 → 就當沒回過）
+  assert.ok(core.autoApproveDecision({
+    msg: trigger, source: 'sse', topic: 't', selfName: 'me', on: true, repliedIds: []
+  }), '★ 呼叫端說沒回過就該能回，不受設定裡的舊 ids 影響');
+  // 核心也沒有「改設定」的入口了
+  assert.strictEqual(typeof core.setAutoApprove, 'undefined',
+    '不該再匯出 setAutoApprove（開關不是持久設定）');
+  assert.strictEqual(typeof core.markAutoApproveReplied, 'undefined',
+    '不該再匯出 markAutoApproveReplied（已回清單只在記憶體）');
+  core.saveConfig({ autoApprove: {} });
 });
 
 check('永遠滾到最新：每個主題一份開關，且壞設定不會讓核心爆掉', function () {
