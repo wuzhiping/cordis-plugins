@@ -314,6 +314,19 @@ $plugins = @(
         Profile = "web"
     }
 
+    # ntfy-teams（團隊協同）：sidebar 面板 + 宿主半邊的兩條 exact 路由。
+    #
+    # ⚠️ 必須留在這份清單裡。這個腳本會用本清單重算 profile，清單外的插件會被
+    # 移除 —— 而 ntfy-teams 的宿主半邊是靠 profile 的 cordis.patch.yml 裡一條
+    # `insert:` 行掛載的。那一行被沖掉時**不會有任何錯誤**，只是 sidebar 的
+    # 「團隊協同」整個消失（實測踩過）。
+    @{
+        Name    = "ntfy-teams"
+        Version = "0.2.0"
+        Source  = "github:wuzhiping/cordis-plugins#path:/ntfy-teams"
+        Profile = "web"
+    }
+
     # @{
     #     Name    = "scene-template"
     #     Version = "0.1.0"

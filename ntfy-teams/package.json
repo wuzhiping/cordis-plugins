@@ -23,8 +23,8 @@
   ],
   "scripts": {
     "build": "node build.js",
-    "test": "node test/core-node.js && node test/host-node.js && node test/core-live.js && node test/client-offline.js && node test/zh-tw-check.js",
-    "test:offline": "node test/core-node.js && node test/host-node.js && node test/client-offline.js && node test/zh-tw-check.js",
+    "test": "node test/core-node.js && node test/host-node.js && node test/core-live.js && node test/client-offline.js && node test/zh-tw-check.js && node test/deploy-consistency.js",
+    "test:offline": "node test/core-node.js && node test/host-node.js && node test/client-offline.js && node test/zh-tw-check.js && node test/deploy-consistency.js",
     "test:live": "node test/core-live.js",
     "test:zh-tw": "node test/zh-tw-check.js",
     "verify:browser": "node test/browser-verify.js full2"
