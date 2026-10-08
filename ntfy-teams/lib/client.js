@@ -8995,6 +8995,29 @@ window.__ModuleLoader__.load({
       }
 
       // 判定：有新訊息符合條件就**排程**（不是立刻送出）。
+      //
+      // ⚠️ 掃描範圍的選擇是這個功能最重要的一個決定，也是實際踩過的 bug。
+      //
+      //   **只檢查「最新那一則」是錯的**（實測復現）：觸發訊息 `/approve session`
+      //   剛送出來，別人往往緊接著又說一句話 —— 那一刻最新的一則是那句普通訊息，
+      //   真正該處理的觸發訊息已經不是尾端了，於是被永久跳過，永遠不會回覆。
+      //   真實群組裡「觸發後面馬上有人接話」是常態，不是邊緣情況。
+      //
+      //   也不能每次整串重掃：這個 effect 在每次 store 變更時都會跑，而面板可能
+      //   載著上千則歷史 —— 每則訊息都被判定 N 次，成本隨視窗開著的時間無上限成長。
+      //
+      //   所以記住「上次看過的是哪一則」（`approveIdRef`），之後**只掃它後面的**。
+      //   於是一次掃描就能補上所有在它之後抵達、還沒被判定的訊息（順序不影響），
+      //   而每次 store 變更的掃描量固定在「新進來那幾則」。
+      //
+      //   ⚠️ 這個 ref 是「掃到哪」的游標，**不是 React state**：它每次 effect 都會
+      //      被讀寫，不該觸發重繪。
+      var scannedRef = React.useRef(null);
+      React.useEffect(function () {
+        // 切換主題時重置游標（換了一串完全不同的訊息）。
+        scannedRef.current = null;
+      }, [active]);
+
       React.useEffect(function () {
         if (!active || !autoApproveOn) return;
         if (approveBusyRef.current) return;
@@ -9002,30 +9025,42 @@ window.__ModuleLoader__.load({
         if (!core || typeof core.autoApproveDecision !== 'function') return;
         var list = (snapshot.messagesByTopic && snapshot.messagesByTopic[active]) || [];
         if (!list.length) return;
-        // 只檢查最新那一則。為什麼不看整串：這個 effect 會在每次 store 變更時
-        // 跑，整串掃描等於每則訊息都被判定 N 次；而新訊息一定是加在尾端。
-        var last = list[list.length - 1];
-        var id = text(last.id);
-        if (id === '' || id === approveIdRef.current) return;
-        var verdict = core.autoApproveDecision({
-          msg: last,
-          source: last.source,
-          topic: active,
-          selfName: identity,
-          // 開關與「已回過」都由這裡（記憶體）決定，不讀設定。
-          on: autoApproveOn,
-          repliedIds: repliedRef.current
-        });
-        // ⚠️ 這裡**即使沒有觸發也要記下 id**：不然每來一則訊息都會重複判定，
-        // 而且下一次的判定會被同一則舊訊息佔住。
-        approveIdRef.current = id;
-        if (!verdict) return;
-        setApprovePending({
-          topic: active,
-          id: verdict.id,
-          text: verdict.reply,
-          deadline: Date.now() + AUTO_APPROVE_DELAY_SEC * 1000
-        });
+
+        var start = 0;
+        if (scannedRef.current !== null) {
+          for (var s = list.length - 1; s >= 0; s -= 1) {
+            if (text(list[s].id) === scannedRef.current) { start = s + 1; break; }
+          }
+        }
+        if (start >= list.length) return;        // 沒有新訊息
+
+        for (var i = start; i < list.length; i += 1) {
+          var msg = list[i];
+          var id = text(msg.id);
+          if (id !== '' && id === approveIdRef.current) continue; // 正在倒數的那一則
+          var verdict = core.autoApproveDecision({
+            msg: msg,
+            source: msg.source,
+            topic: active,
+            selfName: identity,
+            // 開關與「已回過」都由這裡（記憶體）決定，不讀設定。
+            on: autoApproveOn,
+            repliedIds: repliedRef.current
+          });
+          // 游標一律往前推（不管有沒有觸發）：這一則已經判定過了，不必再看。
+          if (id !== '') scannedRef.current = id;
+          if (!verdict) continue;
+          // 排程前先記下它 —— 排程會讓 `approvePending` 變化並重跑這個 effect，
+          // 那時游標已經越過這一則，不會重複排隊。
+          approveIdRef.current = id;
+          setApprovePending({
+            topic: active,
+            id: verdict.id,
+            text: verdict.reply,
+            deadline: Date.now() + AUTO_APPROVE_DELAY_SEC * 1000
+          });
+          return;
+        }
       }, [active, activeMessages.length, autoApproveOn, approvePending]);
 
       // 倒數：依截止時間算出剩幾秒（畫面用），歸零就送出。
@@ -9101,6 +9136,13 @@ window.__ModuleLoader__.load({
         setAutoApproveOn(on);
         // 讓下一個訊息可以重新被判定（否則剛勾選時會沿用上一輪的 id）。
         approveIdRef.current = '';
+        // 開啟時**重置掃描游標**，讓它從頭看一遍。
+        //
+        // 為什麼一定要重置：使用者常常是「看到那句話之後」才去勾這個開關 ——
+        // 那時觸發訊息已經在訊息串裡了。若游標停在它後面，這一則就永遠不會
+        // 被判定，使用者只會覺得「勾了卻沒反應」。（實測復現過。）
+        // 重置會讓這條執行緒重掃一次，代價只是這一瞬間的一次 O(訊息數)。
+        if (on) scannedRef.current = null;
         // 關掉時把待送出的取消掉 —— 使用者剛剛說「不要自動回」了。
         if (!on) setApprovePending(null);
         return on;
