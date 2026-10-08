@@ -243,13 +243,43 @@ its own button is exactly what a user would do, with no extra write path of our 
 The key prompt has no such state (it disappears once a provider is usable), so hiding
 it is enough.
 
+### Why the suppression has to clear three layers, not just the dialog
+
+A naive `display:none` on `.jLrgrW_dialog` looks correct but the app shell stays
+unclickable, because the shipped Modal primitive + `OnboardingModal` paint three
+layers that all have to go:
+
+1. **`.jLrgrW_dialog`** — the dialog card itself.
+2. **The Modal `.root` wrapper** (parent, `position:fixed; inset:0; z-index:1000;
+   role="presentation"`) — captures every pointer event across the page, so even
+   with the dialog invisible the overlay swallows clicks in the sidebar / composer /
+   settings.
+3. **The Modal `.mask` backdrop** (sibling, full viewport, blurred dim) — paints
+   the visual overlay; harmless on its own but part of the "still blocked" feel.
+
+And there is a fourth blocker that lives outside the Modal: `OnboardingModal` calls
+`document.getElementById("root").inert = true` from a `useEffect`, so the entire
+React app shell becomes non-interactive. The modal's own cleanup restores
+`inert`, but it only runs after React unmounts the dialog — which only happens
+once the async acknowledgement write settles. Until then every click is eaten.
+
+The sweep, for each suppressed dialog, hides (1)–(3) by walking the parent chain
+and matching by `role=presentation` / `position:fixed` / `aria-hidden` shape
+instead of pinning the Modal's class hashes, and clears `#root.inert` synchronously.
+A second MutationObserver is attached to `#root` watching the `inert` attribute
+specifically, so any React effect that re-applies it between our sweep ticks is
+overridden on the next mutation. **A live click probe (`document.elementFromPoint`
+inside `#root`) verifies the overlay is gone and clicks actually land.**
+
 Each dialog gets `data-zhtw-suppressed="preview-notice" | "api-key-prompt"` for
 inspection, and the sweep never touches a dialog that carries neither marker (a
 delete-confirmation modal is verified to stay visible). A `:has()` stylesheet is
 installed as a fallback, so a dialog still disappears even when the marker class
 changed under us. **These are DSH build hashes: re-check them after an upgrade** —
-`node test/verify-first-run-dialogs.js` injects stand-ins with the real class names
-and reports all six conditions, including the stale-marker fallback.
+`node test/verify-first-run-dialogs.js` injects stand-ins with the real class
+names AND the surrounding Modal `.root` / `.mask` / `#root.inert=true` triplet,
+and reports all 18 conditions (dialog + overlay + mask + inert + live click + the
+stale-marker fallback for both the dialog and its wrap).
 
 ## Development
 
@@ -282,8 +312,10 @@ node test/audit-dom.js --click 設定,外掛   # …with dialogs opened first
 - `test/s2t.js` mirrors the bundle's converter so the tools can never disagree
   with the shipped code.
 - `test/verify-first-run-dialogs.js` covers the first-run suppression (see
-  *First-run dialogs* above): it injects dialogs with the shipped class names and
-  reports the six conditions, including the `:has()` fallback for a stale marker.
+  *First-run dialogs* above): it injects stand-ins with the shipped class names
+  AND the surrounding Modal `.root` / `.mask` / `#root.inert=true` triplet, and
+  reports all 18 conditions (dialog + parent overlay + mask + inert + live click +
+  the `:has()` fallback for a stale marker on both the dialog and its wrap).
 - `test/sweep-simplified.js` and `test/sweep-settings.js` walk the live GUI surface  by surface (main views; then every Settings sub-page) and
   `test/verify-mcp-and-simplified.js` does the same for one panel plus the
   `MCP網關` label. All three classify each rendered string with the shipped table:

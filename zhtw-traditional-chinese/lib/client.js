@@ -650,6 +650,20 @@ window.__ModuleLoader__.load({
       //        modal would return on every later visit);
       //      - the API-key prompt is only hidden — never auto-submitted, because
       //        that dialog would write credentials.
+      //
+      //    The shared Modal primitive renders THREE layers we have to clear:
+      //      (a) `.jLrgrW_dialog` — the dialog card itself;
+      //      (b) `.root` (parent, `position:fixed`, `z-index:1000`, full viewport,
+      //          `role=presentation`) — captures pointer events across the page;
+      //      (c) `.mask` (sibling, full viewport, blurred backdrop) — paints the dim.
+      //    OnboardingModal ALSO writes `#root.inert=true` from a `useEffect`, so
+      //    the entire app shell (sidebar, composer, settings) becomes non-interactive
+      //    even though the modal is portaled to `document.body`. Its cleanup only
+      //    runs after React unmounts the dialog, which only happens once the async
+      //    acknowledgement write settles — until then every click is eaten. Hide all
+      //    three layers AND reset `#root.inert` synchronously, then click 继续 so the
+      //    acknowledgement persists for the next visit.
+      //
       //    Class names are CSS-module hashes from the DSH build and can go stale
       //    after an upgrade; each selector has a fallback and the sweep is
       //    reported by test/verify-first-run-dialogs.js.
@@ -659,6 +673,7 @@ window.__ModuleLoader__.load({
         var NOTICE_PRIMARY = ".t1T8VW_primary";
         var KEY_EDITOR = ".GL8Viq_editor,.GL8Viq_description";
         var MODAL = ".jLrgrW_dialog";
+        var APP_ROOT_ID = "root";
         var seen = new WeakSet();
 
         var style = document.createElement("style");
@@ -666,10 +681,70 @@ window.__ModuleLoader__.load({
         style.dataset.pluginCss = "zhtw-traditional-chinese/first-run.css";
         // Belt and braces: if the sweep never sees the modal (its hash changed, or
         // the row renders outside the observed subtree), the CSS still hides both
-        // dialogs. The sweep is what makes the preview notice stick.
+        // dialogs. The sweep is what makes the preview notice stick, and what clears
+        // the parent overlay + #root.inert that block UI clicks.
         style.textContent = MODAL + ":has(" + NOTICE_COPY + ")," + MODAL + ":has(" + KEY_EDITOR + "){display:none!important}";
         document.head.appendChild(style);
         local.push(function () { style.remove(); });
+
+        function unblockAppRoot() {
+          var appRoot = document.getElementById(APP_ROOT_ID);
+          if (appRoot && appRoot.inert === true) {
+            appRoot.inert = false;
+          }
+        }
+
+        function hideOverlayStack(dialog) {
+          // (a) Hide the dialog itself (defensive — the user never sees it anyway).
+          dialog.style.setProperty("display", "none", "important");
+
+          // (b) Walk up the parent chain and hide every positioned / presentation
+          //     ancestor. The Modal `.root` wrapper matches here (role=presentation,
+          //     position=fixed, z-index>=1, full viewport). Walking further catches
+          //     nested portals if DSH ever wraps the modal again.
+          var cur = dialog.parentElement;
+          while (cur && cur !== document.body && cur !== document.documentElement) {
+            var role = cur.getAttribute("role");
+            var cs = (typeof window !== "undefined" && window.getComputedStyle) ? window.getComputedStyle(cur) : null;
+            var isOverlay = role === "presentation" ||
+              (cs && cs.position === "fixed" && parseInt(cs.zIndex || "0", 10) >= 1) ||
+              (cs && cs.position === "fixed" && cur.getAttribute("aria-hidden") === "true");
+            if (isOverlay) {
+              cur.style.setProperty("display", "none", "important");
+              cur.setAttribute("data-zhtw-suppressed-overlay", "1");
+            }
+            cur = cur.parentElement;
+          }
+
+          // (c) Hide the `.mask` backdrop sibling — the Modal paints it as the first
+          //     child of the same `.root` as the dialog. A sibling-positioned,
+          //     inset:0 element with `aria-hidden` is a mask; cover that case and the
+          //     future variants without depending on the exact class name.
+          var parent = dialog.parentElement;
+          if (parent) {
+            for (var i = 0; i < parent.children.length; i++) {
+              var sib = parent.children[i];
+              if (sib === dialog) continue;
+              var sibCs = (typeof window !== "undefined" && window.getComputedStyle) ? window.getComputedStyle(sib) : null;
+              if (!sibCs) continue;
+              var sibClass = typeof sib.className === "string" ? sib.className : "";
+              var isMask = sib.getAttribute("aria-hidden") === "true" &&
+                (sibCs.position === "absolute" || sibCs.position === "fixed") &&
+                /mask|backdrop/i.test(sibClass);
+              if (isMask) {
+                sib.style.setProperty("display", "none", "important");
+                sib.setAttribute("data-zhtw-suppressed-overlay", "1");
+              }
+            }
+          }
+
+          // (d) OnboardingModal sets #root.inert=true in a useEffect. The modal's own
+          //     cleanup only fires after React unmounts the dialog (after the async
+          //     acknowledgement write), so the app shell stays inert during that
+          //     window. Clear it now so the sidebar / composer / settings are
+          //     clickable the moment we hide the dialog.
+          unblockAppRoot();
+        }
 
         function handle(dialog) {
           if (seen.has(dialog)) return;
@@ -678,7 +753,7 @@ window.__ModuleLoader__.load({
           if (!isNotice && !isKeyPrompt) return;
           seen.add(dialog);
           dialog.setAttribute("data-zhtw-suppressed", isNotice ? "preview-notice" : "api-key-prompt");
-          dialog.style.setProperty("display", "none", "important");
+          hideOverlayStack(dialog);
           if (isNotice) {
             var button = dialog.querySelector(NOTICE_PRIMARY);
             if (button !== null) {
@@ -690,12 +765,23 @@ window.__ModuleLoader__.load({
         function sweep() {
           var dialogs = document.querySelectorAll(MODAL + ",[role=dialog],[aria-modal=true]");
           for (var i = 0; i < dialogs.length; i++) handle(dialogs[i]);
+          // Also re-clear #root.inert on every sweep — the modal might re-apply
+          // it between our handle() and React's effect, and we want clicks to land
+          // regardless of who wins that microtask race.
+          unblockAppRoot();
         }
 
         var observer = null;
         if (typeof MutationObserver === "function") {
           observer = new MutationObserver(sweep);
           observer.observe(document.body, { childList: true, subtree: true });
+          // Watch #root specifically for the inert attribute flipping back on; React
+          // re-applies it from a useEffect that runs after our sweep, so without this
+          // the sidebar / composer go inert again a tick later.
+          var appRoot = document.getElementById(APP_ROOT_ID);
+          if (appRoot) {
+            observer.observe(appRoot, { attributes: true, attributeFilter: ["inert"] });
+          }
         }
         sweep();
         local.push(function () { if (observer) observer.disconnect(); });
