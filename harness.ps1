@@ -36,7 +36,7 @@ $nodeVersion = "node-v24.19.0-win-x64"
 
 $nodeUrl = "https://abc.feg.com.tw/share/ehr/pages/dev/node-v24.19.0-win-x64.zip"
 
-$dshVersion = "0.1.7-rc.2"
+$dshVersion = "0.2.0-rc.2"
 
 $dshBaseUrl = "https://abc.feg.com.tw/vx"
 
@@ -173,7 +173,8 @@ else {
 }
 
 # git join in Path
-$env:Path = "$gitDir\cmd;$gitDir\usr\bin;$env:Path"
+$uvDir = "$base\uv"
+$env:Path = "$uvDir;$gitDir\cmd;$gitDir\usr\bin;$env:Path"
 
 # ============================================================
 # 1. Node.js
@@ -314,13 +315,42 @@ $plugins = @(
         Profile = "web"
     }
 
-    # @{
-    #     Name    = "scene-template"
-    #     Version = "0.1.0"
-    #     Source  = "github:wuzhiping/cordis-plugins#path:/scene-template"
-    #     Profile = "web"
-    # }
-    
+    @{
+        Name    = "scene-template"
+        Version = "0.1.0"
+        Source  = "github:wuzhiping/cordis-plugins#path:/scene-template"
+        Profile = "web"
+    }
+
+    @{
+        Name    = "fdep-api-request-bundle"
+        Version = "0.1.0"
+        Source  = "github:wuzhiping/cordis-plugins#path:/fdep-api-request"
+        Profile = "web"
+    }
+
+    @{
+        Name    = "@local/aife-provider"
+        Version = "1.0.0"
+        Source  = "github:wuzhiping/cordis-plugins#path:/aife-provider"
+        Profile = "web"
+    }
+
+    @{
+        Name    = "cute-clock"
+        Version = "0.2.0"
+        Source  = "github:wuzhiping/cordis-plugins#path:/cute-clock"
+        Profile = "web"
+    }
+
+    @{
+        Name    = "ntfy-teams"
+        Version = "0.2.0"
+        Source  = "github:wuzhiping/cordis-plugins#path:/ntfy-teams"
+        Profile = "web"
+    }
+
+
     # 以后继续增加：
     #
     # @{
@@ -492,7 +522,7 @@ function Process-ProcessOutput {
 
         # 保存 URL
         Set-Content -Path "$base\harness.txt" -Value $url -Encoding UTF8
-        
+            
         Log "<<<<$url>>>>"
     }
 }
@@ -521,3 +551,4 @@ Log "Starting dsh web..."
 
 # # 停止 dsh
 # taskkill /F /IM node.exe 2>$null; Remove-Item -Path "$PSScriptRootdsh.log" -Force -ErrorAction SilentlyContinue; Write-Output "STOPPED"
+
