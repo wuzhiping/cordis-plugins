@@ -176,9 +176,9 @@ async function main() {
     const { ctx, routes, injected } = makeCtx({ webServer, agentLoop: {} });
     mod.apply(ctx);
     assert.ok(injected.indexOf('webServer') !== -1, '必須走 ctx.inject 等服務就緒');
-    assert.strictEqual(routes.length, 2, '應註冊兩條路由（工作階段 + 設定）');
+    assert.strictEqual(routes.length, 3, '應註冊三條路由（工作階段 + 設定 + 遮蔽金鑰）');
     const paths = routes.map((r) => r.path).sort();
-    assert.deepStrictEqual(paths, [t.ROUTE_PATH, t.SETTINGS_PATH].sort());
+    assert.deepStrictEqual(paths, [t.ROUTE_PATH, t.SETTINGS_PATH, t.MASK_KEY_PATH].sort());
     routes.forEach((r) => {
       assert.strictEqual(r.kind, 'exact', 'exact 才不會影響 Web 頁面');
       assert.strictEqual(typeof r.handler, 'function');
@@ -490,6 +490,202 @@ async function main() {
         '測試用的密碼 s3cret 不該留在使用者的憑證檔裡（那是測試污染）');
       assert.strictEqual(text.indexOf('alice') === -1, true,
         '測試用的帳號 alice 不該留在使用者的憑證檔裡（那是測試污染）');
+    }
+  });
+
+  // ------------------------------------------------------- 遮蔽金鑰（mask key）
+  console.log('');
+  console.log('== 遮蔽金鑰（「恢復設定」用）');
+
+  test('maskKey 與 MASK.md 的公式一致，且可以解回原值', () => {
+    const pinned = new Date('2026-01-01T00:00:00.000Z');
+    const key = 'sk-ExampleKeyReplaceMe001';                 // MASK.md 的合成 key
+    const masked = t.maskKey(key, pinned);
+    // MASK.md 第 22 行：masked = "sk-" + base64(key + "@" + ISO)
+    assert.strictEqual(masked, 'sk-' + Buffer.from(key + '@2026-01-01T00:00:00.000Z', 'utf8').toString('base64'));
+    assert.strictEqual(masked.slice(0, 3), 'sk-', '一定要有 sk- 前綴（伺服器靠它判格式）');
+    assert.strictEqual(masked.length, 71, 'MASK.md 說 25 字元的 key 會得到 71 字元');
+    const back = Buffer.from(masked.slice(3), 'base64').toString('utf8');
+    assert.strictEqual(back, key + '@2026-01-01T00:00:00.000Z', '必須能解回 key + stamp');
+    // 壞輸入要抛，不是靜默回一個像樣的値
+    assert.throws(() => t.maskKey(''), /非空字串/);
+    assert.throws(() => t.maskKey(null), /非空字串/);
+  });
+
+  test('maskKey 每次帶當下時間戳 → 同一個 key 會得到不同的遮蔽値', () => {
+    const key = 'sk-ExampleKeyReplaceMe001';
+    const a = t.maskKey(key, new Date('2026-01-01T00:00:00.000Z'));
+    const b = t.maskKey(key, new Date('2026-01-01T00:00:01.000Z'));
+    assert.notStrictEqual(a, b, '不同時間戳應該產生不同的遮蔽値');
+    assert.strictEqual(a.slice(0, 3), b.slice(0, 3), '但前綴相同');
+  });
+
+  test('readCredentialRef 讀得出 refs 底下的値，且不誤讀其他欄位', () => {
+    const text = [
+      'version: 1',
+      'refs:',
+      '  FEG_API_KEY: sk-ExampleKeyReplaceMe001',
+      '  DEEPSEEK_API_KEY: sk-AnotherKeyReplaceMe0002',
+      'other:',
+      '  FEG_API_KEY: 這不該被讀到'
+    ].join('\n');
+    assert.strictEqual(t.readCredentialRef(text, 'FEG_API_KEY'), 'sk-ExampleKeyReplaceMe001');
+    assert.strictEqual(t.readCredentialRef(text, 'DEEPSEEK_API_KEY'), 'sk-AnotherKeyReplaceMe0002');
+    assert.strictEqual(t.readCredentialRef(text, 'NOPE'), null);
+    // 引號要剝掉
+    assert.strictEqual(t.readCredentialRef('refs:\n  K: "sk-quoted"\n', 'K'), 'sk-quoted');
+    assert.strictEqual(t.readCredentialRef("refs:\n  K: 'sk-single'\n", 'K'), 'sk-single');
+    // 空値／壞輸入 → null（不抛）
+    assert.strictEqual(t.readCredentialRef('refs:\n  K:\n', 'K'), null);
+    assert.strictEqual(t.readCredentialRef('refs:\n  K: ""\n', 'K'), null);
+    assert.strictEqual(t.readCredentialRef(null, 'K'), null);
+    assert.strictEqual(t.readCredentialRef('refs:\n  K: v\n', ''), null);
+    // refs 區塊之外的東西不該被讀到
+    assert.strictEqual(t.readCredentialRef('other:\n  FEG_API_KEY: nope\n', 'FEG_API_KEY'), null);
+  });
+
+  test('maskedCredential：讀不到憑證檔時回一份說得出原因的錯誤', () => {
+    const saved = process.env.DSH_CREDENTIALS_PATH;
+    process.env.DSH_CREDENTIALS_PATH = path.join(settingsTmp, 'does-not-exist.yaml');
+    try {
+      const r = t.maskedCredential({});
+      assert.strictEqual(r.ok, false);
+      assert.ok(r.error.indexOf('讀不到憑證檔') !== -1, '要說出讀不到，實際：' + r.error);
+      assert.ok(r.error.indexOf('does-not-exist.yaml') !== -1, '要指出是哪個檔案，實際：' + r.error);
+    } finally {
+      if (saved === undefined) delete process.env.DSH_CREDENTIALS_PATH;
+      else process.env.DSH_CREDENTIALS_PATH = saved;
+    }
+  });
+
+  test('maskedCredential：憑證檔裡沒有可用的金鑰時，錯誤要列出試過哪些參照', () => {
+    const saved = process.env.DSH_CREDENTIALS_PATH;
+    const f = path.join(settingsTmp, 'creds-no-ref.yaml');
+    fs.writeFileSync(f, 'version: 1\nrefs:\n  OTHER_KEY: sk-x\n', 'utf8');
+    process.env.DSH_CREDENTIALS_PATH = f;
+    try {
+      const r = t.maskedCredential({});
+      assert.strictEqual(r.ok, false);
+      // 錯誤要把「試過哪些」說出來 —— 否則使用者不知道該補哪個參照名。
+      assert.ok(r.error.indexOf('AIFE_API_KEY') !== -1,
+        '要列出試過的參照名，實際：' + r.error);
+      assert.ok(r.error.indexOf('creds-no-ref.yaml') !== -1,
+        '要指出是哪個檔案，實際：' + r.error);
+    } finally {
+      if (saved === undefined) delete process.env.DSH_CREDENTIALS_PATH;
+      else process.env.DSH_CREDENTIALS_PATH = saved;
+      fs.rmSync(f, { force: true });
+    }
+  });
+
+  test('★ maskedCredential：參照名按候選順序取第一個存在的（實測 AIFE_API_KEY 才是對的）', () => {
+    // 這條是被實測逼出來的：第一版寫死 FEG_API_KEY，而這台機器的
+    // `$DSH_HOME/.credentials.yaml` 裡叫 AIFE_API_KEY —— 那時按鈕只會回
+    // 「找不到 refs.FEG_API_KEY」或拿到一把伺服器不認得的金鑰（200 {}）。
+    const saved = process.env.DSH_CREDENTIALS_PATH;
+    const pinned = new Date('2026-01-01T00:00:00.000Z');
+
+    // 1) 只有 FEG_API_KEY（沒有 AIFE）→ 用它，並回報用了哪一個
+    const f1 = path.join(settingsTmp, 'creds-feg.yaml');
+    fs.writeFileSync(f1, 'version: 1\nrefs:\n  FEG_API_KEY: sk-FegOnly\n', 'utf8');
+    process.env.DSH_CREDENTIALS_PATH = f1;
+    try {
+      const r = t.maskedCredential({ now: pinned });
+      assert.strictEqual(r.ok, true);
+      assert.strictEqual(r.ref, 'FEG_API_KEY', '只有 FEG 時應該用它，實際：' + r.ref);
+      assert.strictEqual(r.masked, t.maskKey('sk-FegOnly', pinned));
+    } finally {
+      fs.rmSync(f1, { force: true });
+    }
+
+    // 2) 兩個都在 → 優先 AIFE_API_KEY（實測它才是伺服器認得的那把）
+    const f2 = path.join(settingsTmp, 'creds-both.yaml');
+    fs.writeFileSync(f2, [
+      'version: 1',
+      'refs:',
+      '  FEG_API_KEY: sk-FegOnly',
+      '  AIFE_API_KEY: sk-Aife'
+    ].join('\n') + '\n', 'utf8');
+    process.env.DSH_CREDENTIALS_PATH = f2;
+    try {
+      const r = t.maskedCredential({ now: pinned });
+      assert.strictEqual(r.ok, true);
+      assert.strictEqual(r.ref, 'AIFE_API_KEY',
+        '★ 兩個都在時必須優先 AIFE_API_KEY（實測 FEG 那把會拿到 200 {}），實際：' + r.ref);
+      assert.strictEqual(r.masked, t.maskKey('sk-Aife', pinned));
+    } finally {
+      if (saved === undefined) delete process.env.DSH_CREDENTIALS_PATH;
+      else process.env.DSH_CREDENTIALS_PATH = saved;
+      fs.rmSync(f2, { force: true });
+    }
+  });
+
+  test('★ maskedCredential：成功時回遮蔽値，原文絕不出現', () => {
+    const saved = process.env.DSH_CREDENTIALS_PATH;
+    const f = path.join(settingsTmp, 'creds-ok.yaml');
+    const secret = 'sk-ExampleKeyReplaceMe001';
+    fs.writeFileSync(f, 'version: 1\nrefs:\n  FEG_API_KEY: ' + secret + '\n', 'utf8');
+    process.env.DSH_CREDENTIALS_PATH = f;
+    const pinned = new Date('2026-01-01T00:00:00.000Z');
+    try {
+      const r = t.maskedCredential({ now: pinned });
+      assert.strictEqual(r.ok, true);
+      assert.strictEqual(r.masked, t.maskKey(secret, pinned));
+      assert.ok(r.source.indexOf('creds-ok.yaml') !== -1, '要回報來源檔案');
+      // ★ 最重要的一條：回傳値裡不能出現原文
+      assert.strictEqual(JSON.stringify(r).indexOf(secret), -1,
+        '★ 原文不得出現在回傳値裡（它只該以遮蔽形式離開宿主）');
+    } finally {
+      if (saved === undefined) delete process.env.DSH_CREDENTIALS_PATH;
+      else process.env.DSH_CREDENTIALS_PATH = saved;
+      fs.rmSync(f, { force: true });
+    }
+  });
+
+  // ⚠️ 這條一定要用 testAsync + await route.handler(...)：
+  //    handler 是 async，不 await 的話 `res.end` 還在 microtask 裡沒跑，
+  //    讀到的會是空物件，於是斷言全部落空（第一版就是這樣，看起來像路由壞了）。
+  await testAsync('遮蔽金鑰路由：GET 回遮蔽値、非 GET 回 405、失敗回 503', async () => {
+    const webServer = {};
+    const { ctx, routes } = makeCtx({ webServer, agentLoop: {} });
+    mod.apply(ctx);
+    const route = routeAt(routes, t.MASK_KEY_PATH);
+
+    const saved = process.env.DSH_CREDENTIALS_PATH;
+    const f = path.join(settingsTmp, 'creds-route.yaml');
+    fs.writeFileSync(f, 'version: 1\nrefs:\n  FEG_API_KEY: sk-ExampleKeyReplaceMe001\n', 'utf8');
+    process.env.DSH_CREDENTIALS_PATH = f;
+    try {
+      // 1) GET → 200 + maskKey
+      const ex1 = makeExchange('GET');
+      await route.handler(ex1.req, ex1.res);
+      const out1 = await ex1.done;
+      assert.strictEqual(ex1.res.statusCode, 200, 'GET 應該回 200');
+      assert.strictEqual(out1.ok, true, 'GET 應該成功，實際：' + JSON.stringify(out1));
+      assert.ok(typeof out1.maskKey === 'string' && out1.maskKey.slice(0, 3) === 'sk-',
+        '應該回一把 sk- 開頭的遮蔽値，實際：' + JSON.stringify(out1));
+      assert.strictEqual(out1.maskKey.indexOf('ExampleKeyReplaceMe001'), -1,
+        '★ 路由回應不得含原文');
+
+      // 2) POST → 405（只有 GET）
+      const ex2 = makeExchange('POST', {});
+      await route.handler(ex2.req, ex2.res);
+      const out2 = await ex2.done;
+      assert.strictEqual(out2.ok, false, 'POST 應該被拒');
+      assert.ok(String(out2.error).indexOf('GET') !== -1, '要說明只接受 GET');
+
+      // 3) 憑證檔不在 → 503 且說得出原因
+      process.env.DSH_CREDENTIALS_PATH = path.join(settingsTmp, 'nope.yaml');
+      const ex3 = makeExchange('GET');
+      await route.handler(ex3.req, ex3.res);
+      const out3 = await ex3.done;
+      assert.strictEqual(ex3.res.statusCode, 503,
+        '讀不到憑證檔應該回 503，實際 ' + ex3.res.statusCode);
+      assert.ok(out3 && out3.ok === false && out3.error, '要有錯誤訊息');
+    } finally {
+      if (saved === undefined) delete process.env.DSH_CREDENTIALS_PATH;
+      else process.env.DSH_CREDENTIALS_PATH = saved;
+      fs.rmSync(f, { force: true });
     }
   });
 

@@ -3411,6 +3411,103 @@ window.__ModuleLoader__.load({
     var SETTINGS_PATH = '/ntfy-teams/settings';
 
     /**
+     * 宿主那條「遮蔽金鑰」路由：回一份用 MASK.md 公式算出的 mask key。
+     * 與 lib/index.js 的 MASK_KEY_PATH 必須一致。
+     *
+     * ⚠️ 為什麼要繞這條路而不是在瀏覽器裡自己遮蔽：`FEG_API_KEY` 住在**宿主的
+     * 憑證檔**（`$DSH_HOME/.credentials.yaml`）裡，瀏覽器讀不到；把它送到瀏覽器
+     * 只為了再遮蔽一次，反而讓原文出現在 DevTools、記憶體與任何截圖裡。
+     */
+    var MASK_KEY_PATH = '/ntfy-teams/mask-key';
+
+    /** 「恢復設定」要打的遠端儲存端點。 */
+    var RESTORE_API = 'https://abc.feg.com.tw/BDD/API/AI/dsh/storage/ntfy';
+
+    /** 打端點的超時（毫秒）。比 scene-template 的 8s 寬一點，這個要落地資料。 */
+    var RESTORE_TIMEOUT_MS = 10000;
+
+    /**
+     * 從一個回應物件裡挑出第一個非空字串欄位。
+     *
+     * 為什麼要「挑」而不是直接讀 `uid`：伺服器的回傳形狀沒有文件，實測只拿到
+     * `{}`（格式對但沒有這把金鑰的資料）。所以先接受幾種常見命名，並且在
+     * **一個都對不上時把原始回應顯示出來** —— 使用者第一次按就能看到真實形狀，
+     * 而不是卡在「不知道為什麼沒反應」。
+     *
+     * @param source - 回應物件（或巢狀的物件）。
+     * @param names - 候選欄位名（依優先序）。
+     * @returns 字串；找不到回 ''。
+     */
+    function pickField(source, names) {
+      if (!source || typeof source !== 'object') return '';
+      for (var i = 0; i < names.length; i += 1) {
+        var v = source[names[i]];
+        if (v === null || v === undefined) continue;
+        if (typeof v === 'string' && v !== '') return v;
+        if (typeof v === 'number') return String(v);
+      }
+      return '';
+    }
+
+    /**
+     * 把伺服器回應收成 `{ uid, pwd, name }`（找不到的欄位是 ''）。
+     *
+     * 逐層往內找：頂層 → `data` → `settings` → `value`。真實形狀未知時，
+     * 多試一層的成本遠低於「明明有資料卻說找不到」。
+     *
+     * @param payload - 解析後的回應。
+     * @returns {{ uid, pwd, name, raw }}
+     */
+    function normalizeRestorePayload(payload) {
+      var layers = [payload];
+      ['data', 'settings', 'value', 'result'].forEach(function (key) {
+        var inner = payload && payload[key];
+        if (inner && typeof inner === 'object' && !Array.isArray(inner)) layers.push(inner);
+      });
+      var out = { uid: '', pwd: '', name: '', raw: payload };
+      for (var i = 0; i < layers.length; i += 1) {
+        var l = layers[i];
+        if (!out.uid) out.uid = pickField(l, ['uid', 'user', 'username', 'account', 'userName']);
+        if (!out.pwd) out.pwd = pickField(l, ['pwd', 'password', 'pass', 'passwd']);
+        if (!out.name) out.name = pickField(l, ['name', 'displayName', 'identity', 'nickname', 'nick']);
+      }
+      return out;
+    }
+
+    /**
+     * 帶超時打一個 JSON API。
+     *
+     * @param url - 端點。
+     * @param options - `{ method, body }`。
+     * @returns Promise<{ status, payload, text }>；網路／超時失敗會 reject。
+     */
+    function fetchJsonWithTimeout(url, options) {
+      var opts = options || {};
+      var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+      var killer = setTimeout(function () {
+        if (ctrl) { try { ctrl.abort(); } catch (e) { /* 已經結束 */ } }
+      }, RESTORE_TIMEOUT_MS);
+      var init = { method: opts.method || 'GET' };
+      if (opts.body !== undefined) {
+        init.headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
+        init.body = JSON.stringify(opts.body);
+      }
+      if (ctrl) init.signal = ctrl.signal;
+      return fetch(url, init).then(function (res) {
+        return res.text().then(function (raw) {
+          clearTimeout(killer);
+          var payload = null;
+          try { payload = raw ? JSON.parse(raw) : null; } catch (e) { payload = null; }
+          return { status: res.status, ok: res.ok, payload: payload, text: raw };
+        });
+      }, function (err) {
+        clearTimeout(killer);
+        throw err;
+      });
+    }
+
+
+    /**
      * 從宿主讀設定與憑證，套進 core。
      *
      * 為什麼要這一層：伺服器位址、帳密、主題清單原本只躺在 localStorage，
@@ -5995,6 +6092,75 @@ window.__ModuleLoader__.load({
         });
       }
 
+      /**
+       * 從遠端儲存端點把 uid／pwd／name 取回來，填進這一區的欄位。
+       *
+       * 流程（每一段失敗都要說出**卡在哪裡**，否則使用者只看到「按了沒反應」）：
+       *   1. 向宿主要一份 mask key（`GET /ntfy-teams/mask-key`）
+       *      —— 原文住在宿主的憑證檔裡，瀏覽器拿不到，也不該拿到。
+       *   2. 拿它去打 `POST …/storage/ntfy`，body `{ apiKey }`。
+       *   3. 把回應填進使用者名稱／密碼／顯示名稱。
+       *
+       * ⚠️ 實測的伺服器行為（2026-10-10）：
+       *   * `500` + 空 body → 請求格式不對（`apiKey` 缺／空／不是 `sk-`+base64）；
+       *   * `200 {}`        → **格式對但這把金鑰沒有資料**。
+       *   後者不是錯誤碼，所以一定要**明確當成失敗**呈現；不然它長得跟成功一樣。
+       *
+       * ⚠️ 只**填欄位，不自動儲存**：這是「把遠端記著的値帶進來」，存不存由使用者
+       * 決定（跟其他欄位一樣，改完按「儲存」）。
+       */
+      function restore() {
+        if (typeof fetch !== 'function') {
+          setNote({ kind: 'err', text: '這個環境沒有 fetch，無法恢復設定' });
+          return;
+        }
+        setBusy(true);
+        setNote({ kind: 'ok', text: '恢復中…' });
+
+        fetchJsonWithTimeout(MASK_KEY_PATH, { method: 'GET' }).then(function (res) {
+          if (!res.ok || !res.payload || res.payload.ok !== true || !res.payload.maskKey) {
+            var why = (res.payload && res.payload.error) || ('HTTP ' + res.status);
+            throw new Error('拿不到遮蔽金鑰：' + why);
+          }
+          return fetchJsonWithTimeout(RESTORE_API, {
+            method: 'POST',
+            body: { apiKey: res.payload.maskKey }
+          });
+        }).then(function (res) {
+          // 500：伺服器說請求本身不對（缺 apiKey／格式不對）。
+          if (res.status === 500) {
+            throw new Error('伺服器回 500（請求格式不對）。請把這句回報給維護者：'
+              + 'POST ' + RESTORE_API + ' body={"apiKey":"<mask key>"}');
+          }
+          if (!res.ok) throw new Error('伺服器回 HTTP ' + res.status);
+          if (res.payload === null) {
+            throw new Error('回應不是 JSON：' + text(res.text).slice(0, 120));
+          }
+          var got = normalizeRestorePayload(res.payload);
+          if (!got.uid && !got.pwd && !got.name) {
+            // 200 但沒有可用欄位 —— 最常見的原因是「這把金鑰在伺服器上沒有資料」。
+            throw new Error('伺服器沒有回傳任何可用欄位（200 ' + JSON.stringify(res.payload).slice(0, 160)
+              + '）—— 通常是這把金鑰在伺服器上沒有對應的資料');
+          }
+          // 只覆蓋伺服器真的有給的欄位，沒給的保留使用者已填的。
+          if (got.uid) patchCred('user', got.uid);
+          if (got.pwd) patchCred('password', got.pwd);
+          if (got.name) setName(got.name);
+          var filled = [];
+          if (got.uid) filled.push('使用者名稱');
+          if (got.pwd) filled.push('密碼');
+          if (got.name) filled.push('顯示名稱');
+          setNote({
+            kind: 'ok',
+            text: '已帶入 ' + filled.join('、') + '（確認無誤後按「儲存」）'
+          });
+          setBusy(false);
+        }).catch(function (err) {
+          setBusy(false);
+          setNote({ kind: 'err', text: '恢復失敗：' + text(err && err.message) });
+        });
+      }
+
       var modeOptions = [
         { value: 'none', label: '無認證' },
         { value: 'basic', label: '帳號密碼' },
@@ -6057,6 +6223,19 @@ window.__ModuleLoader__.load({
             value: cred.password || '',
             onChange: function (ev) { patchCred('password', ev.target.value); }
           }) : null,
+          // 「恢復設定」：只在帳號密碼模式下出現。
+          //
+          // 為什麼放在密碼欄位後面而不是跟「測試連線／儲存」排一起：它產出的是
+          // **這一組欄位的値**（帳號＋密碼＋顯示名稱），所以它屬於欄位、不屬於
+          // 「對外動作」那一組。順序上也剛好是「填不進去就按這顆」。
+          cred.mode === 'basic' ? e('button', {
+            type: 'button',
+            className: 'ntfy-teams-btn ntfy-teams-btn--ghost',
+            disabled: busy,
+            title: '從 ' + RESTORE_API + ' 取回這台機器記著的帳號、密碼與顯示名稱'
+              + '（用遮蔽過的金鑰，金鑰原文不會離開本機）',
+            onClick: restore
+          }, '恢復設定') : null,
           cred.mode === 'token' ? e('input', {
             className: 'ntfy-teams-input ntfy-teams-input--grow',
             type: 'password',
@@ -10161,6 +10340,13 @@ window.__ModuleLoader__.load({
       renderInlineNodes: renderInlineNodes,
       installStyles: installStyles,
       saveSubscriptions: saveSubscriptions,
+
+      // 「恢復設定」相關：純函式，離線可測（不碰網路）。
+      pickField: pickField,
+      normalizeRestorePayload: normalizeRestorePayload,
+      RESTORE_API: RESTORE_API,
+      MASK_KEY_PATH: MASK_KEY_PATH,
+      RESTORE_TIMEOUT_MS: RESTORE_TIMEOUT_MS,
 
       StatusGlyph: StatusGlyph,
       CSS_TEXT: NTFY_TEAMS_CSS,

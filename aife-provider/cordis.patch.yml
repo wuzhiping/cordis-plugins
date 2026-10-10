@@ -1,6 +1,6 @@
 # aife-provider — Host-only bundle layer.
 #
-# Two effects, both deliberate:
+# Three effects, all deliberate:
 #
 # 1. It inserts the plugin row.
 # 2. It carries the AIFE route's non-secret configuration as this layer's own
@@ -8,6 +8,10 @@
 #    button: the page renders that button only while the profile layer alone
 #    carries the route (`hasPath(user) && !hasPath(base)`), so a route this
 #    layer already provides is not removable from the UI — no refusal, no error.
+# 3. It declares AIFE as the *new-session default provider* so anyone installing
+#    this bundle (without writing a profile patch) still gets a working default.
+#    Profile layer wins when it also sets `agent-default-model`, so this is
+#    non-breaking — it's the floor, not a ceiling.
 #
 # The configuration stays a normal settings value, so the API key remains
 # editable: the key is stored through the credentials service under
@@ -30,3 +34,8 @@
             input:
               - text
               - image
+- id: agent-default-model
+  name: "@deepseek-ai/dsh-agent-default-model"
+  config:
+    provider: aife
+    model: MiniMax-M3

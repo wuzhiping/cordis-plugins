@@ -1464,6 +1464,214 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     core.setIdentity('');
   });
 
+  test('★ 恢復設定：只在帳號密碼模式出現，且真的把遠端回的 uid/pwd/name 填進欄位', async () => {
+    // 需求：「認證方式選帳號密碼的時候，出現一顆恢復按鈕，用 mask key 打
+    //       POST .../storage/ntfy，把本地設定（uid/pwd/name）恢復回來」。
+    //
+    // 這條測的是**真實的 fetch 往返**（不是純函式）：攔下兩個請求，
+    // 驗證 (1) 先向宿主要 mask key、(2) 再拿它打端點、(3) 回應填進三個欄位。
+    const { harness, exports: mod, core } = freshPanel();
+    const t = mod.__test;
+    const SettingsPanel = t.SettingsPanel;
+
+    assert.strictEqual(typeof t.pickField, 'function', '應匯出 pickField');
+    assert.strictEqual(typeof t.normalizeRestorePayload, 'function', '應匯出 normalizeRestorePayload');
+    assert.strictEqual(t.MASK_KEY_PATH, '/ntfy-teams/mask-key', 'client 與 host 的路徑必須一致');
+    assert.strictEqual(t.RESTORE_API, 'https://abc.feg.com.tw/BDD/API/AI/dsh/storage/ntfy');
+
+    // ---- 純函式：回應形狀自適應（伺服器形狀沒有文件，所以接受幾種命名）----
+    const norm = t.normalizeRestorePayload;
+    const r1 = norm({ uid: 'u', pwd: 'p', name: 'n' });
+    assert.deepStrictEqual({ uid: r1.uid, pwd: r1.pwd, name: r1.name }, { uid: 'u', pwd: 'p', name: 'n' },
+      '{uid,pwd,name} 要被接受');
+    assert.strictEqual(norm({ user: 'u2', password: 'p2' }).uid, 'u2', '{user,password} 要被接受');
+    assert.strictEqual(norm({ username: 'u3', pass: 'p3', displayName: 'n3' }).name, 'n3',
+      '{username,pass,displayName} 要被接受');
+    assert.strictEqual(norm({ data: { uid: 'nested' } }).uid, 'nested', '巢狀 data 要被接受');
+    // ★ 實測形狀：200 但空物件 —— 必須收成「什麼都沒有」，讓呼叫端報明確失敗
+    const empty = norm({});
+    assert.strictEqual(empty.uid + empty.pwd + empty.name, '', '空物件應該收成三個空字串');
+    [null, undefined, 42, 'x', [1, 2]].forEach((bad) => {
+      const r = norm(bad);
+      assert.strictEqual(r.uid + r.pwd + r.name, '', '壞輸入 ' + JSON.stringify(bad) + ' 應收成空值');
+    });
+    assert.strictEqual(t.pickField({ uid: '' }, ['uid']), '', '空字串要被跳過');
+    assert.strictEqual(t.pickField({ uid: 0 }, ['uid']), '0', '數字 0 是有效值');
+
+    // ---- 端到端：渲染 → 找到按鈕 → 點下去 → 驗兩個請求與欄位 ----
+    core.saveConfig({ server: 'https://msn.feg.cn', topics: [], aliases: {} });
+    core.saveCredentials('https://msn.feg.cn', { mode: 'basic', user: '', password: '' });
+    core.setIdentity('');
+
+    const draw = () => {
+      const nodes = [];
+      const node = harness.render(function settingsUnderTest() {
+        return SettingsPanel({ defaultOpen: true });
+      }, undefined);
+      walk(harness, node, nodes, 0);
+      return nodes;
+    };
+    const restoreBtn = (nodes) => nodes.find((n) => n.tag === 'button' && n.text === '恢復設定');
+
+    // 1) 帳號密碼模式 → 按鈕在
+    assert.ok(restoreBtn(draw()), '帳號密碼模式下應該有「恢復設定」按鈕');
+    // 2) 無認證 → 不該在
+    core.saveCredentials('https://msn.feg.cn', { mode: 'none' });
+    assert.ok(!restoreBtn(draw()), '無認證模式下不該出現「恢復設定」按鈕');
+    // 3) 存取權杖 → 也不該在
+    core.saveCredentials('https://msn.feg.cn', { mode: 'token', token: 'tk_x' });
+    assert.ok(!restoreBtn(draw()), '存取權杖模式下不該出現「恢復設定」按鈕');
+
+    // ---- 點下去：攔 fetch，驗請求與填入 ----
+    core.saveCredentials('https://msn.feg.cn', { mode: 'basic', user: '', password: '' });
+    const btn = restoreBtn(draw());
+    assert.ok(btn, '回到帳號密碼模式後按鈕要回來');
+
+    const calls = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = function (url, init) {
+      const u = String(url);
+      const opt = init || {};
+      calls.push({ url: u, method: opt.method, body: opt.body });
+      if (u.indexOf('/ntfy-teams/mask-key') !== -1) {
+        return Promise.resolve({
+          ok: true, status: 200,
+          text: () => Promise.resolve(JSON.stringify({ ok: true, maskKey: 'sk-MASKED' }))
+        });
+      }
+      if (u.indexOf('/storage/ntfy') !== -1) {
+        return Promise.resolve({
+          ok: true, status: 200,
+          text: () => Promise.resolve(JSON.stringify({ uid: 'restored-user', pwd: 'restored-pass', name: 'restored-name' }))
+        });
+      }
+      return realFetch.apply(this, arguments);
+    };
+
+    try {
+      btn.props.onClick();
+      for (let i = 0; i < 80 && calls.length < 2; i += 1) {
+        await new Promise((r) => setTimeout(r, 5));
+      }
+      await new Promise((r) => setTimeout(r, 40));
+
+      // (a) 先要 mask key，再打端點 —— 順序不能反
+      assert.ok(calls.length >= 2, '應該送出兩個請求（mask key + 端點），實際 ' + calls.length);
+      assert.ok(calls[0].url.indexOf('/ntfy-teams/mask-key') !== -1,
+        '第一個請求要是向宿主要 mask key，實際：' + calls[0].url);
+      assert.strictEqual(calls[0].method, 'GET', 'mask key 用 GET');
+      assert.ok(calls[1].url.indexOf('/storage/ntfy') !== -1,
+        '第二個請求要打端點，實際：' + calls[1].url);
+      assert.strictEqual(calls[1].method, 'POST', '端點用 POST');
+      // (b) body 必須是 { apiKey: <mask key> }，而且帶的是**宿主回的那把**
+      const sent = JSON.parse(calls[1].body);
+      assert.strictEqual(sent.apiKey, 'sk-MASKED',
+        'body.apiKey 要是宿主回的 mask key，實際：' + calls[1].body);
+
+      // (c) 三個欄位都要被填進去
+      const inputs = draw().filter((n) => n.tag === 'input');
+      const values = inputs.map((n) => String((n.props && n.props.value) || ''));
+      assert.ok(values.indexOf('restored-user') !== -1,
+        '使用者名稱要被填入，實際欄位值：' + JSON.stringify(values));
+      assert.ok(values.indexOf('restored-pass') !== -1,
+        '密碼要被填入，實際欄位值：' + JSON.stringify(values));
+      assert.ok(values.indexOf('restored-name') !== -1,
+        '顯示名稱要被填入，實際欄位值：' + JSON.stringify(values));
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+
+    core.clearCredentials('https://msn.feg.cn');
+    core.setIdentity('');
+  });
+
+  test('★ 恢復設定：失敗要說出原因，200 空物件不能當成功', async () => {
+    // 實測的伺服器行為：`500` 空 body = 請求格式不對；`200 {}` = 格式對但這把
+    // 金鑰沒有資料。後者不是錯誤碼 —— 若當成成功，使用者只會看到「點了沒反應」。
+    const { harness, exports: mod, core } = freshPanel();
+    const SettingsPanel = mod.__test.SettingsPanel;
+    core.saveConfig({ server: 'https://msn.feg.cn', topics: [], aliases: {} });
+    core.saveCredentials('https://msn.feg.cn', { mode: 'basic', user: '', password: '' });
+    core.setIdentity('');
+
+    const draw = () => {
+      const nodes = [];
+      const node = harness.render(function settingsUnderTest() {
+        return SettingsPanel({ defaultOpen: true });
+      }, undefined);
+      walk(harness, node, nodes, 0);
+      return nodes;
+    };
+    const restoreBtn = (nodes) => nodes.find((n) => n.tag === 'button' && n.text === '恢復設定');
+    const notesText = (nodes) => nodes
+      .filter((n) => n.cls && String(n.cls).indexOf('ntfy-teams-hint') !== -1)
+      .map((n) => n.text || '').join(' | ');
+
+    /**
+     * 用指定的假回應跑一次 restore，回傳畫面上的提示文字。
+     * @param maskRes - mask-key 路由的回應。
+     * @param apiRes - 端點的回應。
+     * @returns 提示文字。
+     */
+    async function run(maskRes, apiRes) {
+      const realFetch = globalThis.fetch;
+      globalThis.fetch = function (url) {
+        const u = String(url);
+        const r = u.indexOf('/ntfy-teams/mask-key') !== -1 ? maskRes : apiRes;
+        if (r && r.throws) return Promise.reject(new Error(r.throws));
+        return Promise.resolve({
+          ok: r.ok !== false, status: r.status,
+          text: () => Promise.resolve(r.body === undefined ? '' : r.body)
+        });
+      };
+      try {
+        const btn = restoreBtn(draw());
+        assert.ok(btn, '按鈕應該在');
+        btn.props.onClick();
+        for (let i = 0; i < 80; i += 1) {
+          await new Promise((res) => setTimeout(res, 5));
+          const txt = notesText(draw());
+          if (txt && txt.indexOf('恢復中') === -1) return txt;
+        }
+        return notesText(draw());
+      } finally {
+        globalThis.fetch = realFetch;
+      }
+    }
+
+    // 1) 拿不到 mask key → 要說出原因（不是「失敗」兩個字）
+    let txt = await run(
+      { status: 503, body: JSON.stringify({ ok: false, error: '憑證檔裡找不到 refs.FEG_API_KEY' }) },
+      {});
+    assert.ok(txt.indexOf('FEG_API_KEY') !== -1 || txt.indexOf('拿不到遮蔽金鑰') !== -1,
+      '拿不到 mask key 時要說出原因，實際：' + txt);
+
+    // 2) 端點 500 → 明確說「請求格式不對」
+    txt = await run({ status: 200, body: JSON.stringify({ ok: true, maskKey: 'sk-M' }) },
+      { status: 500, body: '' });
+    assert.ok(txt.indexOf('500') !== -1, '端點 500 要提到 500，實際：' + txt);
+
+    // 3) ★ 200 空物件 → 不能當成功
+    txt = await run({ status: 200, body: JSON.stringify({ ok: true, maskKey: 'sk-M' }) },
+      { status: 200, body: '{}' });
+    assert.ok(txt.indexOf('恢復失敗') !== -1, '★ 200 空物件必須是失敗，實際：' + txt);
+    assert.ok(txt.indexOf('沒有對應的資料') !== -1 || txt.indexOf('沒有回傳任何可用欄位') !== -1,
+      '★ 要指出可能是金鑰沒有資料，實際：' + txt);
+
+    // 4) 端點回非 JSON → 明確說「不是 JSON」
+    txt = await run({ status: 200, body: JSON.stringify({ ok: true, maskKey: 'sk-M' }) },
+      { status: 200, body: '<html>500</html>' });
+    assert.ok(txt.indexOf('不是 JSON') !== -1, '非 JSON 要明說，實際：' + txt);
+
+    // 5) 網路／超時失敗 → 明確說恢復失敗
+    txt = await run({ status: 200, body: JSON.stringify({ ok: true, maskKey: 'sk-M' }) },
+      { throws: 'aborted' });
+    assert.ok(txt.indexOf('恢復失敗') !== -1, '網路失敗要說恢復失敗，實際：' + txt);
+
+    core.clearCredentials('https://msn.feg.cn');
+    core.setIdentity('');
+  });
+
   test('儲存成功後自動收合（不留著展開佔高度）', () => {
     const { harness, exports: mod, core } = freshPanel();
     core.saveConfig({ server: 'https://msn.feg.cn', topics: [], aliases: {} });

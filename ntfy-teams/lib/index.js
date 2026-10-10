@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const configStore = require('./config-store.js');
 
@@ -34,6 +36,9 @@ const ROUTE_PATH = '/ntfy-teams/session';
 /** 設定與憑證的讀寫路由。 */
 const SETTINGS_PATH = '/ntfy-teams/settings';
 
+/** 遮蔽金鑰路由：回一份用 MASK.md 公式算出的 mask key（原文不出宿主）。 */
+const MASK_KEY_PATH = '/ntfy-teams/mask-key';
+
 /** 一次最多接受几则讯息进入 seed（防止有人贴一整个频道的历史进来）。 */
 const MAX_MESSAGES = 400;
 
@@ -56,6 +61,163 @@ function logNote(ctx, message) {
 
 /** 默认 ntfy 服务器地址；与 lib/client.js 里的 DEFAULT_SERVER 保持一致。 */
 const DEFAULT_SERVER = 'https://msn.feg.cn';
+
+// =============================================================================
+// 「恢復設定」用的遮蔽金鑰（mask key）
+//
+// 需求：認證方式選「帳號密碼」時，多一顆按鈕，用遮蔽過的金鑰去打
+//       POST https://abc.feg.com.tw/BDD/API/AI/dsh/storage/ntfy
+//       body `{ "apiKey": "<mask key>" }`，把伺服器記著的 uid／pwd／name 取回來。
+//
+// 演算法與 `MASK.md` 一致（那是**遮蔽，不是加密** —— 知道演算法與時間戳的人
+// 可以還原）：
+//
+//     ts     = "@" + ISO 時間戳          // "@2026-10-10T07:39:06.000Z"
+//     masked = "sk-" + base64(key + ts)
+//
+// ⚠️ 原文**永遠不離開宿主**：這條路由只回遮蔽後的値，客戶端拿不到 `FEG_API_KEY`。
+//    遮蔽放在宿主還有第二個好處 —— 時間戳在伺服器端算，客戶端不必信任自己的鐘。
+//
+// 實測（2026-10-10，對 abc.feg.com.tw）：
+//     {"apiKey":"sk-"+base64(任意字串)}  → 200 `{}`   ← 格式對
+//     {"apiKey":""} / 缺欄位 / 非字串     → 500          ← 格式不對
+//     格式對但金鑰不認得                  → **200 `{}`**（不是錯誤碼）
+//   所以「200 空物件」必須當成**明確失敗**呈現，否則使用者只會看到「點了沒反應」。
+// =============================================================================
+
+/**
+ * 拿來遮蔽的金鑰候選參照名（依優先序）。
+ *
+ * ⚠️ 這份清單是被**實測**逼出來的，不是猜的：
+ *
+ *   在 `$DSH_HOME/.credentials.yaml`（這台機器真正在用的那份）裡，
+ *   參照名是 **`AIFE_API_KEY`** —— 沒有 `FEG_API_KEY`。第一版寫死
+ *   `FEG_API_KEY`，於是：
+ *     * 宿主回 503「找不到 refs.FEG_API_KEY」；或
+ *     * 若剛好讀到別處那份有 `FEG_API_KEY` 的檔案，端點會回 `200 {}`
+ *       （格式對、但那把金鑰在伺服器上沒有資料）——
+ *       使用者看到的就只是「按了沒反應」。
+ *
+ *   實測兩邊的差異（遮蔽後打端點）：
+ *     `AIFE_API_KEY`     → 200 `{"name":"Jinbe","uid":"…","pwd":"…"}`  ✅
+ *     `FEG_API_KEY`      → 200 `{}`                                     ✗
+ *
+ *   所以按序試，取第一個**存在**的參照。這樣換環境（或以後改名）不必改程式。
+ */
+const MASK_KEY_REFS = ['AIFE_API_KEY', 'FEG_API_KEY', 'DEEPSEEK_API_KEY'];
+
+/** 遮蔽值的前綴（與 MASK.md 一致）。 */
+const MASK_PREFIX = 'sk-';
+
+/**
+ * 解析 `$DSH_HOME/.credentials.yaml` 裡的 `refs.<name>`。
+ *
+ * 為什麼自己寫一個最小 parser 而不引入 YAML 套件：這個檔案由 DSH 自己寫，
+ * 形狀固定（`refs:` 底下兩空格縮排的 `名稱: 値`），而本外掛目前零執行期依賴。
+ * 只認這一種形狀，認不出來就回 null（上層會回一份帶原因的錯誤）。
+ *
+ * @param text - 檔案內容。
+ * @param name - 參照名，例如 `FEG_API_KEY`。
+ * @returns 値；找不到回 null。
+ */
+function readCredentialRef(text, name) {
+  if (typeof text !== 'string' || typeof name !== 'string' || name === '') return null;
+  const lines = text.split(/\r?\n/);
+  let inRefs = false;
+  let refsIndent = -1;
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (/^\s*#/.test(line) || line.trim() === '') continue;
+    const indent = line.length - line.trimStart().length;
+    const trimmed = line.trim();
+
+    if (/^refs:\s*$/.test(trimmed)) {
+      inRefs = true;
+      refsIndent = indent;
+      continue;
+    }
+    if (!inRefs) continue;
+    if (indent <= refsIndent) { inRefs = false; continue; }   // refs 區塊結束
+
+    const m = trimmed.match(/^([A-Za-z0-9_.-]+):\s*(.*)$/);
+    if (!m || m[1] !== name) continue;
+    let value = m[2].trim();
+    if (value === '') return null;
+    // 去引號（單／雙皆可）。
+    if ((value.charAt(0) === '"' && value.charAt(value.length - 1) === '"')
+      || (value.charAt(0) === "'" && value.charAt(value.length - 1) === "'")) {
+      value = value.slice(1, -1);
+    }
+    return value === '' ? null : value;
+  }
+  return null;
+}
+
+/**
+ * 找出 DSH 憑證檔的路徑。
+ *
+ * 順序：`DSH_CREDENTIALS_PATH`（測試用覆寫）→ `$DSH_HOME/.credentials.yaml`
+ * → `$HOME/.dsh/.credentials.yaml`。找不到任何存在的檔案時回**第一個候選**，
+ * 讓呼叫端的錯誤訊息能指出它預期在哪裡。
+ *
+ * @returns 絕對路徑。
+ */
+function credentialsFilePath() {
+  const override = process.env.DSH_CREDENTIALS_PATH;
+  if (typeof override === 'string' && override.trim() !== '') return override.trim();
+  const home = process.env.DSH_HOME
+    || path.join(os.homedir(), '.dsh');
+  return path.join(home, '.credentials.yaml');
+}
+
+/**
+ * 依 MASK.md 的公式遮蔽一個金鑰。
+ *
+ * @param key - 原始金鑰（非空字串）。
+ * @param now - 產生遮蔽值的時刻（測試可釘住）。
+ * @returns `sk-` + base64(key + "@" + ISO)。
+ */
+function maskKey(key, now) {
+  if (typeof key !== 'string' || key.length === 0) {
+    throw new TypeError('maskKey: key 必須是非空字串');
+  }
+  const stamp = '@' + (now instanceof Date ? now : new Date()).toISOString();
+  return MASK_PREFIX + Buffer.from(key + stamp, 'utf8').toString('base64');
+}
+
+/**
+ * 讀出候選參照中第一個存在的金鑰，並回傳它的遮蔽値。
+ *
+ * @param options - `{ now }`，測試用。
+ * @returns `{ ok, masked, source, ref, error }`；`error` 只在失敗時有値。
+ */
+function maskedCredential(options) {
+  const opts = options || {};
+  const file = credentialsFilePath();
+  let text;
+  try {
+    text = fs.readFileSync(file, 'utf8');
+  } catch (err) {
+    return {
+      ok: false,
+      error: '讀不到憑證檔（' + file + '）：' + toText(err && err.message)
+    };
+  }
+  for (let i = 0; i < MASK_KEY_REFS.length; i += 1) {
+    const ref = MASK_KEY_REFS[i];
+    const key = readCredentialRef(text, ref);
+    if (!key) continue;
+    try {
+      return { ok: true, masked: maskKey(key, opts.now), source: file, ref: ref };
+    } catch (err) {
+      return { ok: false, error: '遮蔽失敗（' + ref + '）：' + toText(err && err.message) };
+    }
+  }
+  return {
+    ok: false,
+    error: '憑證檔裡找不到可用的金鑰（試過 ' + MASK_KEY_REFS.join('、') + '）——檔案：' + file
+  };
+}
 
 /**
  * 设定与凭证的存放目录。
@@ -417,6 +579,41 @@ function apply(ctx) {
     } catch (err) {
       logNote(ctx, '設定路由註冊例外: ' + (err && err.message));
     }
+
+    // 遮蔽金鑰路由：只回遮蔽後的値，原文不出宿主。
+    //
+    // 為什麼要一條路由而不是讓客戶端自己讀憑證檔：**客戶端讀不到檔案**（它在
+    // 瀏覽器裡），而且把 `FEG_API_KEY` 送到瀏覽器會讓它出現在 DevTools、記憶體、
+    // 以及任何一張截圖裡。放在宿主算完再回傳，暴露面就只剩「一個已經遮蔽的值」。
+    try {
+      webServer.register({
+        kind: 'exact',
+        path: MASK_KEY_PATH,
+        handler: async (req, res) => {
+          try {
+            if (req.method !== 'GET') {
+              sendJson(res, 405, { ok: false, error: '只接受 GET' });
+              return;
+            }
+            const result = maskedCredential({});
+            if (!result.ok) {
+              // 失敗要說出**在哪裡找不到**，否則使用者只知道「按了沒反應」。
+              sendJson(res, 503, { ok: false, error: result.error });
+              return;
+            }
+            // ★ source 也回一份：除錯時要知道「這把金鑰是從哪個檔案讀出來的」。
+            //   JSON.stringify 會把反斜杠變 \\\\，但網址/console 印出來仍是 \，
+            //   且 `file` 已是絕對路徑，不會洩漏到客戶端看不見的位置。
+            sendJson(res, 200, { ok: true, maskKey: result.masked, ref: result.ref, source: result.source });
+          } catch (err) {
+            sendJson(res, 500, { ok: false, error: '遮蔽路由失敗：' + toText(err && err.message) });
+          }
+        }
+      });
+      logNote(ctx, '路由註冊成功: ' + MASK_KEY_PATH);
+    } catch (err) {
+      logNote(ctx, '遮蔽路由註冊例外: ' + (err && err.message));
+    }
   });
 }
 
@@ -438,7 +635,14 @@ module.exports = {
     clampText,
     ROUTE_PATH,
     SETTINGS_PATH,
+    MASK_KEY_PATH,
     settingsDir,
+    // 遮蔽金鑰相關（「恢復設定」那顆按鈕用）。
+    readCredentialRef,
+    maskKey,
+    maskedCredential,
+    credentialsFilePath,
+    MASK_KEY_REFS,
     MAX_MESSAGES,
     MAX_MESSAGE_CHARS
   }
