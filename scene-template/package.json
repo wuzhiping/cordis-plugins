@@ -27,5 +27,8 @@
       "immediately": true
     }
   },
+  "scripts": {
+    "test": "node test/mask-key.js"
+  },
   "license": "MIT"
 }

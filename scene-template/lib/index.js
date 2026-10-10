@@ -22,6 +22,10 @@
 // resolve. Nothing here writes to a session log or the filesystem.
 "use strict";
 
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+
 /**
  * Exact route the browser bundle POSTs its selection to.
  *
@@ -134,8 +138,111 @@ function readBody(req) {
 	});
 }
 
+// ── 遮蔽金鑰（mask key）──────────────────────────────────────────────────────
+//
+// 三個 scene 介面（list / detail / suggestion_template）的 POST body 都要帶
+// `apiKey`，而它的值必須是 MASK.md 定義的**遮蔽形**：
+//
+//     ts     = "@" + ISO 時間戳
+//     masked = "sk-" + base64(key + ts)
+//
+// 遮蔽放在宿主，不讓瀏覽器自己算：金鑰住在宿主的憑證檔裡，送進瀏覽器只為了
+// 再遮蔽一次，反而讓**原文**出現在 DevTools、記憶體與任何截圖裡。所以這裡只把
+// 遮蔽後的値交出去（`GET MASK_KEY_PATH`），客戶端拿它填進每個 POST body。
+//
+// 這段與 ntfy-teams 的實作是**刻意重複**的：兩個外掛各自獨立發佈（GitHub
+// tarball 個別安裝），共用一個模組會讓其中一個的缺席弄壞另一個。
+//
+// 參照名依序試，取第一個存在的 —— 這是被實測逼出來的：這台機器的
+// `$DSH_HOME/.credentials.yaml` 裡叫 `AIFE_API_KEY`，沒有 `FEG_API_KEY`；
+// 而 `FEG_API_KEY` 遮蔽後打端點會拿到 `200 {}`（格式對、但那把金鑰沒資料）。
+const MASK_KEY_PATH = "/scene-template/mask-key";
+const MASK_KEY_REFS = ["AIFE_API_KEY", "FEG_API_KEY", "DEEPSEEK_API_KEY"];
+const MASK_PREFIX = "sk-";
+
+/** @returns the credentials file path (honours DSH_CREDENTIALS_PATH). */
+function credentialsFilePath() {
+	const override = process.env.DSH_CREDENTIALS_PATH;
+	if (typeof override === "string" && override.trim() !== "") return override.trim();
+	const home = process.env.DSH_HOME || path.join(os.homedir(), ".dsh");
+	return path.join(home, ".credentials.yaml");
+}
+
+/**
+ * Read one `refs:` entry out of the credentials YAML text.
+ *
+ * A deliberately minimal line parser: the file is written by DSH itself and this
+ * needs exactly one scalar out of one block. It stops at the first line that is
+ * not indented, so a same-named key in a later top-level block cannot be picked
+ * up by accident.
+ *
+ * @param text - the credentials file contents.
+ * @param name - the reference name, e.g. `AIFE_API_KEY`.
+ * @returns the value, or null.
+ */
+function readCredentialRef(text, name) {
+	if (typeof text !== "string" || typeof name !== "string" || name === "") return null;
+	const lines = text.split(/\r?\n/);
+	let inRefs = false;
+	for (let i = 0; i < lines.length; i += 1) {
+		const line = lines[i];
+		if (/^refs:\s*$/.test(line)) { inRefs = true; continue; }
+		if (!inRefs) continue;
+		if (/^\S/.test(line)) break;
+		const m = /^\s+([A-Za-z0-9_.-]+):\s*(.*)$/.exec(line);
+		if (!m || m[1] !== name) continue;
+		let value = m[2].trim();
+		if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+			value = value.slice(1, -1);
+		}
+		return value === "" ? null : value;
+	}
+	return null;
+}
+
+/**
+ * Mask one key exactly as MASK.md specifies.
+ * @param key - the raw key.
+ * @param now - the timestamp to embed (tests pin this).
+ * @returns the masked string.
+ */
+function maskKey(key, now) {
+	if (typeof key !== "string" || key === "") throw new Error("maskKey: key 必須是非空字串");
+	const stamp = "@" + (now instanceof Date ? now : new Date()).toISOString();
+	return MASK_PREFIX + Buffer.from(key + stamp, "utf8").toString("base64");
+}
+
+/**
+ * Resolve the first available reference and return its masked form.
+ * @param options - `{ now }`, for tests.
+ * @returns `{ ok, masked, ref, source, error }`.
+ */
+function maskedCredential(options) {
+	const opts = options || {};
+	const file = credentialsFilePath();
+	let text;
+	try {
+		text = fs.readFileSync(file, "utf8");
+	} catch (err) {
+		return { ok: false, error: "讀不到憑證檔（" + file + "）：" + (err && err.message ? err.message : String(err)) };
+	}
+	for (const ref of MASK_KEY_REFS) {
+		const key = readCredentialRef(text, ref);
+		if (!key) continue;
+		try {
+			return { ok: true, masked: maskKey(key, opts.now), ref, source: file };
+		} catch (err) {
+			return { ok: false, error: "遮蔽失敗（" + ref + "）：" + (err && err.message ? err.message : String(err)) };
+		}
+	}
+	return { ok: false, error: "憑證檔裡找不到可用的金鑰（試過 " + MASK_KEY_REFS.join("、") + "）——檔案：" + file };
+}
+
 module.exports = {
 	name: "scene-template",
+	/** No statically required services: every one is taken through `ctx.inject`
+	 * inside `apply`, so a missing service degrades instead of blocking the row. */
+	inject: [],
 	/**
 	 * Register the prompt context and the selection route.
 	 * @param ctx - the host context of this bundle's row.
@@ -367,26 +474,86 @@ module.exports = {
 			send(200, { ok: true, tip: injectionTip(sessionId, selection) });
 		}
 
-		const systemPrompt = ctx.get("systemPrompt");
-		if (systemPrompt === undefined) {
-			console.error("[scene-template] systemPrompt service unavailable; the selection cannot be injected");
-		} else {
+		// ⚠️ 服務一律走 `ctx.inject`，**不能**用 apply 當下的 `ctx.get`。
+		//
+		// 這個坑讓整條路由靜默地不註冊：沒有例外、沒有錯誤，只有一個 404 ——
+		// 而且連既有的 `/scene-template/selection` 也一直是壞的（實測：GET 404、
+		// POST 405、沒有 content-type，那是框架自己的處理器在答，不是這裡的
+		// handler）。`ctx.get` 在 apply 當下可能拿到尚未就緒的對象，於是
+		// `webServer.register` 從來沒被呼叫到。同樣的結論 ntfy-teams 也踩過。
+		//
+		// `ctx.inject` 會等服務就緒之後才跑回呼，是唯一可靠的做法。
+		if (typeof ctx.inject !== "function") {
+			console.error("[scene-template] ctx.inject unavailable; routes and prompt context cannot be registered");
+			return;
+		}
+
+		ctx.inject(["systemPrompt"], (scope) => {
+			const systemPrompt = scope.systemPrompt;
+			if (systemPrompt === undefined) {
+				console.error("[scene-template] systemPrompt service unavailable; the selection cannot be injected");
+				return;
+			}
 			ctx.effect(() => systemPrompt.context({
 				name: CONTEXT_NAME,
 				order: CONTEXT_ORDER,
 				text: selectionContextText,
 			}), "scene-template: selection prompt context");
-		}
+		});
 
-		const webServer = ctx.get("webServer");
-		if (webServer === undefined) {
-			console.error("[scene-template] webServer service unavailable; the client cannot report its selection");
-		} else {
+		ctx.inject(["webServer"], (scope) => {
+			const webServer = scope.webServer;
+			if (webServer === undefined) {
+				console.error("[scene-template] webServer service unavailable; the client cannot report its selection");
+				return;
+			}
+			// Log the success: without it, a route that failed to register and a
+			// route that registered fine are indistinguishable (both just get a
+			// 404 from the framework), which is exactly what made this bug silent.
+			console.log("[scene-template] registering routes: " + ROUTE_PATH + ", " + MASK_KEY_PATH);
+
 			ctx.effect(() => webServer.register({
 				kind: "exact",
 				path: ROUTE_PATH,
 				handler: handleSelection,
 			}), "scene-template: selection route");
-		}
+
+			// The client needs the masked key for every scene API POST body.
+			// Only GET; the response carries the masked form and never the raw key.
+			ctx.effect(() => webServer.register({
+				kind: "exact",
+				path: MASK_KEY_PATH,
+				handler: (req, res) => {
+					const send = (status, payload) => {
+						res.statusCode = status;
+						res.setHeader("content-type", "application/json; charset=utf-8");
+						res.setHeader("cache-control", "no-store");
+						res.end(JSON.stringify(payload));
+					};
+					if (req.method !== "GET") {
+						send(405, { ok: false, error: "只接受 GET" });
+						return;
+					}
+					const result = maskedCredential({});
+					if (!result.ok) {
+						// Say *where* it looked, otherwise the only symptom is "it silently
+						// sends no apiKey".
+						send(503, { ok: false, error: result.error });
+						return;
+					}
+					send(200, { ok: true, maskKey: result.masked, ref: result.ref, source: result.source });
+				},
+			}), "scene-template: mask-key route");
+		});
+	},
+	/** Offline test surface: the mask helpers are pure and worth pinning. */
+	__test: {
+		MASK_KEY_PATH,
+		MASK_KEY_REFS,
+		credentialsFilePath,
+		readCredentialRef,
+		maskKey,
+		maskedCredential,
+		ROUTE_PATH,
 	},
 };

@@ -25,7 +25,26 @@ window.__ModuleLoader__.load({
     var PET_AIR = 44;  // 面板上方給懸空寵物留的空氣(= 面板 marginTop)
     var PET_HANG = 6;  // 寵物中心相對"面板右上角點"偏進來多少
                        // (0 = 正好騎在角上但會被列右邊界裁;6 既掛得住角又不裁、也不壓內容)
-    var SKEL_BG = "#e6ecf4";
+    // ── 顏色一律走主題令牌（深淺色自動聯動）─────────────────────────────
+    //
+    // 這裡原本全是硬編碼的淺色（#fff / #f8fafc / #e2e8f0 / #0f172a…），於是深色
+    // 主題下整塊面板是「淺底淺字」，最嚴重的一處是 scenarioBadge：
+    //
+    //     background: var(--dsw-alias-brand-primary, #2563eb) + color: #fff
+    //
+    // `--dsw-alias-brand-primary` 是**會反色的**：淺色主題下是深藍（當底色沒問題），
+    // **深色主題下實測是 #f9fafb（近白）** → 白底白字，整個膠囊看不見。
+    // 所以「要一個固定的藍」就必須用 `--dsw-static-*`，不能用 alias。
+    //
+    // 規則（與 ntfy-teams 相同，兩個外掛一致）：
+    //   * 文字   → `--dsw-alias-label-primary / -secondary / -tertiary`
+    //   * 表面   → `--dsw-alias-bg-layer-1`（卡片）/ `-layer-2`（更內一層、骨架）
+    //   * 邊框   → `--dsw-alias-border-l2`
+    //   * 語意色 → `--dsw-alias-state-warn-primary`
+    //   * 飽和的重點色（藍／天藍／紫／琥珀）→ 保留色票或 `--dsw-static-*`，
+    //     因為它們**本來就該在兩種主題下長一樣**；`color:#fff` 配它們是刻意的。
+    //   * 影子用的 rgba(15,23,42,…) 不動：深色下幾乎看不見，但卡片另有邊框撐著。
+    var SKEL_BG = "var(--dsw-alias-bg-layer-2, #e6ecf4)";
     // 骨架 chip 的寬度表(故意長短不一,像真的名稱)
     var SKEL_CHIPS = [188, 150, 214, 168];
     var SKEL_BRANCHES = [132, 108, 156];
@@ -37,6 +56,9 @@ window.__ModuleLoader__.load({
     var SCENE_SUGGEST_API = "https://abc.feg.com.tw/BDD/API/AI/dsh/scene/suggestion_template";
     var SCENE_API_ORIGIN = "https://abc.feg.com.tw";
     var SCENE_API_TIMEOUT = 8000;
+    // 三個 scene 介面的 POST body 都要帶的遮蔽金鑰,由宿主算好後給(見 lib/index.js:
+    // 金鑰原文不出宿主,瀏覽器只拿到遮蔽形)。同源路由,所以用相對路徑。
+    var MASK_KEY_PATH = "/scene-template/mask-key";
 
     /** POST 一個 JSON body(bundle 跑在瀏覽器裡,預檢 OPTIONS 已確認 allow-methods 含 POST)。 */
     function postJson(url, body, timeoutMs) {
@@ -56,6 +78,56 @@ window.__ModuleLoader__.load({
       }, function (err) {
         clearTimeout(killer);
         throw err;
+      });
+    }
+
+    /**
+     * 取得遮蔽金鑰(mask key)。三個 scene 介面的 POST body 都要帶它。
+     *
+     * 只抓一次並快取;失敗**不快取**,下次呼叫會重試 —— 否則宿主晚一步就緒
+     * (例如剛開機)會讓整個工作階段都拿不到金鑰。
+     * 拿不到時回空字串,呼叫端照樣送出(只是不帶 apiKey):目前後端不強制,
+     * 硬要失敗反而會把整個介面打成 mock。
+     * @returns Promise<string>,拿不到時是 ""。
+     */
+    var maskKeyCache = null;
+    var maskKeyPending = null;
+    function getMaskKey() {
+      if (typeof maskKeyCache === "string") return Promise.resolve(maskKeyCache);
+      if (maskKeyPending) return maskKeyPending;
+      var p = fetch(MASK_KEY_PATH, { headers: { accept: "application/json" } })
+        .then(function (res) {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.json();
+        })
+        .then(function (out) {
+          var key = out && typeof out.maskKey === "string" ? out.maskKey : "";
+          if (key === "") throw new Error("回應沒有 maskKey");
+          maskKeyCache = key;
+          return key;
+        })
+        .catch(function (err) {
+          console.warn("[scene-template] mask key unavailable; scene API POST omits apiKey:",
+            err && err.message ? err.message : err);
+          return "";
+        });
+      maskKeyPending = p;
+      var clear = function () { maskKeyPending = null; };
+      p.then(clear, clear);
+      return p;
+    }
+
+    /**
+     * 把 apiKey 併進要送出的 body。
+     * @param body - 該介面自己的欄位。
+     * @returns Promise<併好 apiKey 的 body>。
+     */
+    function withApiKey(body) {
+      return getMaskKey().then(function (key) {
+        var out = {};
+        Object.keys(body || {}).forEach(function (k) { out[k] = body[k]; });
+        if (key !== "") out.apiKey = key;
+        return out;
       });
     }
 
@@ -237,14 +309,26 @@ window.__ModuleLoader__.load({
     }
 
     function previewPage(title, subtitle, sections) {
+      // 這段 HTML 是**另一份文件**（走 data:text/html 進 iframe），父層的 CSS 變數
+      // 不會傳進去，`prefers-color-scheme` 也跟不上 DSH 強制的主題 ——
+      // 所以主題要在**產生當下**從父層讀進來，直接寫成兩套色票。
+      // （previewPage 每次開預覽都會重跑，所以主題切換後再開就是新色。）
+      var dark = typeof document !== 'undefined' && document.body
+        && document.body.hasAttribute('data-ds-dark-theme');
+      var pal = dark
+        ? { page: '#151517', card: '#232324', border: '#ffffff1f', title: '#f9fafb', sub: '#cfd3d6' }
+        : { page: '#f8fafc', card: '#fff', border: '#e2e8f0', title: '#0f172a', sub: '#64748b' };
       var cards = sections.map(function (pair) {
-        return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin:8px 0;">'
+        return '<div style="background:' + pal.card + ';border:1px solid ' + pal.border
+          + ';border-radius:8px;padding:12px;margin:8px 0;">'
           + "<b>" + pair[0] + "</b> " + pair[1] + "</div>";
       }).join("");
       return "data:text/html;charset=utf-8," + encodeURIComponent(
-        '<html><body style="font-family:system-ui,sans-serif;padding:24px;background:#f8fafc;">'
-        + '<h2 style="margin:0 0 4px;color:#0f172a;">' + title + "</h2>"
-        + '<p style="margin:0 0 12px;color:#64748b;font-size:13px;">' + subtitle + "</p>"
+        '<html><head><meta name="color-scheme" content="' + (dark ? 'dark' : 'light') + '"></head>'
+        + '<body style="font-family:system-ui,sans-serif;padding:24px;margin:0;background:' + pal.page
+        + ';color:' + pal.title + ';">'
+        + '<h2 style="margin:0 0 4px;color:' + pal.title + ';">' + title + "</h2>"
+        + '<p style="margin:0 0 12px;color:' + pal.sub + ';font-size:13px;">' + subtitle + "</p>"
         + cards
         + "</body></html>"
       );
@@ -573,20 +657,16 @@ window.__ModuleLoader__.load({
       listScenarios: function (preset) {
         // 真接口 + 失敗回退:超時/非 2xx/形狀不對 → 用本檔案裡的 mock,
         // 並把 source 帶回去(介面上 hover 場景列可確認來源)。
-        // 清單是 GET,回應只有一個弱 etag(沒有 cache-control / last-modified),所以每次加一個
-        // 唯一查詢參數 —— 瀏覽器或中間快取都不可能把舊清單餵回來,新工作階段一定拿到最新。
-        // (不用 fetch 的 cache:"no-store":它會帶上 cache-control 請求頭,把簡單請求變成需要 preflight)
-        // ?preset=<agent preset id>:後端按模式篩場景;沒有 preset 時就不帶這個鍵。
-        var ctrl = typeof AbortController === "function" ? new AbortController() : null;
-        var killer = setTimeout(function () { if (ctrl) { try { ctrl.abort(); } catch (err) {} } }, SCENE_API_TIMEOUT);
-        var url = SCENE_API + "?_t=" + Date.now()
-          + (typeof preset === "string" && preset.length > 0 ? "&preset=" + encodeURIComponent(preset) : "");
-        return fetch(url, {
-          headers: { accept: "application/json" },
-          signal: ctrl ? ctrl.signal : undefined,
-        }).then(function (res) {
-          if (!res.ok) throw new Error("HTTP " + res.status);
-          return res.json();
+        //
+        // ★ 這裡原本是 GET + `?_t=` 去破快取(因為回應只有弱 etag、沒有
+        //   cache-control)。現在改成 POST,是為了讓**每個** scene 介面的 body
+        //   都帶遮蔽金鑰(後端要求) —— 附帶好處是 POST 本來就不會被快取,
+        //   那個 `_t` 時間戳與相關的 preflight 顧慮一起消失了。
+        //   ?preset=<agent preset id> 也一併從查詢搬到 body。
+        var body = {};
+        if (typeof preset === "string" && preset.length > 0) body.preset = preset;
+        return withApiKey(body).then(function (payload) {
+          return postJson(SCENE_API, payload);
         }).then(function (payload) {
           return { scenarios: normalizeScenarios(payload), source: "remote" };
         }).catch(function (err) {
@@ -597,14 +677,13 @@ window.__ModuleLoader__.load({
             }),
             source: "mock",
           });
-        }).then(function (out) {
-          clearTimeout(killer);
-          return out;
         });
       },
       getScenario: function (id) {
-        // 真接口(POST {id}) + 失敗回退:超時/非 2xx/形狀不對 → 用本檔案裡的 mock。
-        return postJson(SCENE_DETAIL_API, { id: id }).then(function (payload) {
+        // 真接口(POST {apiKey, id}) + 失敗回退:超時/非 2xx/形狀不對 → 用本檔案裡的 mock。
+        return withApiKey({ id: id }).then(function (body) {
+          return postJson(SCENE_DETAIL_API, body);
+        }).then(function (payload) {
           return { detail: normalizeDetail(payload), source: "remote" };
         }).catch(function (err) {
           console.warn("[scene-template] scene detail remote failed, falling back to mock:", err && err.message ? err.message : err);
@@ -616,10 +695,12 @@ window.__ModuleLoader__.load({
         if (!input || input.length < 20) return Promise.resolve([]);
         return delayed(LATENCY.dynamic, DYNAMIC_TEMPLATES[scenarioId] || []);
       },
-      // 推薦:POST /scene/suggestion_template {scene_id, content}。遠端每次回一批(陣列),
+      // 推薦:POST /scene/suggestion_template {apiKey, scene_id, content}。遠端每次回一批(陣列),
       // 所以「換一批」就是再調一次;cursor 只在回退到本檔案 mock 池子時才有用。
       recommend: function (sceneId, content, cursor) {
-        return postJson(SCENE_SUGGEST_API, { scene_id: sceneId, content: content }).then(function (list) {
+        return withApiKey({ scene_id: sceneId, content: content }).then(function (body) {
+          return postJson(SCENE_SUGGEST_API, body);
+        }).then(function (list) {
           return { templates: normalizeTemplates(list), source: "remote" };
         }).catch(function (err) {
           console.warn("[scene-template] suggestion remote failed, falling back to mock:", err && err.message ? err.message : err);
@@ -772,7 +853,7 @@ window.__ModuleLoader__.load({
       border: "none",
       borderRadius: 0,
       fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif',
-      fontSize: 12, color: "#0f172a",
+      fontSize: 12, color: "var(--dsw-alias-label-primary)",
     };
 
     var S = {
@@ -810,10 +891,10 @@ window.__ModuleLoader__.load({
         return {
           flex: "0 0 auto",
           padding: big ? "7px 15px" : "4px 11px",
-          border: "1px solid " + (selected ? (color || "#2563eb") : "#cbd5e1"),
+          border: "1px solid " + (selected ? (color || "#2563eb") : "var(--dsw-alias-border-l2)"),
           borderRadius: 999,
-          background: selected ? (color || "#2563eb") : "#f8fafc",
-          color: selected ? "#fff" : "#0f172a",
+          background: selected ? (color || "#2563eb") : "var(--dsw-alias-bg-layer-2)",
+          color: selected ? "#fff" : "var(--dsw-alias-label-primary)",
           cursor: "pointer",
           fontSize: big ? 14 : 13,
           fontWeight: big ? 500 : 400,
@@ -832,9 +913,9 @@ window.__ModuleLoader__.load({
       skelPoster: {
         flex: "0 0 auto",
         width: POSTER_W,
-        border: "2px solid #e2e8f0",
+        border: "2px solid var(--dsw-alias-border-l2)",
         borderRadius: 14,
-        background: "#fff",
+        background: "var(--dsw-alias-bg-layer-1)",
         overflow: "hidden",
         position: "relative",
         textAlign: "left",
@@ -848,9 +929,9 @@ window.__ModuleLoader__.load({
         return {
           flex: "0 0 auto",
           width: POSTER_W,
-          border: "2px solid " + (selected ? "#0ea5e9" : "#e2e8f0"),
+          border: "2px solid " + (selected ? "#0ea5e9" : "var(--dsw-alias-border-l2)"),
           borderRadius: 14,
-          background: "#fff",
+          background: "var(--dsw-alias-bg-layer-1)",
           cursor: "pointer",
           overflow: "hidden",
           position: "relative",
@@ -859,7 +940,7 @@ window.__ModuleLoader__.load({
           textAlign: "left",
         };
       },
-      cover: { height: COVER_H, background: "#f1f5f9", overflow: "hidden" },
+      cover: { height: COVER_H, background: "var(--dsw-alias-bg-layer-2)", overflow: "hidden" },
       coverImg: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
       coverIcon: {
         width: "100%", height: "100%",
@@ -875,12 +956,12 @@ window.__ModuleLoader__.load({
       },
       posterBody: { padding: "9px 11px 12px" },
       posterTitle: {
-        fontSize: 13, fontWeight: 700, color: "#0f172a", lineHeight: 1.3,
+        fontSize: 13, fontWeight: 700, color: "var(--dsw-alias-label-primary)", lineHeight: 1.3,
         overflow: "hidden", textOverflow: "ellipsis",
         display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
       },
       posterSub: {
-        fontSize: 11, color: "#64748b", marginTop: 4, lineHeight: 1.35,
+        fontSize: 11, color: "var(--dsw-alias-label-secondary)", marginTop: 4, lineHeight: 1.35,
         overflow: "hidden",
         display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
       },
@@ -890,19 +971,23 @@ window.__ModuleLoader__.load({
         paddingBottom: 2,
         cursor: "grab", userSelect: "none", touchAction: "pan-x",
       },
-      empty: { fontSize: 11, color: "#94a3b8", padding: "4px 0", flex: "0 0 auto" },
+      empty: { fontSize: 11, color: "var(--dsw-alias-label-tertiary)", padding: "4px 0", flex: "0 0 auto" },
       header: {
         display: "flex", alignItems: "center",
         gap: 8, minWidth: 0, marginBottom: 4,
       },
       headRight: { display: "flex", alignItems: "center", gap: 8, flexShrink: 0 },
       headLeft: { display: "flex", alignItems: "center", gap: 6, minWidth: 0, overflow: "hidden" },
-      hint: { fontSize: 10, color: "#94a3b8", fontWeight: 400 },
+      hint: { fontSize: 10, color: "var(--dsw-alias-label-tertiary)", fontWeight: 400 },
       // 選中的場景:左側主位,品牌色膠囊;右側帶一個關閉 ✕(點它 = 清空選擇、回到場景清單)
       scenarioBadge: {
         display: "inline-flex", alignItems: "center", gap: 6,
         padding: "3px 6px 3px 12px", borderRadius: 999,
-        background: "var(--dsw-alias-brand-primary, #2563eb)",
+        // ⚠️ 這裡**不能**用 `--dsw-alias-brand-primary`：它是會反色的，
+        //   深色主題下實測是 #f9fafb（近白），配上下面的 `color:#fff`
+        //   就是白底白字 —— 整個「已選場景」膠囊在深色模式下完全看不見。
+        //   要一個「兩種主題下都一樣的藍」就得用 static 色票。
+        background: "var(--dsw-static-blue-600, #2563eb)",
         color: "#fff", fontSize: 13, fontWeight: 700, lineHeight: 1.4,
         boxShadow: "0 2px 10px rgba(37, 99, 235, 0.28)",
         maxWidth: "62%", minWidth: 0,
@@ -917,41 +1002,42 @@ window.__ModuleLoader__.load({
         display: "inline-flex", alignItems: "center", justifyContent: "center",
       },
       recommendBtn: {
-        border: "1px solid #c9d6e4", background: "#f8fafc", color: "#0f172a",
+        border: "1px solid var(--dsw-alias-border-l2)", background: "var(--dsw-alias-bg-layer-2)",
+        color: "var(--dsw-alias-label-primary)",
         padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600,
         cursor: "pointer", whiteSpace: "nowrap",
       },
-      selectedSummary: { fontSize: 11, color: "#64748b" },
+      selectedSummary: { fontSize: 11, color: "var(--dsw-alias-label-secondary)" },
       clearBtn: {
-        border: "1px solid #dbe3ec", background: "transparent",
-        color: "#64748b", cursor: "pointer", fontSize: 11,
+        border: "1px solid var(--dsw-alias-border-l2)", background: "transparent",
+        color: "var(--dsw-alias-label-secondary)", cursor: "pointer", fontSize: 11,
         padding: "3px 9px", borderRadius: 999, whiteSpace: "nowrap",
       },
       previewModal: {
         position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
-        background: "#fff", borderRadius: 12,
+        background: "var(--dsw-alias-bg-layer-1)", borderRadius: 12,
         width: "min(860px, 90vw)", height: "min(640px, 82vh)",
         display: "flex", flexDirection: "column", overflow: "hidden",
         zIndex: 99999, boxShadow: "0 24px 60px rgba(15, 23, 42, 0.3)",
       },
       previewBackdrop: { position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.5)", zIndex: 99998 },
       previewHeader: {
-        padding: "10px 14px", borderBottom: "1px solid #e2e8f0",
+        padding: "10px 14px", borderBottom: "1px solid var(--dsw-alias-border-l2)",
         display: "flex", alignItems: "center", justifyContent: "space-between",
         fontWeight: 600, fontSize: 13,
       },
       previewClose: {
-        border: "1px solid #cbd5e1", background: "transparent",
+        border: "1px solid var(--dsw-alias-border-l2)", background: "transparent",
         padding: "4px 10px", borderRadius: 6, fontSize: 12, cursor: "pointer",
       },
       previewBody: { flex: 1, position: "relative", display: "flex", flexDirection: "column" },
       previewOverlay: {
-        position: "absolute", inset: 0, background: "#fff",
+        position: "absolute", inset: 0, background: "var(--dsw-alias-bg-layer-1)",
         display: "flex", flexDirection: "column", gap: 12,
         alignItems: "center", justifyContent: "center",
-        color: "#94a3b8", fontSize: 12, padding: "0 32px", textAlign: "center",
+        color: "var(--dsw-alias-label-tertiary)", fontSize: 12, padding: "0 32px", textAlign: "center",
       },
-      previewHint: { color: "#b45309", fontSize: 11, lineHeight: 1.5, maxWidth: 420 },
+      previewHint: { color: "var(--dsw-alias-state-warn-primary)", fontSize: 11, lineHeight: 1.5, maxWidth: 420 },
       previewSkel: { width: "72%", height: 12, borderRadius: 6, background: SKEL_BG },
       iframe: { flex: 1, border: "none", width: "100%" },
     };
@@ -1427,7 +1513,7 @@ window.__ModuleLoader__.load({
           e("div", { style: S.header },
             e("div", { style: S.headLeft },
               e("span", { style: S.hint }, hintText || ""),
-              !inRecommend && !dynLoading && dynTemplates.length > 0 && e("span", { style: { color: "#0284c7", fontSize: 11 } },
+              !inRecommend && !dynLoading && dynTemplates.length > 0 && e("span", { style: { color: "var(--dsw-static-blue-500, #0284c7)", fontSize: 11 } },
                 "+" + dynTemplates.length + " 動態"
               ),
             ),
@@ -1458,7 +1544,7 @@ window.__ModuleLoader__.load({
                 }),
               )
             : emptyText
-            ? e("div", { key: "wall-empty", className: "st-in", style: { fontSize: 11, color: "#94a3b8", textAlign: "center", padding: "8px 0" } }, emptyText)
+            ? e("div", { key: "wall-empty", className: "st-in", style: { fontSize: 11, color: "var(--dsw-alias-label-tertiary)", textAlign: "center", padding: "8px 0" } }, emptyText)
             : e("div", {
                     key: "wall-ok",
                     className: "st-in",
