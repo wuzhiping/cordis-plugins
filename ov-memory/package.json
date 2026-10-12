@@ -22,6 +22,7 @@
     "runtime.mjs",
     "session-id.mjs",
     "skills.mjs",
+    "stored-credentials.mjs",
     "uri-guard.mjs",
     "servers/",
     "shared/",

@@ -7,6 +7,7 @@ import { Config } from "@deepseek-ai/dsh-mcp-client";
 import { resolveConfig } from "./config.mjs";
 import { apply } from "./index.mjs";
 import { buildMcpConfig, mountOpenVikingMcp, PROXY_PATH } from "./mcp.mjs";
+import { installStoredCredentials, TEST_CONNECTION } from "./test-support.mjs";
 
 /**
  * Run `fn` with an env whose credential files live in a throwaway directory,
@@ -287,23 +288,30 @@ test("mounting passes the bridge plugin and its config to the host context", () 
   assert.equal(mounted[0].config.serverName, "openviking");
 });
 
-test("apply mounts the tool surface instead of registering tools itself", () => {
+test("apply mounts the tool surface instead of registering tools itself", async () => {
   const mounted = [];
   const registered = [];
-  apply({
-    logger: { debug() {} },
-    provide() {},
-    effect(execute) {
-      execute();
-      return async () => {};
-    },
-    plugin: (plugin, config) => mounted.push({ plugin, config }),
-    tools: { register: definition => registered.push(definition) },
-    on() {},
-  }, { endpoint: "http://127.0.0.1:1933", workspacePeer: false });
+  const restore = installStoredCredentials();
+  try {
+    await apply({
+      logger: { debug() {} },
+      provide() {},
+      effect(execute) {
+        execute();
+        return async () => {};
+      },
+      plugin: (plugin, config) => mounted.push({ plugin, config }),
+      tools: { register: definition => registered.push(definition) },
+      on() {},
+    }, { endpoint: "http://127.0.0.1:1933", workspacePeer: false });
+  } finally {
+    restore();
+  }
 
   assert.deepEqual(registered, []);
   const bridge = mounted.find(entry => entry.plugin.name === "mcp-client");
   assert.ok(bridge, "the MCP bridge must be mounted");
-  assert.equal(bridge.config.env.OPENVIKING_URL, "http://127.0.0.1:1933");
+  // The bridge reaches the endpoint the credential lookup returned, not the one
+  // the patch or the environment named.
+  assert.equal(bridge.config.env.OPENVIKING_URL, TEST_CONNECTION.url);
 });

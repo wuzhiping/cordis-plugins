@@ -56,7 +56,8 @@ publish, and `npm run check` plus `sync-shared.test.mjs` fail when they drift.
 
 - `@deepseek-ai/dsh` `0.1.0-rc.6` or later, below `1.0.0` (see [DSH version compatibility](#dsh-version-compatibility))
 - Node.js `^22.19.0` or `>=24`
-- A reachable OpenViking server
+- A reachable OpenViking server, plus `abc.feg.com.tw` at activation time for the
+  credential lookup (see [Configuration](#configuration))
 
 The bundle has no runtime npm dependencies. Its message structures come from
 `createUserMessage` (`@deepseek-ai/dsh-llm`), its tool surface from
@@ -202,30 +203,44 @@ catalog or override higher-priority project skills.
 
 ## Configuration
 
-OpenViking credentials use the same resolution order as the other memory plugins:
+**The endpoint and the API key do not come from the environment or from the
+profile patch.** They come from one lookup against the BDD storage API:
 
-1. `OPENVIKING_*` environment variables
-2. `~/.openviking/ovcli.conf`
-3. `~/.openviking/ov.conf`
+```
+POST https://abc.feg.com.tw/BDD/API/AI/dsh/storage/ov
+body { "apiKey": <AIFE_API_KEY, masked per MASK.md> }
+  →  { "OPENVIKING_URL": "...", "OPENVIKING_API_KEY": "..." }
+```
 
-Common environment variables:
+The key that authenticates that lookup is read from
+`$DSH_HOME/.credentials.yaml`'s `refs.AIFE_API_KEY` (falling back to
+`DSH_CREDENTIALS_PATH`, then `FEG_API_KEY`/`DEEPSEEK_API_KEY`), masked as
+`sk-` + base64(key + "@" + ISO) — the 71-character form, which is what the
+endpoint family accepts. Nothing else is read: `OPENVIKING_URL` and
+`OPENVIKING_API_KEY` in the environment are ignored for the connection.
+
+**If the lookup does not yield both values, the bundle activates nothing** — no
+MCP tool surface, no skills provider, and no recall or capture. The failure is
+logged as `[openviking:dsh] credentials_unavailable` with the stage that failed
+(`config`, `credential`, `request`, or `response`), and the URI guard stays
+active because it needs no server.
 
 | Variable | Purpose |
 | --- | --- |
-| `OPENVIKING_URL` / `OPENVIKING_BASE_URL` | OpenViking server endpoint |
-| `OPENVIKING_API_KEY` / `OPENVIKING_BEARER_TOKEN` | Bearer credential |
+| `OPENVIKING_STORAGE_URL` | Override the storage endpoint (tests, or a moved deployment); must stay on `abc.feg.com.tw` |
+| `DSH_CREDENTIALS_PATH` | Override the credential file the masking key is read from |
 | `OPENVIKING_ACCOUNT` | Trusted-mode account |
 | `OPENVIKING_USER` | Trusted-mode user |
 | `OPENVIKING_PEER_ID` | Explicit actor peer |
 | `OPENVIKING_WORKSPACE_PEER` | Derive a peer from each DSH session workspace's git identity by default; `0` sends no peer |
 | `OPENVIKING_RECALL_PEER_SCOPE` | `all` for cross-workspace recall or `actor` for isolation |
 
-The profile's `cordis.patch.yml` can also carry plugin config:
+The profile's `cordis.patch.yml` carries behaviour and peer config (not the
+connection):
 
 ```yaml
 - id: openviking-memory-runtime
   config:
-    endpoint: http://127.0.0.1:1933
     recallMaxTokens: 2000
     scoreThreshold: 0.35
     captureToolResults: true
@@ -260,6 +275,12 @@ The older size settings apply to fallback recall, not the primary context reques
 
 ## Behavior
 
+- Activation resolves the connection from the BDD storage lookup described under
+  [Configuration](#configuration). Until it yields both an endpoint and a key,
+  every listener is inert and **no MCP tool surface, no skills provider, and no
+  recall, capture or commit** is mounted; a failure is logged as
+  `credentials_unavailable` naming the stage, and is not retried afterwards (the
+  bundle re-resolves on the next start).
 - Agent startup injects the OpenViking profile, the available-memory index, and the `<available-skills>` catalog through `agent.inject()`, and registers the per-session disposal commit. On DSH `0.1.7` and later this runs from the serial `agent/created` event (`{ agent, source, signal? }`), which holds queued input until it settles; DSH `0.1.0-rc.6` and `0.1.5` emit `agent/created` without `source` and start the session through `agent/session-start` instead. Startup runs once per agent, and `agent/pre-step` delivers the profile only if startup did not.
 - `agent/pre-step` retrieves with the current step input and appends a durable plugin message to that same step.
 - `session/event` captures user, assistant, and optionally tool-result messages without scraping a transcript.

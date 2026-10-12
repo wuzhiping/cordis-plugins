@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { apply } from "./index.mjs";
+import { installStoredCredentials } from "./test-support.mjs";
 
 test("session filtering skips subagents without changing main-session recall", async () => {
   const handlers = new Map();
@@ -20,11 +21,6 @@ test("session filtering skips subagents without changing main-session recall", a
       handlers.set(name, handler);
     },
   };
-  apply(ctx, {
-    endpoint: "http://127.0.0.1:1933",
-    workspacePeer: false,
-    skipSubagentSessions: true,
-  });
 
   const agent = {
     session: { id: "dsh-final-batch", header: { cwd: "/workspace" } },
@@ -35,10 +31,6 @@ test("session filtering skips subagents without changing main-session recall", a
       },
     },
   };
-  const created = handlers.get("agent/created");
-  assert.equal(typeof created, "function");
-
-  const preStep = handlers.get("agent/pre-step");
   const initial = [message("initial input")];
   const downstream = [message("downstream replacement")];
   const seen = [];
@@ -55,7 +47,22 @@ test("session filtering skips subagents without changing main-session recall", a
     return response({}, 404);
   };
 
+  // Stub both halves before `apply`: the storage lookup decides whether anything
+  // is mounted at all, so it has to be answerable from the first moment.
+  const restoreCredentials = installStoredCredentials();
   try {
+    await apply(ctx, {
+      endpoint: "http://127.0.0.1:1933",
+      workspacePeer: false,
+      skipSubagentSessions: true,
+    });
+
+    // Registered synchronously by `apply`, so both exist well before the lookup
+    // answers; the listeners themselves are what gate on `active`.
+    const created = handlers.get("agent/created");
+    assert.equal(typeof created, "function");
+    const preStep = handlers.get("agent/pre-step");
+
     await preStep({
       agent,
       messages: initial,
@@ -95,13 +102,14 @@ test("session filtering skips subagents without changing main-session recall", a
     assert.deepEqual(childDecision.messages, childMessages);
     assert.equal(memoryRuntime.states.has(child.session.id), false);
   } finally {
+    restoreCredentials();
     globalThis.fetch = originalFetch;
   }
 
   assert.deepEqual(seen, ["downstream replacement"]);
 });
 
-function mountPlugin() {
+async function mountPlugin() {
   const handlers = new Map();
   let runtime;
   const ctx = {
@@ -119,7 +127,12 @@ function mountPlugin() {
       handlers.set(name, handler);
     },
   };
-  apply(ctx, { endpoint: "http://127.0.0.1:1933", workspacePeer: false });
+  const restore = installStoredCredentials();
+  try {
+    await apply(ctx, { endpoint: "http://127.0.0.1:1933", workspacePeer: false });
+  } finally {
+    restore();
+  }
   runtime.stopDrainer();
   // Replace only the network-bound part; initialize/profileMessage stay real so
   // the single-flight and delivered-once guarantees are the plugin's own.
@@ -163,7 +176,7 @@ async function withQuietFetch(run) {
 }
 
 test("agent/created (dsh 0.1.7+) runs startup once and pre-step does not re-inject the profile", async () => {
-  const { handlers, calls } = mountPlugin();
+  const { handlers, calls } = await mountPlugin();
   const agent = startupAgent();
   await withQuietFetch(async () => {
     const result = await handlers.get("agent/created")({
@@ -198,7 +211,7 @@ test("agent/created (dsh 0.1.7+) runs startup once and pre-step does not re-inje
 });
 
 test("dsh 0.1.x: source-less agent/created defers startup to agent/session-start", async () => {
-  const { handlers, calls } = mountPlugin();
+  const { handlers, calls } = await mountPlugin();
   const agent = startupAgent("dsh-legacy");
   await withQuietFetch(async () => {
     assert.equal(await handlers.get("agent/created")({ agent }), undefined);
@@ -216,7 +229,7 @@ test("dsh 0.1.x: source-less agent/created defers startup to agent/session-start
 });
 
 test("agent/created returns on abort and never rejects on startup failure", async () => {
-  const { handlers, runtime } = mountPlugin();
+  const { handlers, runtime } = await mountPlugin();
   let release;
   runtime.initializeState = () => new Promise(resolve => {
     release = resolve;
@@ -242,6 +255,69 @@ test("agent/created returns on abort and never rejects on startup failure", asyn
     undefined,
   );
   assert.deepEqual(failing.injected, []);
+});
+
+// The whole point of routing the connection through the storage lookup: a
+// machine that cannot resolve one gets no tool surface, no skills, and no
+// session state — not a bundle that quietly reaches some other server.
+test("a failed credential lookup activates nothing", async () => {
+  const handlers = new Map();
+  let runtime;
+  const mounted = [];
+  const registered = [];
+  const ctx = {
+    logger: { debug() {} },
+    provide(name, value) {
+      if (name === "openvikingMemory") runtime = value;
+    },
+    effect(execute) {
+      execute();
+      return async () => {};
+    },
+    plugin: (plugin, config) => mounted.push({ name: plugin.name, config }),
+    tools: { register: definition => registered.push(definition) },
+    on(name, handler) {
+      handlers.set(name, handler);
+    },
+  };
+
+  const calls = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async url => {
+    calls.push(String(url));
+    return response({});
+  };
+  // A 200 with no connection in it: the endpoint answered, this key has nothing
+  // stored. Measured against the live endpoint, this is exactly what a wrong or
+  // unknown `AIFE_API_KEY` produces (`stage: "response"`, `status: 200`), so this
+  // test models "someone pasted the wrong key", not just a hypothetical.
+  const restoreCredentials = installStoredCredentials({ body: {} });
+
+  try {
+    assert.equal(await apply(ctx, { endpoint: "http://127.0.0.1:1933", workspacePeer: false }), false);
+
+    assert.deepEqual(mounted, [], "no MCP bridge and no skills provider");
+    assert.deepEqual(registered, []);
+    assert.deepEqual(calls, [], "nothing reached the OpenViking server");
+
+    // Listeners stay registered but inert, including the serial startup path.
+    const agent = startupAgent("dsh-no-credentials");
+    assert.equal(
+      await handlers.get("agent/created")({ agent, source: "startup", signal: new AbortController().signal }),
+      undefined,
+    );
+    assert.deepEqual(agent.injected, []);
+    assert.deepEqual(agent.effects, []);
+    handlers.get("session/event")(
+      { id: "no-credentials", header: { cwd: "/workspace" } },
+      { type: "user/message", data: message("Remember this despite no connection.") },
+    );
+    assert.equal(runtime.states.has("no-credentials"), false);
+    assert.deepEqual(calls, [], "a captured message must not reach any server");
+  } finally {
+    restoreCredentials();
+    globalThis.fetch = originalFetch;
+  }
 });
 
 function message(text) {

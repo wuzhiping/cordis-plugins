@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { apply } from "./index.mjs";
+import { installStoredCredentials } from "./test-support.mjs";
 
 function setup(t) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "dsh-session-workspace-")));
@@ -33,17 +34,25 @@ function setup(t) {
     process.env = originalEnv;
     rmSync(root, { recursive: true, force: true });
   });
-  const start = (input = {}) => {
+  const start = async (input = {}) => {
     let runtime;
-    apply({
-      logger: { debug() {} },
-      provide(name, value) {
-        if (name === "openvikingMemory") runtime = value;
-      },
-      effect(execute) { execute(); },
-      on() {},
-      plugin() {},
-    }, { endpoint: "http://openviking.test", ...input });
+    // Nothing mounts until the credential lookup answers. The stub wraps whatever
+    // fetch the test installed and is removed again once activation has happened,
+    // so the test's own OpenViking stubs stay in charge afterwards.
+    const restore = installStoredCredentials();
+    try {
+      await apply({
+        logger: { debug() {} },
+        provide(name, value) {
+          if (name === "openvikingMemory") runtime = value;
+        },
+        effect(execute) { execute(); },
+        on() {},
+        plugin() {},
+      }, { endpoint: "http://openviking.test", ...input });
+    } finally {
+      restore();
+    }
     runtimes.push(runtime);
     return runtime;
   };
@@ -51,10 +60,10 @@ function setup(t) {
   return { root, a, b, writeConfig, start, session };
 }
 
-test("sessions load their own workspace peer and keep it for their lifetime", t => {
+test("sessions load their own workspace peer and keep it for their lifetime", async t => {
   const { a, b, writeConfig, start, session } = setup(t);
   writeConfig(b, { peer: { id: "project-b", source: "b-{dir}" } });
-  const runtime = start();
+  const runtime = await start();
   assert.equal(runtime.config.peerId, "project-a");
   const stateA = runtime.stateFor(session(a));
   const stateB = runtime.stateFor(session(b));
@@ -70,10 +79,10 @@ test("sessions load their own workspace peer and keep it for their lifetime", t 
   assert.equal(runtime.stateFor({ id: "no-cwd" }).config.peerId, "project-a");
 });
 
-test("a session never inherits the launch workspace's peer id or source", t => {
+test("a session never inherits the launch workspace's peer id or source", async t => {
   const { b, writeConfig, start, session } = setup(t);
   writeConfig(b, {});
-  const runtime = start();
+  const runtime = await start();
   // A non-git workspace with no peer settings has no project peer.
   assert.equal(runtime.stateFor(session(b, "plain")).config.peerId, "");
   writeConfig(b, { peer: { source: ["{git_remote}", "b-{dir}"] } });
@@ -85,31 +94,31 @@ test("a session never inherits the launch workspace's peer id or source", t => {
   assert.equal(runtime.stateFor(session(b, "local")).config.peerId, "local-b");
 });
 
-test("session peer resolution preserves host, environment and pinned credential precedence", t => {
+test("session peer resolution preserves host, environment and pinned credential precedence", async t => {
   const { root, b, writeConfig, start, session } = setup(t);
   writeConfig(b, { peer: { id: "project-b" } });
   process.env.OPENVIKING_PEER_ID = "env-peer";
-  assert.equal(start().stateFor(session(b)).config.peerId, "env-peer");
-  assert.equal(start({ peerId: "host-peer" }).stateFor(session(b)).config.peerId, "host-peer");
+  assert.equal((await start()).stateFor(session(b)).config.peerId, "env-peer");
+  assert.equal((await start({ peerId: "host-peer" })).stateFor(session(b)).config.peerId, "host-peer");
 
   // Pinning credentials to ovcli.conf intentionally excludes the env peer.
   process.env.OPENVIKING_CREDENTIAL_SOURCE = "ovcli";
   writeFileSync(join(root, "ovcli.conf"), JSON.stringify({ actor_peer_id: "account-peer" }));
-  assert.equal(start().stateFor(session(b)).config.peerId, "account-peer");
-  assert.equal(start({ peerId: "host-peer" }).stateFor(session(b)).config.peerId, "host-peer");
+  assert.equal((await start()).stateFor(session(b)).config.peerId, "account-peer");
+  assert.equal((await start({ peerId: "host-peer" })).stateFor(session(b)).config.peerId, "host-peer");
   delete process.env.OPENVIKING_PEER_ID;
-  assert.equal(start().stateFor(session(b)).config.peerId, "project-b");
+  assert.equal((await start()).stateFor(session(b)).config.peerId, "project-b");
   writeConfig(b, {});
-  assert.equal(start().stateFor(session(b)).config.peerId, "account-peer");
+  assert.equal((await start()).stateFor(session(b)).config.peerId, "account-peer");
 
   delete process.env.OPENVIKING_CREDENTIAL_SOURCE;
   writeFileSync(join(root, "ovcli.conf"), JSON.stringify({ plugin: { dsh: { peerSource: "global-{dir}" } } }));
-  assert.equal(start().stateFor(session(b)).config.peerId, "global-b");
+  assert.equal((await start()).stateFor(session(b)).config.peerId, "global-b");
   writeConfig(b, { peer: { source: "workspace-{dir}" } });
   process.env.OPENVIKING_PEER_SOURCE = "env-{dir}";
-  assert.equal(start().stateFor(session(b)).config.peerId, "env-b");
+  assert.equal((await start()).stateFor(session(b)).config.peerId, "env-b");
   process.env.OPENVIKING_WORKSPACE_PEER = "0";
-  assert.equal(start().stateFor(session(b)).config.peerId, "");
+  assert.equal((await start()).stateFor(session(b)).config.peerId, "");
 });
 
 test("capture, recall and commit send each session's peer on the wire", async t => {
@@ -128,7 +137,7 @@ test("capture, recall and commit send each session's peer on the wire", async t 
       headers: { "Content-Type": "application/json" },
     });
   });
-  const runtime = start();
+  const runtime = await start();
   for (const [cwd, id, peer] of [[a, "a", "project-a"], [b, "b", "project-b"]]) {
     const current = session(cwd, id);
     const message = { role: "user", content: [{ type: "text", text: `Remember the deployment for project ${id}.` }], source: { kind: "user" } };

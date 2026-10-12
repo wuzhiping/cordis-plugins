@@ -6,6 +6,7 @@ import chokidar from "chokidar";
 import { Config, FileSystemSkillProvider } from "@deepseek-ai/dsh-skill-filesystem";
 import { apply } from "./index.mjs";
 import { buildSkillsConfig, mountOpenVikingSkills, SKILLS_DIR } from "./skills.mjs";
+import { installStoredCredentials } from "./test-support.mjs";
 
 test("the provider config validates against the pinned provider's own schema", () => {
   const parsed = Config(buildSkillsConfig());
@@ -69,16 +70,21 @@ test("mounting passes the provider plugin and its config to the host context", (
   assert.equal(mounted[0].config.providerName, "openviking");
 });
 
-test("apply mounts both the tool surface and the skill", () => {
+test("apply mounts the tool surface and the skill once the connection resolves", async () => {
   const mounted = [];
-  apply({
-    logger: { debug() {} },
-    provide() {},
-    effect(execute) { execute(); return async () => {}; },
-    plugin: (plugin, config) => mounted.push({ name: plugin.name, config }),
-    tools: { register() {} },
-    on() {},
-  }, { endpoint: "http://127.0.0.1:1933", workspacePeer: false });
+  const restore = installStoredCredentials();
+  try {
+    await apply({
+      logger: { debug() {} },
+      provide() {},
+      effect(execute) { execute(); return async () => {}; },
+      plugin: (plugin, config) => mounted.push({ name: plugin.name, config }),
+      tools: { register() {} },
+      on() {},
+    }, { endpoint: "http://127.0.0.1:1933", workspacePeer: false });
+  } finally {
+    restore();
+  }
 
   assert.deepEqual(mounted.map(entry => entry.name).sort(), ["mcp-client", "skill-filesystem"]);
 });

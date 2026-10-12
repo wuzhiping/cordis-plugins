@@ -25,9 +25,10 @@
 | 代码从哪来 | upstream `OpenViking/examples/dsh-memory-plugin` 的 **vendored 副本**，只读参考，**永不修改上游** |
 | 改名成什么 | 包名 `ov-memory`（upstream 是 `@openviking/dsh-memory-plugin`） |
 | 共享模块在哪 | 真源 `cordis-plugins/memory-plugin-shared/lib`；`ov-memory/shared/` 是**生成副本**（提交进 git） |
+| 连接从哪来 | **BDD storage 查询**：`POST …/dsh/storage/ov`，用 `refs.AIFE_API_KEY` 遮蔽后换回 `OPENVIKING_URL` + `OPENVIKING_API_KEY`。**不读环境变量**；查不到就 MCP / 技能 / 召回 / 采集**全部不激活**（§4.5） |
 | 改完一定要跑 | `npm run check && npm test`；动了 shared 还要 `node scripts/sync-shared.mjs` |
 | 上游发新版怎么办 | `node scripts/sync-upstream.mjs`（它会重放本地化），然后 review `README.md` |
-| 现在被加载了吗 | **没有**。任何 profile 都还没装它（见 §7 TODO-1） |
+| 现在被加载了吗 | **是**。2026-10-12 以 `link:` 装进 `web` profile 并已激活（见 §5.1 真机验收） |
 | 验证跑在哪个 DSH | 本机 DSH `0.2.0-rc.2`（Node `v24.19.0`），**不是** lockfile 里的 `0.1.0-rc.6` |
 
 ---
@@ -72,6 +73,7 @@ cordis-plugins/ov-memory/shared/          ← 打包/安装用的生成副本（
 | `uri-guard.mjs` | 拦截把 `viking://` 交给本地文件工具；给 bash 附提示 |
 | `skills.mjs` / `skills/` | 独立 `ctx.skills` provider + 3 个内置 skill |
 | `session-id.mjs` | DSH session id → 可移植的 `dsh-<id>` |
+| `stored-credentials.mjs` | **连接的唯一来源**：读 `refs.AIFE_API_KEY` → 遮蔽 → `POST /BDD/API/AI/dsh/storage/ov` → `{url, apiKey}`；永不抛，用 `stage` 区分失败 |
 | `shared/` | **生成物**，由 `scripts/sync-shared.mjs` 写入，**永远不要手改** |
 | `scripts/sync-shared.mjs` | 从真源生成 `shared/`（`--check` 只校验） |
 | `scripts/sync-upstream.mjs` | 从上游 checkout 重新 vendored（`--check` 只报告漂移） |
@@ -92,7 +94,10 @@ cordis-plugins/ov-memory/shared/          ← 打包/安装用的生成副本（
 | `package-lock.json` | 两处 `name` → `ov-memory` | 与 manifest 自洽（仅 2 处，内容其余不动） |
 | `bundle.test.mjs` | 两处断言：包名、patch 行名 | upstream 断言的是它的发布名 |
 | `bundle.test.mjs` `skills.test.mjs` | `\n` → `\r?\n` | 本仓库 `core.autocrlf=true`，工作树是 CRLF，而断言读的是工作树 |
-| `README.md` | 身份说明、Install 段、shared 说明、Upgrading 段 | **唯一不参与自动同步的文件**，见 §4.4 |
+| `package.json` | 外加 `files` 增加 `stored-credentials.mjs` | 连接走 storage 查询后新增的模块 |
+| `index.mjs` | **结构性改动**：连接改为异步解析，全部监听器以 `active` 门控 | 见 §4.5；这是一次 fork，不是改名 |
+| `index.test.mjs` `mcp.test.mjs` `skills.test.mjs` `session-workspace.test.mjs` | `apply()` 现在要 `await`，且必须先 stub storage 查询 | 门控带来的测试接线 |
+| `README.md` | 身份说明、Install 段、shared 说明、Upgrading 段、Configuration 段 | 见 §4.4 |
 
 新增（上游没有）：`.gitignore`、`scripts/*`、`sync-shared.test.mjs`、`shared/`。
 
@@ -145,11 +150,41 @@ node "$probe\ov-memory\scripts\sync-upstream.mjs" --from ...\OpenViking
 git diff --no-index --ignore-cr-at-eol --name-status $probe\ov-memory ...\cordis-plugins\ov-memory
 ```
 
-### 4.4 `README.md` 为什么不自动同步
+### 4.4 哪些文件人工持有（`--check` 里的 "held by hand"）
 
-它的本地改动是散在五处的**散文**（身份段、Install 段、shared 生成说明、Testing、Upgrading）。
-为散文做替换表会在"上游恰好重写周边文本"的那次升级上崩掉。脚本的做法是：
-不动它，并在输出里打印 `review by hand (localized): README.md`。
+`README.md` 的本地改动是散在几处的**散文**，为散文做替换表会在"上游恰好重写周边文本"
+的那次升级上崩掉。连接改走 storage 查询之后，`index.mjs` 与 4 个 apply 层测试文件
+也加入了这一组 —— 那是**结构性 fork**，不是改名或行尾微调，用文本替换重放既不可读，
+也会被上游第一次重排版打烂。
+
+`sync-upstream.mjs` 的 `LOCALIZED` 就是这份清单；`--check` 会逐个打印它们
+（"not compared, held by hand"），**升级时它们的上游版本仍会到达你面前，只是以"人工合并"的形式**。
+
+### 4.5 连接：storage 查询，以及"查不到就什么都不挂"
+
+```
+$DSH_HOME/.credentials.yaml  refs.AIFE_API_KEY           ← 遮蔽用的钥匙（不是连接本身）
+        │  maskKey() = "sk-" + base64(key + "@" + ISO)    ← 71 字符形（实测这个端点族吃它）
+        ▼
+POST https://abc.feg.com.tw/BDD/API/AI/dsh/storage/ov    body {"apiKey": <mask>}
+        ▼
+{ "OPENVIKING_URL": "https://ov.feg.cn", "OPENVIKING_API_KEY": "<64 字符>" }
+        ▼
+config.endpoint / config.baseUrl / config.apiKey          ← 覆盖 patch 与环境里的任何值
+```
+
+不变量（改代码时不要破坏）：
+
+1. **`createOvHttp` 在构造时冻结 base URL**（`const baseUrl = cfg.baseUrl || cfg.endpoint`），
+   所以拿到凭据后**必须重建 client**（`runtime.client = new OpenVikingClient(config)`），
+   改 `config` 字段是没用的。
+2. **注册同步、行为异步**：所有 `ctx.on` / `ctx.provide` / `ctx.effect` 仍在 `apply` 里同步完成，
+   异步的只有 `activate()`；监听器用 `active` 门控。若把注册搬进 promise 的续体，
+   凭据查询在途时到达的事件会被漏掉。
+3. **失败绝不落到别的服务器**：`stage` 只有 `config` / `credential` / `request` / `response` 四种，
+   任何一种失败都只记日志并返回 `false`，不挂 MCP、不挂 skill、不建 session。
+4. **遮蔽值只能发给 `abc.feg.com.tw`**：`requireStorageUrl()` 会拒绝其它 host 与 http。
+   MASK.md 的原则是"遮蔽值在传输中等同于密钥"。
 
 ---
 
@@ -164,6 +199,55 @@ git diff --no-index --ignore-cr-at-eol --name-status $probe\ov-memory ...\cordis
 | `npm pack --dry-run` | **41 files**（含 20 个 `shared/*.mjs`） |
 | `path:` 安装仿真 | 只复制 `ov-memory/`（无姊妹目录）时 `index.mjs` / `servers/mcp-proxy.mjs` / `shared/*` / `runtime.mjs` 全部 import 成功 |
 | 上游仓库 | `git status --porcelain` 为空，HEAD 未变 —— **从未被修改** |
+
+### 5.1 真机验收：`web` profile 以 `link:` 安装（2026-10-12，真实进程）
+
+安装命令（`dsh plugin` 直通 pnpm；随后 `dsh-plugin-manager` 的 `reconcile()` 会自动把
+声明了 `dsh.bundle` 的新依赖追加进 `dsh.profile.bundles`，并对 patch 做可加载校验，失败会回滚）：
+
+```bash
+dsh plugin --profile web add "C:\Users\shawoo\Desktop\feg.cn\cordis-plugins\ov-memory"
+```
+
+落地形态（与安装前备份逐项 diff，**只多了该有的东西**）：
+
+| 位置 | 结果 |
+|---|---|
+| `profiles/web/package.json` → `dependencies` | `"ov-memory": "link:C:/Users/shawoo/Desktop/feg.cn/cordis-plugins/ov-memory"` |
+| `profiles/web/package.json` → `dsh.profile.bundles` | 末尾追加 `"ov-memory"` |
+| `profiles/web/pnpm-lock.yaml` | +3 行（该 link 依赖的 specifier / version） |
+| `profiles/web/node_modules/ov-memory` | `SymbolicLink` → checkout |
+
+激活证据。**宿主进程 11:45:34 启动，安装在 16:30:34** —— 也就是说 DSH 在运行中
+**热加载**了新 bundle，**本次没有重启**：
+
+| 验收项 | 证据 |
+|---|---|
+| 装载行进入组合 | `cordis_inspect` host / Config：`include:openviking-memory-runtime`，`name: ov-memory` |
+| 启动 profile 注入 | 会话上下文出现 `<openviking-context source="profile">`（含 `<available-memories>` 与 `<available-skills>`）。本会话的 agent 早于安装创建，所以这条走的是 **`agent/pre-step` 兜底投递**，不是 `agent/created` |
+| 技能提供者 | 技能目录出现 `openviking-memory` / `openviking-skills` / `ov-experience-memory`；注入里另有服务端 `<available-skills>`（`viking://agent/skills/sirchmunk`） |
+| MCP 工具面（端到端） | `mcp__openviking__health` → `healthy, storage: VikingFS`；`mcp__openviking__find` 返回真实记忆。链路：DSH → dsh-mcp-client → `servers/mcp-proxy.mjs` → 服务端 |
+| 服务端与会话身份 | 服务端 `GET /health` → `version 0.5.0, auth_mode api_key`；`viking://user/pocoyo/sessions/` 按 mtime 倒序第一条 = 本会话 `dsh-session-a205040e-…`（`deriveDshSessionId` 的命名） |
+| **采集 capture** | 该会话 `messages.jsonl` 里出现了**本次对话自己的 pwsh 工具结果**（`role:"user"`、`parts[0].type:"tool"`、`tool_name:"pwsh"`、`tool_status:"completed"`），以及**正在执行中**的 `mcp__openviking__grep`（`tool_status:"running"`）—— 采写是准实时的 |
+| 召回 recall | **未直接观察到**（本轮注入只有 profile 块，没有 recall 块）。见 §7 TODO-1 剩余项 |
+
+服务端是**远端** `https://ov.feg.cn`，不是本机服务。（该值当时由环境变量提供；
+改走 storage 查询后由 §4.5 的端点给出 —— 同一台服务器。）
+
+### 5.2 连接改造（storage 查询 + 失败即不激活）的验证，2026-10-12
+
+| 验证 | 结果 |
+|---|---|
+| 端点契约实测（`POST /BDD/API/AI/dsh/storage/ov`） | mask71 → `200 {"OPENVIKING_URL":…, "OPENVIKING_API_KEY":…}`；mask67 → `200 {}`；无 apiKey → `500 apikey无效` |
+| 模块真机跑通 | `fetchStoredConnection()` → `{ok:true, url:"https://ov.feg.cn", keyLen:64, ref:"AIFE_API_KEY"}`，凭据取自 `$DSH_HOME\.credentials.yaml` |
+| **失败路径真机跑通（假 key）** | 用临时凭据文件放一把语法合法但服务器不认识的 `AIFE_API_KEY`，对**真端点**跑：`lookup → {ok:false, stage:"response", status:200, "carries no OPENVIKING_URL and OPENVIKING_API_KEY (received: no fields)"}`；再走**真 `apply()`** → `activated:false`、`mounted: []`（无 MCP、无 skill）、`registered: 0`，日志 `credentials_unavailable {"stage":"response","status":200,…}` |
+| 契约/失败面测试 | `stored-credentials.test.mjs`：refs 解析、遮蔽公式（71 字符）、四个 stage（config/credential/request/response）、域名防线、"200 {}" 与 "500" 的区分 |
+| 门控测试 | `index.test.mjs` 新增 **"a failed credential lookup activates nothing"**：断言没有挂 MCP、没有挂 skill、`agent/created` 不注入、`session/event` 不建 state、且**一次网络请求都没发出** |
+| 离线门禁 | `npm run check` **83 modules**；`npm test` **109 项 / 108 通过 / 0 失败 / 1 skip** |
+| 上游漂移 | `sync-upstream --check` → **in sync**（人工持有清单见 §4.4） |
+
+⚠️ **本次改动尚未在运行中的 DSH 生效**：代码变更要重启才加载（§6.7）。当前运行进程仍是
+旧的"从环境变量取连接"版本 —— 所以 §5.1 里那套结论描述的仍是旧路径，重启后要按新路径重验。
 
 **验证环境必须写清楚**：Node `v24.19.0`、本机 DSH `0.2.0-rc.2`、
 npm registry **不可达**（所以本机跑测试靠 §6.4 的 junction scaffold，
@@ -231,13 +315,79 @@ registry 不可达，所以本机跑测试用的 `ov-memory/node_modules/` 是 *
   `mcp__openviking__*` 工具名，是面向模型的契约。
 - **`shared/` 是生成物**：改了会在下次 `sync` 被覆盖，要改就改真源。
 
+### 6.6 从子进程 shell 看不到插件的凭据（DSH 会洗掉 KEY/SECRET/TOKEN）
+
+**症状**：`curl https://ov.feg.cn/api/v1/sessions/<id>` 得到
+`UNAUTHENTICATED: Missing API Key when resolving identity`；`env` 里也只看到
+`OPENVIKING_URL`，很容易误判「插件根本没配 key」。
+
+**根因**：DSH 会从子进程继承的环境里**洗掉匹配 `/KEY|PASSWORD|SECRET|TOKEN/i` 的名字**
+（README 有写）。宿主进程有 key，我的 shell 没有；`OPENVIKING_URL` 不在这个形状里，所以活了下来。
+
+**教训**：**不能用「我的 shell 有没有这个变量」判断插件拿到了什么。**
+要验证凭据与身份，走插件自己的路径（MCP 工具调用）或看服务端结果，不要用 curl 复现 ——
+curl 必然缺 key，得到的 401 与插件的真实状态无关。
+
+**附带结论**：`link:` 安装在 checkout 里需要的 dsh peers（§6.4 的 junction scaffold）
+在同账户其它机器的经验里也出现过同类问题（`openviking-ui` 的 `@deepseek-ai/schemastery`
+解析失败，同样靠在 bundle 目录里建 `node_modules` 软链解决）。这是这套环境的**已知模式**，
+不是本 bundle 特有的怪癖。
+
+### 6.7 「bundle 新增」会热加载，「代码变更」不会
+
+**观察到**：`dsh plugin add` 之后，运行中的进程**无需重启**就装载了这个 bundle（§5.1）。
+但这不等于「改代码也会热更」：ESM 按 URL 缓存，`apply()` 在组合时执行一次。
+
+- **新增 / 移除 bundle** → 可能立即生效（本次实测如此）；
+- **改 `index.mjs` / `runtime.mjs` 等代码** → 必须重启 DSH 才会加载新代码。
+
+**代价**：重启会中断当前会话。所以改代码的正确姿势是：先在 checkout 里跑
+`npm run check && npm test`（离线可跑，见 §6.4），把「只有重启才能看的东西」攒成一批，
+再一次性重启验证。
+
+### 6.8 ★ 遮蔽形状：MASK.md 说 67，实测这个端点族要 71
+
+**症状**：照 MASK.md 的"API contract"实现（inner 去掉 `sk-`，得到 67 字符），
+端点回 `200 {}` —— 看起来像成功，实际什么都没拿到，插件会静默"连不上"。
+
+**实测**（2026-10-12，同一把 `AIFE_API_KEY`）：
+
+| 形状 | 长度 | 结果 |
+|---|---|---|
+| `sk-` + base64(**key** + `@ISO`) | 71 | `200` + 真实数据（`/storage/ov` 与对照 `/storage/ntfy` 都是） |
+| `sk-` + base64(**key.slice(3)** + `@ISO`) | 67 | `200 {}`（格式对、查不到） |
+| 空 / 缺字段 | — | `500 apikey无效` |
+
+**结论**：**这个端点族吃 71 字符形**。MASK.md 的 67 字符说法至少对 `/storage/*` 不成立；
+`stored-credentials.mjs` 的注释里已写明这个矛盾与测量。改形状之前先重量一次。
+
+**顺带两个坑**：
+
+- **`/storage/<name>` 映射到 `/opt/bpm/BDD/API/AI/dsh/storage/<name>.nools`**，所以
+  "路由不存在"会表现为 `500 … openviking.nools ENOENT`，而"规则写错"会表现为
+  `500 Invalid rule definition`（2026-10-12 修好前 `/storage/ov` 就是这个）。两者都不是
+  插件的问题，但错误文本能一眼区分。
+- **这台机器有两份凭据文件**：`C:\Users\shawoo\.dsh\.credentials.yaml`（只有 `FEG_API_KEY`）
+  与 `$DSH_HOME\.credentials.yaml`（有 `AIFE_API_KEY`）。读错那份的后果正是 `200 {}` ——
+  与"形状错"的症状一模一样，所以 `credentialsFilePath()` 必须 `DSH_HOME` 优先，
+  且失败信息必须**打出文件名**。
+
+### 6.9 凭据查询失败 ≠ 插件坏了
+
+需求是"查不到就不要激活 MCP 与 SKILLS"，所以失败路径**必须**是安静的、可诊断的、
+且不产生副作用的：只记一条 `credentials_unavailable`（含 `stage`），不挂任何东西，
+不建 session，不写 pending queue。**不要在失败时回退到环境变量** ——
+那就等于绕过了"连接只来自 storage"这条规则，而且会把"没配置"伪装成"能用"。
+
 ---
 
 ## 7. 待办（下一步改造候选）
 
 | # | 事项 | 状态 / 备注 |
 |---|---|---|
-| 1 | **真机验收**：把 `ov-memory` 装进 `web` profile，重启 DSH，验证 profile 注入 / 召回 / 采集 / 提交 / MCP 工具真的起来 | 未做。**重启 DSH 会终止当前会话**，必须使用者点头；可先只装不重启 |
+| 1 | **真机验收 · 安装与激活**：装进 `web` profile 并确认真的起来 | **已完成 2026-10-12**（§5.1）：`link:` 安装、运行中热加载（未重启）、profile 注入 / 技能提供者 / MCP 工具面 / **采集** 全部实测通过 |
+| 1b | **真机验收 · 剩余项**：① 直接观察到 recall 注入块（`source="recall"`）② 确认 commit 真的触发（`turn/end` 达阈值或会话 dispose）③ 重启 DSH 后的稳定性 | 未做。③ 会中断当前会话，**先问** |
+| 1c | **让"连接改走 storage 查询"生效**：重启 DSH，确认日志出现 `credentials_resolved`、MCP 与技能仍挂载、且断网/清空 `refs.AIFE_API_KEY` 时变成 `credentials_unavailable` 且**什么都不挂** | 未做。本次是代码变更 → 必须重启（§6.7）；现在跑的还是旧的环境变量版本 |
 | 2 | **清理 `memory-plugin-shared` 的上游冗余**（`sync.mjs` / `install.sh` / `bootstrap.sh` / ~40 个跑不了的测试），只留 `lib/` + `MANIFEST` | 未做。需确认（会删文件）。留着也不影响运行，只是噪音 + §6.1 的误跑风险 |
 | 3 | 把 §6.4 的 junction scaffold 换成正式 `npm ci`（或 pnpm），并把 `link:` 安装的 node_modules 依赖写进 README | 阻塞在 registry 不可达 |
 | 4 | 把 package 版本号策略定下来：本地化后是继续跟 upstream 0.5.23，还是自增（如 `0.5.23+local.1`） | 未决。`check:version` 要求 `PLUGIN_VERSION` == `package.json` 版本，改了要同步 `config.mjs` |
@@ -261,6 +411,15 @@ registry 不可达，所以本机跑测试用的 `ov-memory/node_modules/` 是 *
 | 2026-10-12 | 文档：`cordis-plugins/README.md` 登记 bundle 行；`ov-memory/README.md` 改 Install/身份并加 Upgrading 段 | —— |
 | 2026-10-12 | 新增本文件 `HANDOFF.md`，并确立「每次改进必须同步本文件」的规矩 | —— |
 | 2026-10-12 | 修 `sync-upstream.mjs`：把 `HANDOFF.md` 列入 `LOCAL_ONLY`（新增的本地文件被 `--check` 误报成上游漂移） | `--check` 恢复 `in sync`；98 项测试仍全绿 |
+| 2026-10-12 | **`link:` 安装进 `web` profile**：`dsh plugin --profile web add <checkout>`；`reconcile()` 自动追加 `dsh.profile.bundles` | 落地 diff 仅「1 条依赖 + 1 个 bundles 项」，lock +3 行（§5.1） |
+| 2026-10-12 | **真机验收通过**（无代码改动）：运行中热加载后，profile 注入 / 技能提供者 / MCP 工具面 / 采集全部实测通过；确认 DSH 会在 `plugin add` 后热加载 bundle | §5.1，含 `cordis_inspect` 组合证据与会话 `messages.jsonl` 的采集证据 |
+| 2026-10-12 | HANDOFF 增补 §5.1 真机验收、§6.6 凭据洗掉的坑；§7 TODO-1 拆为「已完成」与「剩余项」 | —— |
+| 2026-10-12 | **连接改由 BDD storage 查询提供**：新增 `stored-credentials.mjs`（读 `refs.AIFE_API_KEY` → 遮蔽 → `POST /BDD/API/AI/dsh/storage/ov`），`OPENVIKING_URL` / `OPENVIKING_API_KEY` 环境变量不再被读取 | 真机 `fetchStoredConnection()` → `https://ov.feg.cn` + 64 字符 key，ref=`AIFE_API_KEY`（§5.2） |
+| 2026-10-12 | **查不到凭据就什么都不激活**：`index.mjs` 全部监听器以 `active` 门控；不挂 MCP、不挂 skill、不建 session、不发任何请求 | `index.test.mjs` 新增负面测试 "a failed credential lookup activates nothing" |
+| 2026-10-12 | 遮蔽形状按**实测**定为 71 字符；MASK.md 的 67 字符说法对 `/storage/*` 不成立（回 `200 {}`） | 对照实验：mask71 有数据、mask67 `200 {}`、无 key `500 apikey无效`（§6.8） |
+| 2026-10-12 | fork 边界更新：`index.mjs` + 4 个 apply 层测试文件转入 `LOCALIZED`；`stored-credentials.mjs`、`stored-credentials.test.mjs`、`test-support.mjs` 转入 `LOCAL_ONLY`；`package.json` 的 `files` 增加一条 transform | `sync-upstream --check` 恢复 `in sync` |
+| 2026-10-12 | 新增 `scripts/check.mjs` 覆盖到 3 个新模块（83 modules）；README 的 Configuration / Behavior / Requirements 段改写为 storage 连接模型 | `npm run check` + `npm test` 全绿 |
+| 2026-10-12 | **假 key 的真机失败验证**：临时凭据文件放未知的 `AIFE_API_KEY` → 真端点回 `200 {}` → `apply()` 返回 false、`mounted: []`、零请求 | §5.2；该场景同时被 `index.test.mjs` 的负面测试固定 |
 
 ---
 

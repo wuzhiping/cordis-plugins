@@ -45,14 +45,30 @@ const LOCAL_ONLY = new Set([
   "scripts/check.mjs",
   "scripts/sync-shared.mjs",
   "scripts/sync-upstream.mjs",
+  "stored-credentials.mjs",
+  "stored-credentials.test.mjs",
   "sync-shared.test.mjs",
+  "test-support.mjs",
 ]);
 
 /**
  * Files that legitimately differ from upstream and are reconciled by hand.
  * Reported on every `--check`, and their upstream diff is printed on upgrade.
+ *
+ * `index.mjs` and the four apply-level test files joined this set when the
+ * connection moved behind the BDD storage lookup: that is a structural fork, not
+ * a rename or a line-ending tweak, so re-applying it as a text replacement would
+ * be unreadable and would break on the first upstream reformat. Their upstream
+ * versions still arrive in an upgrade — as "review by hand", which is the point.
  */
-const LOCALIZED = new Set(["README.md"]);
+const LOCALIZED = new Set([
+  "README.md",
+  "index.mjs",
+  "index.test.mjs",
+  "mcp.test.mjs",
+  "session-workspace.test.mjs",
+  "skills.test.mjs",
+]);
 
 /** Directories that are generated or not ours to mirror. */
 const SKIPPED_DIRS = new Set(["node_modules", "shared", ".git"]);
@@ -75,6 +91,13 @@ const TRANSFORMS = {
       to: `    "sync": "node scripts/sync-shared.mjs",
     "prepack": "node scripts/sync-shared.mjs",
     "check": "node scripts/check.mjs && node scripts/sync-shared.mjs --check && npm run check:version",`,
+    },
+    {
+      from: `    "skills.mjs",
+    "uri-guard.mjs",`,
+      to: `    "skills.mjs",
+    "stored-credentials.mjs",
+    "uri-guard.mjs",`,
     },
     {
       from: `    "url": "git+https://github.com/volcengine/OpenViking.git",
