@@ -769,6 +769,25 @@ window.__ModuleLoader__.load({
           // it between our handle() and React's effect, and we want clicks to land
           // regardless of who wins that microtask race.
           unblockAppRoot();
+          // Sidebar label renames (surgical, not via the global PHRASES map):
+          // 2026-10-12 局部修改 —— 把 sidebar 的「外掛」改為「系统外掛」。
+          // 只動 `.hHd-Xa_panelRow[aria-label="外掛"]` 跟它的 `.hHd-Xa_panelTitle`，
+          // 不影響 zh dict 裡其他「插件」翻譯（會員對話、文件路徑、…等都不在改）。
+          renameSidebarRow();
+        }
+
+        /**
+         * 把 sidebar 裡 `aria-label="外掛"` 那一列改名為「系统外掛」。
+         * 只改**這一行**，不改 zhtw 自己的 PHRASES 表 —— 避免牽連其他顯示了「插件」
+         * 兩字的地方。
+         */
+        function renameSidebarRow() {
+          var rows = document.querySelectorAll('.hHd-Xa_panelRow[aria-label="外掛"]');
+          for (var i = 0; i < rows.length; i += 1) {
+            rows[i].setAttribute('aria-label', '系统外掛');
+            var title = rows[i].querySelector('.hHd-Xa_panelTitle');
+            if (title !== null) title.textContent = '系统外掛';
+          }
         }
 
         var observer = null;

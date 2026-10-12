@@ -18,6 +18,7 @@ registry picks up their `lib/client.js`.
 |--------------|---------|---------|
 | [`zhtw-traditional-chinese/`](./zhtw-traditional-chinese) | Adds 繁體中文 (zh-TW) to the Web GUI language picker; converts Simplified Chinese strings from all 27 DSH namespaces to Traditional on the fly | `dsh plugin --profile web add  "github:wuzhiping/cordis-plugins#path:/zhtw-traditional-chinese"` |
 | [`scene-template/`](./scene-template) | AI 工作流输入区:场景 / 分支选择挂在输入框上方,模板海报墙挂在下方(推荐翻批、按住拖曳平移、双击预览);数据来自 `abc.feg.com.tw` 的 BDD API 并自带回退 mock;选中的场景/模板会作为运行时上下文注入模型每一步;界面文案全为**繁体(zh-TW 惯用)** | `dsh plugin --profile web add  "github:wuzhiping/cordis-plugins#path:/scene-template"` |
+| [`ov-memory/`](./ov-memory) | OpenViking 长期语义记忆:每步自动召回、会话采集与提交、`viking://` URI 保护、MCP 工具面与 3 个内置 skill;`memory-plugin-shared/lib` 是共享模块唯一真源,`shared/` 是其生成副本(`npm run sync`) | `dsh plugin --profile web add  "github:wuzhiping/cordis-plugins#path:/ov-memory"` |
 
 Each subdirectory is also a standalone DSH install target — you can add
 `file:./zhtw-traditional-chinese` while inside this repo, or use the GitHub

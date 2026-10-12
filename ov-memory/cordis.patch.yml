@@ -1,0 +1,3 @@
+- insert:
+    - id: openviking-memory-runtime
+      name: 'ov-memory'
