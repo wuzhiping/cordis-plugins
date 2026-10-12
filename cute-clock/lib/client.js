@@ -205,6 +205,91 @@ window.__ModuleLoader__.load({
 
       // 讓指針走得更流暢
       '.cute-clock-hand-minute,.cute-clock-hand-hour{transition:transform .25s cubic-bezier(.4,.0,.2,1)}',
+
+      // ====================== 用量小卡（cute-usage）======================
+      // 位置：釘在**視窗**右上角。
+      //
+      // 為什麼不是 `position:absolute` 或 `position:fixed` 簡單解：
+      //   - absolute 的話，卡片作為 `.cute-clock-page` 子節點，會被 page 的
+      //     `transform:translateX(-50px) translateY(-40px)` 推走，視窗上看
+      //     top = page.top + 18 - 40 = -22（偏上）。
+      //   - fixed 的話，CSS 規則是 fixed 元素的 containing block 是「最近的
+      //     有 transform 的祖先」，page 仍然把卡片捕獲了，視窗上看一樣是 -22。
+      //   - portal 到 document.body 不可用：DSH 用的 React 太舊，沒有
+      //     `React.createPortal`。
+      //
+      // 解法：仍然 absolute 在 page 內，但卡片自己加 `transform:translate(2px, 40px)`
+      // 把 page 的反向推回來。視窗上的最終位置：
+      //   right 邊 = (page.right - 18) + 50 = viewport.right - 18
+      //   top    = (page.top + 18) + 40 = 18
+      // 50 / 40 這兩個數字跟 page 的 transform 配對 —— 將來如果 DSH 改了 page 的
+      // transform，這兩個值要手動跟著校準。
+      //
+      // 配色全部走 DSH 主題令牌 —— 切明暗主題自動跟。
+      '.cute-usage{',
+      '  position:absolute;right:18px;top:18px;z-index:5;',
+      '  width:200px;',
+      '  background:var(--dsw-alias-bg-layer-1,#ffffff);',
+      '  border:1px solid var(--dsw-alias-border-l1,rgba(0,0,0,.08));',
+      '  border-radius:12px;',
+      '  box-shadow:0 4px 16px rgba(0,0,0,.10);',
+      '  font-family:var(--sans,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif);',
+      '  color:var(--dsw-alias-label-primary,#131926);',
+      '  user-select:none;cursor:pointer;',
+      '  overflow:hidden;',
+      '  transition:width .2s ease,box-shadow .2s ease;',
+      '}',
+      '.cute-usage--expanded{width:268px;cursor:default}',
+      '.cute-usage--err{box-shadow:0 4px 16px rgba(217,119,6,.18)}',
+      '.cute-usage__head{',
+      '  display:flex;align-items:center;justify-content:space-between;',
+      '  padding:8px 12px;',
+      '  border-bottom:1px solid transparent;',
+      '  transition:border-color .15s;',
+      '}',
+      '.cute-usage--expanded .cute-usage__head{border-bottom-color:var(--dsw-alias-border-l1,rgba(0,0,0,.08))}',
+      '.cute-usage__title{font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--dsw-alias-brand-primary,#4d6bfe)}',
+      '.cute-usage__chev{font-size:10px;color:var(--dsw-alias-label-tertiary,#6b7891);margin-left:6px;transition:transform .15s}',
+      '.cute-usage--expanded .cute-usage__chev{transform:rotate(180deg)}',
+      '.cute-usage__summary{padding:6px 12px 10px 12px}',
+      '.cute-usage__line{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace}',
+      '.cute-usage__used{color:var(--dsw-alias-label-primary,#131926)}',
+      '.cute-usage__sep{color:var(--dsw-alias-label-tertiary,#6b7891);font-weight:400}',
+      '.cute-usage__budget{color:var(--dsw-alias-label-secondary,#43506b);font-weight:600}',
+      '.cute-usage__period{color:var(--dsw-alias-label-tertiary,#6b7891);font-weight:400;font-size:11px;margin-left:2px}',
+      '.cute-usage__bar{',
+      '  height:4px;background:var(--dsw-alias-bg-layer-2,#f0f2f5);',
+      '  border-radius:2px;margin-top:6px;overflow:hidden;',
+      '}',
+      '.cute-usage__bar-fill{',
+      '  height:100%;',
+      '  background:var(--dsw-alias-state-warn-primary,#d97706);',
+      '  transition:width .3s ease;',
+      '}',
+      '.cute-usage__pct{font-size:10px;color:var(--dsw-alias-label-tertiary,#6b7891);margin-top:3px;text-align:right}',
+      '.cute-usage__detail{padding:8px 12px 10px 12px;border-top:1px solid var(--dsw-alias-border-l1,rgba(0,0,0,.08))}',
+      '.cute-usage__row{display:flex;justify-content:space-between;align-items:center;font-size:11px;line-height:1.55}',
+      '.cute-usage__k{color:var(--dsw-alias-label-tertiary,#6b7891)}',
+      '.cute-usage__v{color:var(--dsw-alias-label-primary,#131926);font-weight:600;font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace}',
+      '.cute-usage__mono{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;font-weight:500}',
+      '.cute-usage__sep-row{height:6px}',
+      '.cute-usage__actions{padding-top:8px;display:flex;justify-content:flex-end}',
+      '.cute-usage__btn{',
+      '  background:transparent;',
+      '  border:1px solid var(--dsw-alias-border-l1,rgba(0,0,0,.08));',
+      '  border-radius:6px;',
+      '  padding:3px 9px;',
+      '  font-size:10.5px;color:var(--dsw-alias-label-secondary,#43506b);',
+      '  cursor:pointer;',
+      '  transition:background .12s,border-color .12s;',
+      '}',
+      '.cute-usage__btn:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2,#f0f2f5);border-color:var(--dsw-alias-border-l2,rgba(0,0,0,.18))}',
+      '.cute-usage__btn:disabled{opacity:.5;cursor:not-allowed}',
+      '.cute-usage__err-tip{',
+      '  padding:0 12px 8px 12px;',
+      '  font-size:10px;color:var(--dsw-alias-state-warn-primary,#d97706);',
+      '  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+      '}',
     ].join('\n');
 
     // =========================================================================
@@ -759,7 +844,11 @@ window.__ModuleLoader__.load({
           key: quote,
           title: '點一下，換一條活力 slogan 💪',
           onClick: rollSlogan
-        }, '✿  ' + quote + '  ✿')
+        }, '✿  ' + quote + '  ✿'),
+        // 用量小卡：使用 `position:fixed; right:18px; top:18px;`，視窗-相對定位，
+        // 不被 `.cute-clock-page` 的 transform 拉走。仍在這個 React 子樹裡，
+        // 所以 mount/unmount 跟 BigClockPage 走（切到主面板就出現，切走就消失）。
+        e(UsageCard, null)
       );
     }
 
@@ -774,6 +863,353 @@ window.__ModuleLoader__.load({
       return function dispose() {
         if (style && style.parentNode) style.parentNode.removeChild(style);
       };
+    }
+
+    // =========================================================================
+    // 8. 用量小卡（cute-usage）
+    //
+    // 從 `https://abc.feg.com.tw/BDD/API/v1/litellm/console/usageKey` 拉今日用量。
+    // 契約（per MASK.md §"API contract: apiKey for abc.feg.com.tw"）：
+    //   POST {apiKey: "sk-..."}  ← apiKey 是 67 字元的遮蔽形
+    //
+    // apiKey 由宿主算好後透過 `GET /cute-clock/mask-key` 給瀏覽器；
+    // 瀏覽器永遠拿不到原文。失敗時不自動重試（避免錯誤的雪崩），
+    // 等使用者在卡片上按「重新整理」再試。
+    //
+    // 預設摺疊：spend / max_budget（後端給的，例如 $28.99 / $1,000）+ 進度條 +
+    //             週期（7d）+ 下次重置日期；展開才看 user_id / role / models。
+    //
+    // 2026-10-12 第二次重設計：之前筆者把它當成「每日 usage」端點（按天聚合
+    // 的 results[] 陣列），那是 litellm 標準 `/usage` 端點的形狀。實際上
+    // `/BDD/API/v1/litellm/console/usageKey` 走的是 `/key/info` 形狀：
+    //   p.res = { spend, max_budget, budget_duration, budget_reset_at,
+    //             models, teams, user_id, user_email, user_role, ... }
+    // 也就是「這把 key 跟它的額度」，不是「這一天用量」。已重寫 summarizeUsage
+    // 對應這個結構。
+    // =========================================================================
+    var USAGE_URL = 'https://abc.feg.com.tw/BDD/API/v1/litellm/console/usageKey';
+    var MASK_KEY_PATH = '/cute-clock/mask-key';
+    var USAGE_FETCH_TIMEOUT_MS = 8000;
+
+    /**
+     * 取得遮蔽金鑰，失敗時回空字串（不 throw）。
+     * 只快取**成功**的結果；失敗就下次重試 —— 否則宿主晚一步就緒
+     * 就永遠拿不到。callers 用 `if (key) ...` 決定是否帶 apiKey。
+     */
+    var maskKeyCache = null;
+    var maskKeyPending = null;
+    function getMaskKey() {
+      if (typeof maskKeyCache === 'string') return Promise.resolve(maskKeyCache);
+      if (maskKeyPending) return maskKeyPending;
+      var p = fetch(MASK_KEY_PATH, { headers: { accept: 'application/json' } })
+        .then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
+        .then(function (out) {
+          var key = out && typeof out.maskKey === 'string' ? out.maskKey : '';
+          if (key === '') throw new Error('回應沒有 maskKey');
+          maskKeyCache = key;
+          return key;
+        })
+        .catch(function (err) {
+          console.warn('[cute-clock] mask key unavailable; usage card will skip apiKey:',
+            err && err.message ? err.message : err);
+          return '';
+        });
+      maskKeyPending = p;
+      var clear = function () { maskKeyPending = null; };
+      p.then(clear, clear);
+      return p;
+    }
+
+    /**
+     * 從 usageKey 端點拿今日用量。回傳正規化後的摘要：
+     *   { date, used, savings, prompt, output, cacheRead, requests,
+     *     failed, model, keyAlias, fetchedAt, ok, error? }
+     * 失敗時 `ok: false` + `error: '...'`，其它欄位用 0 / '—' 填。
+     */
+    function fetchUsage() {
+      var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+      var killer = setTimeout(function () { if (ctrl) { try { ctrl.abort(); } catch (e) {} } }, USAGE_FETCH_TIMEOUT_MS);
+      return getMaskKey().then(function (key) {
+        // 即便沒拿到金鑰也照發請求（後端目前不強制），只是 body 沒 apiKey
+        var body = key ? { apiKey: key } : {};
+        return fetch(USAGE_URL, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'application/json' },
+          body: JSON.stringify(body),
+          signal: ctrl ? ctrl.signal : undefined,
+        });
+      }).then(function (res) {
+        clearTimeout(killer);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      }).then(function (payload) {
+        return summarizeUsage(payload);
+      }).catch(function (err) {
+        clearTimeout(killer);
+        return {
+          ok: false, error: err && err.message ? err.message : String(err),
+          used: 0, savings: 0, prompt: 0, output: 0, cacheRead: 0,
+          requests: 0, failed: 0, model: '—', keyAlias: '—',
+          date: '—', fetchedAt: new Date().toISOString(),
+        };
+      });
+    }
+
+    /**
+     * 把 litellm `/key/info` 響應收成 UI 用的扁平形狀。
+     *
+     * 2026-10-12 重設計：這個端點回的是「**這把 key 的額度狀態**」，
+     * 不是「今日用量」。欄位是 key / user / budget 的快照。
+     *
+     * 重要欄位：
+     *   p.res.spend              ← 當前週期已用
+     *   p.res.max_budget         ← 週期總額度（null/0 表示無限額）
+     *   p.res.budget_duration    ← '7d' / '30d' / '24h' 等
+     *   p.res.budget_reset_at    ← 下次重置的 ISO timestamp
+     *   p.res.user_id            ← 這把 key 屬於哪個 user
+     *   p.res.user_email         ← user email
+     *   p.res.user_role          ← internal_user_viewer / etc
+     *   p.res.models             ← 允許的 model 陣列
+     *   p.res.teams              ← 屬於哪些 team（陣列或單一）
+     *   p.res.created_at         ← key 建立時間
+     *   p.res.updated_at         ← key 更新時間
+     *   p.res.max_parallel_requests / tpm_limit / rpm_limit ← 速率限制（可能空）
+     *
+     * `ok: false` 時 `error` 有值，UI 改為錯誤狀態。
+     */
+    function summarizeUsage(payload) {
+      if (!payload || !payload.res) {
+        return {
+          ok: false, error: '回應沒有 res',
+          used: 0, budget: 0, period: '—', resetAt: '—',
+          userId: '—', userEmail: '—', role: '—',
+          models: '—', teams: '—', createdAt: '—', updatedAt: '—',
+          fetchedAt: new Date().toISOString(),
+        };
+      }
+      var r = payload.res;
+      var models = Array.isArray(r.models) ? r.models.join(', ') : '—';
+      var teams = Array.isArray(r.teams) ? r.teams.join(', ') : (r.teams || '—');
+      return {
+        ok: true,
+        used: numberOr0(r.spend),
+        budget: numberOr0(r.max_budget),
+        period: r.budget_duration || '—',
+        resetAt: r.budget_reset_at || '—',
+        userId: r.user_id || '—',
+        userEmail: r.user_email || '—',
+        role: r.user_role || '—',
+        models: models,
+        teams: teams,
+        createdAt: r.created_at || '—',
+        updatedAt: r.updated_at || '—',
+        maxParallel: r.max_parallel_requests || '—',
+        tpm: r.tpm_limit || '—',
+        rpm: r.rpm_limit || '—',
+        fetchedAt: new Date().toISOString(),
+      };
+    }
+    function numberOr0(v) {
+      var n = Number(v);
+      return isFinite(n) ? n : 0;
+    }
+
+    function fmtUsd(n) {
+      // 不帶貨幣符號 —— 金額這個字就代表「$」，再寫一次只是冗餘
+      var v = Number(n) || 0;
+      return v.toFixed(2);
+    }
+    function fmtInt(n) {
+      var v = Number(n) || 0;
+      return v.toLocaleString('en-US');
+    }
+    /**
+     * 解析 ISO（UTC）字串，回傳**本地時區**的日期與時分。
+     * 舊版本直接 regex `YYYY-MM-DD` 跟 `HH:MM` 段，會把後端回傳的 UTC 時間
+     * 當成本地時間顯示（差 8 小時）。用 `new Date(...)` 讓瀏覽器按使用者的時區轉。
+     */
+    function fmtDate(iso) {
+      if (typeof iso !== 'string' || iso.length < 10) return '—';
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) {
+        // 解析失敗退回到舊行為：直接抓前 10 字（忽略時區，但至少有東西可看）
+        var m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return m ? m[2] + '/' + m[3] : '—';
+      }
+      var mm = String(d.getMonth() + 1);
+      var dd = String(d.getDate());
+      return (mm.length < 2 ? '0' + mm : mm) + '/' + (dd.length < 2 ? '0' + dd : dd);
+    }
+    function fmtTime(iso) {
+      if (typeof iso !== 'string' || iso.length < 16) return '—';
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) {
+        // 解析失敗退回到舊行為：直接 regex HH:MM
+        var m = iso.match(/T(\d{2}:\d{2})/);
+        return m ? m[1] : '—';
+      }
+      var hh = String(d.getHours());
+      var mm = String(d.getMinutes());
+      return (hh.length < 2 ? '0' + hh : hh) + ':' + (mm.length < 2 ? '0' + mm : mm);
+    }
+
+    /**
+     * 摺疊 / 展開的用量小卡。
+     * 內部管自己 state（expanded / data / loading / error / lastFetch），
+     * 不依賴外部 props。每次切工作階段都會 re-mount 一次（overlay slot），
+     * 所以新 mount 會重抓。
+     */
+    function UsageCard() {
+      var expandedPair = useState(false);
+      var expanded = expandedPair[0];
+      var setExpanded = expandedPair[1];
+      var dataPair = useState(null);
+      var data = dataPair[0];
+      var setData = dataPair[1];
+      var loadingPair = useState(false);
+      var loading = loadingPair[0];
+      var setLoading = loadingPair[1];
+      var fetchingPair = useState(false);
+      var fetching = fetchingPair[0];
+      var setFetching = fetchingPair[1];
+
+      // 拉資料。不輪詢、不快取 —— 每次元件 mount（= 切到主面板）都會
+      // 走一次 fetchUsage 拿最新值；手動按「重新整理」也會再拉一次。
+      // `fetching` 只擋連點（避免重複請求），不做 TTL gate。
+      function refresh() {
+        if (fetching) return;
+        setFetching(true);
+        setLoading(!data);  // 第一次顯示「載入中…」；之後背景刷新
+        fetchUsage().then(function (d) {
+          setData(d);
+        }).then(function () {
+          setFetching(false);
+          setLoading(false);
+        });
+      }
+
+      // mount 時拉一次（每次切到主面板都會 re-mount，所以「每次激活都更新」
+      // 這條自然滿足 —— 不需要任何背景輪詢）
+      useEffect(function () { refresh(); }, []);
+
+      var d = data || {
+        ok: false, error: '載入中…',
+        used: 0, budget: 0, period: '—', resetAt: '—',
+        userId: '—', userEmail: '—', role: '—',
+        models: '—', teams: '—', createdAt: '—', updatedAt: '—',
+        maxParallel: '—', tpm: '—', rpm: '—',
+        fetchedAt: '',
+      };
+      var used = d.used;
+      var budget = d.budget;
+      var pct = budget > 0 ? Math.min(100, Math.round((used / budget) * 100)) : null;
+      var hasBudget = budget > 0;
+
+      // .cute-clock-page 在視窗上是 (left=230, top=-40)，
+      // 因為 page 自帶 `transform:translateX(-50px) translateY(-40px)`
+      // （DSH 為了補償側欄偏移的設計）。卡片是 page 子節點，被這個 transform 推走。
+      //
+      // 數學（讓卡片視窗上落在 (viewport-18, 18)）：
+      //   page.left in viewport = 230, page.right in viewport = 1398
+      //   卡片 `right:18` 在 page 內 → viewport right = 1398 - 18 = 1380（離 viewport.right 差 2px，是 page 寬度算的結果）
+      //   卡片 `top:18` 在 page 內 → viewport top = -40 + 18 = -22
+      //   修正：transform: translate(2px, 40px) 把卡片往右 2 / 往下 40。
+      //
+      // `position:fixed` 也試過 —— 但 fixed 元素的 containing block 規則會被
+      // 任何有 transform 的祖先捕獲，page 自身就把 fixed 捕獲了，仍被推走。
+      // `createPortal` 在 DSH 的 React 版本裡不存在。
+      return e('div', {
+        className: 'cute-usage' + (expanded ? ' cute-usage--expanded' : '') + (d.ok ? '' : ' cute-usage--err'),
+        style: { transform: 'translate(2px, 40px)' },
+        onClick: function (ev) {
+          if (ev.target.closest && ev.target.closest('.cute-usage__btn')) return;
+          setExpanded(!expanded);
+        }
+      },
+        // 抬頭（永遠可見）
+        e('div', { className: 'cute-usage__head' },
+          e('span', { className: 'cute-usage__title' }, '💰 用量'),
+          e('span', { className: 'cute-usage__chev' }, expanded ? '▴' : '▾')
+        ),
+        // 摺疊態：$28.99 / $1,000 (7d) + 進度條 + 剩餘時間
+        e('div', { className: 'cute-usage__summary' },
+          e('div', { className: 'cute-usage__line' },
+            e('span', { className: 'cute-usage__used' }, fmtUsd(used)),
+            hasBudget && e('span', { className: 'cute-usage__sep' }, ' / '),
+            hasBudget && e('span', { className: 'cute-usage__budget' }, fmtUsd(budget)),
+            d.period && d.period !== '—' && e('span', { className: 'cute-usage__period' }, ' (' + d.period + ')')
+          ),
+          pct !== null && e('div', { className: 'cute-usage__bar' },
+            e('div', { className: 'cute-usage__bar-fill', style: { width: pct + '%' } })
+          ),
+          e('div', { className: 'cute-usage__pct' },
+            pct !== null
+              ? (pct + '% · 重置 ' + fmtDate(d.resetAt))
+              : (d.resetAt !== '—' ? '重置 ' + fmtDate(d.resetAt) : ''))
+        ),
+        // 展開態：明細
+        expanded && e('div', { className: 'cute-usage__detail' },
+          e('div', { className: 'cute-usage__row' },
+            e('span', { className: 'cute-usage__k' }, '用戶'),
+            e('span', { className: 'cute-usage__v' }, d.userEmail)
+          ),
+          e('div', { className: 'cute-usage__row' },
+            e('span', { className: 'cute-usage__k' }, 'ID'),
+            e('span', { className: 'cute-usage__v cute-usage__mono' }, d.userId)
+          ),
+          e('div', { className: 'cute-usage__row' },
+            e('span', { className: 'cute-usage__k' }, '角色'),
+            e('span', { className: 'cute-usage__v' }, d.role)
+          ),
+          e('div', { className: 'cute-usage__sep-row' }),
+          e('div', { className: 'cute-usage__row' },
+            e('span', { className: 'cute-usage__k' }, '允許模型'),
+            e('span', { className: 'cute-usage__v' }, d.models)
+          ),
+          e('div', { className: 'cute-usage__row' },
+            e('span', { className: 'cute-usage__k' }, 'Team'),
+            e('span', { className: 'cute-usage__v cute-usage__mono' }, d.teams)
+          ),
+          (d.maxParallel !== '—' || d.tpm !== '—' || d.rpm !== '—') && e('div', { className: 'cute-usage__sep-row' }),
+          d.maxParallel !== '—' && e('div', { className: 'cute-usage__row' },
+            e('span', { className: 'cute-usage__k' }, '並行上限'),
+            e('span', { className: 'cute-usage__v' }, String(d.maxParallel))
+          ),
+          d.tpm !== '—' && e('div', { className: 'cute-usage__row' },
+            e('span', { className: 'cute-usage__k' }, 'TPM'),
+            e('span', { className: 'cute-usage__v' }, String(d.tpm))
+          ),
+          d.rpm !== '—' && e('div', { className: 'cute-usage__row' },
+            e('span', { className: 'cute-usage__k' }, 'RPM'),
+            e('span', { className: 'cute-usage__v' }, String(d.rpm))
+          ),
+          e('div', { className: 'cute-usage__sep-row' }),
+          e('div', { className: 'cute-usage__row' },
+            e('span', { className: 'cute-usage__k' }, '建立'),
+            e('span', { className: 'cute-usage__v' }, fmtDate(d.createdAt))
+          ),
+          e('div', { className: 'cute-usage__row' },
+            e('span', { className: 'cute-usage__k' }, '更新'),
+            e('span', { className: 'cute-usage__v' }, fmtDate(d.updatedAt) + ' ' + fmtTime(d.updatedAt))
+          ),
+          e('div', { className: 'cute-usage__actions' },
+            e('button', {
+              className: 'cute-usage__btn',
+              onClick: function (ev) {
+                ev.stopPropagation();
+                refresh();
+              },
+              disabled: fetching,
+              title: '重新整理'
+            }, fetching ? '更新中…' : '重新整理')
+          )
+        ),
+        // 錯誤時疊加提示
+        !d.ok && e('div', { className: 'cute-usage__err-tip' }, d.error || '載入失敗')
+      );
     }
 
     // =========================================================================
