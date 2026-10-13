@@ -13,7 +13,7 @@
 > 影响到状态/结构/坑位的部分就地更新（§1/§2/§4/§6/§7）。
 > 只改代码不改这里 = 下一个人会照着一份说谎的文档干活。
 
-最后更新：**2026-10-12** · 基线：`OpenViking` HEAD `2e706d719`（upstream `@openviking/dsh-memory-plugin` v0.5.23）
+最后更新：**2026-10-13** · 基线：`OpenViking` HEAD `2e706d719`（upstream `@openviking/dsh-memory-plugin` v0.5.23）
 
 ---
 
@@ -185,16 +185,28 @@ config.endpoint / config.baseUrl / config.apiKey          ← 覆盖 patch 与�
    任何一种失败都只记日志并返回 `false`，不挂 MCP、不挂 skill、不建 session。
 4. **遮蔽值只能发给 `abc.feg.com.tw`**：`requireStorageUrl()` 会拒绝其它 host 与 http。
    MASK.md 的原则是"遮蔽值在传输中等同于密钥"。
+5. **每个新会话重新确认**（在 `agent/created` 里，早于 profile 注入）：成功 → 刷新连接（重建 client）
+   + 必要时**晚激活**；失败 → 该会话被拒绝。MCP 桥与 skill provider 是**进程级**挂载，
+   没法给单个会话卸载，所以拒绝发生在**调用时**——`tools/pre-execute` 是 agent 作用域事件，
+   带 `exec.agent`，`guardUnconfirmedBridgedTool` 据此拒绝 `mcp__openviking__*`。
+6. **默认拒绝**：门控用"已确认集合"的**正向**判定（`confirmed.has(id)`），不是"未确认集合"。
+   任何没走过确认的会话（被拒绝的、还没轮到的、`exec.agent` 缺 id 的）都拿不到记忆能力与桥接工具。
+7. **确认有独立预算**：每会话确认 3 秒（`CONFIRM_TIMEOUT_MS`），boot 用默认 8 秒。
+   因为它跑在**串行**的 `agent/created` 里，那里会 hold 住新会话的排队输入，
+   所以 storage 端点挂掉时不能拖满 8 秒——超时就等于这次失败，再开一个新会话即可重试。
+8. **失败绝不阻断会话创建**：`startAgent` 捕获一切、`agent/created` 永远 resolve `undefined`
+   （返回别的值会 bail 串行派发，跳过它之后的监听器）。实测"没有账号"时新会话 **190ms** 建好；
+   最坏情况（端点不可达）也只花确认预算（3 秒），且会话照建、只是没有记忆。
 
 ---
 
-## 5. 已验证状态（2026-10-12）
+## 5. 已验证状态（截至 2026-10-13）
 
 | 检查 | 结果 |
 |---|---|
-| `npm run check` | `checked 80 modules`；`shared/ matches memory-plugin-shared/lib` |
-| `npm test` | 98 tests / **97 pass / 0 fail** / 1 skip（`live-recall` opt-in 真机 E2E） |
-| `node scripts/sync-upstream.mjs --check` | `in sync`（仅 `README.md` 标注为人工持有） |
+| `npm run check` | `checked 83 modules`；`shared/ matches memory-plugin-shared/lib` |
+| `npm test` | 111 tests / **110 pass / 0 fail** / 1 skip（`live-recall` opt-in 真机 E2E） |
+| `node scripts/sync-upstream.mjs --check` | `in sync`（人工持有清单见 §4.4） |
 | 上游幂等性 | 临时副本真跑同步后与当前树**零源码差异** |
 | `npm pack --dry-run` | **41 files**（含 20 个 `shared/*.mjs`） |
 | `path:` 安装仿真 | 只复制 `ov-memory/`（无姊妹目录）时 `index.mjs` / `servers/mcp-proxy.mjs` / `shared/*` / `runtime.mjs` 全部 import 成功 |
@@ -248,6 +260,37 @@ dsh plugin --profile web add "C:\Users\shawoo\Desktop\feg.cn\cordis-plugins\ov-m
 
 ⚠️ **本次改动尚未在运行中的 DSH 生效**：代码变更要重启才加载（§6.7）。当前运行进程仍是
 旧的"从环境变量取连接"版本 —— 所以 §5.1 里那套结论描述的仍是旧路径，重启后要按新路径重验。
+
+### 5.3 每会话确认（方案 A）的验证，2026-10-13
+
+| 验证 | 结果 |
+|---|---|
+| 单元/集成 | 111 项 / 110 通过 / 0 失败。新增：**"a session whose confirmation fails is refused while the process stays connected"**（不注入、不建 state、`mcp__openviking__*` 被拒且带上 stage）与 **"late activation"**（boot 失败 → 首个确认成功的会话自己把桥与 skill 挂上） |
+| 真机（真端点 + 真凭据） | `boot → activated:false, mounted:[]`；两个会话的桥接工具调用均被拒绝，拒绝理由为 `stage "response" (HTTP 200)`，日志有 `credentials_unavailable` |
+| **"没有账号"场景实测**（2026-10-13，操作员**有意**移除 `/storage/ov` 记录） | boot：`activated:false`、`mounted:[]`、耗时 **545ms**；新建会话：`agent/created` 返回 `undefined`、**190ms** 完成、注入 0 条、pre-step 批次原样通过（无 recall）、桥接工具被拒且理由为"not enabled for this machine"、无 session state，两条 `credentials_unavailable` 日志（boot + 该会话） |
+| **结论** | **没有账号 ⇒ 会话照样能建（190ms，不是被拖住），只是记忆能力整体为 0**。这正是这次故障注入要验证的性质 |
+| 措辞区分 | 端点答了但**没有记录**（`empty: true`）说"not enabled for this machine"（不再叫人去查 key）；传输/500 类失败才说 `failed at stage "…"`。因为**未知 key 与被移除的记录在响应上不可区分**，所以空记录那句**从不**断言 key 是错的（§6.10） |
+
+**推论**：`/storage/ov` 现在是**有意为空**的（操作员移除该 API key 对应的账号/记录）。
+若此刻重启 DSH，新代码会**按设计拒绝挂载**：记忆功能整体关闭，而会话创建不受影响（上面的 190ms 实测）。
+
+### 5.4 重启后的真机确认（2026-10-13 08:57，**新代码 + 无账号**）
+
+这次重启同时证明了两件事：**新代码确实在跑**（旧代码没有门控，无账号也会照挂），
+以及门控在真实进程里**按设计生效**。
+
+| 检查 | 重启前（07:47 进程） | **重启后（08:57，PID 10288，`ov` 为空）** |
+|---|---|---|
+| 装载层 `include:openviking-memory-runtime`（`cordis_inspect` host/Config） | 在 | **仍在** —— bundle 被**装载**，被门控的是**挂载** |
+| `<openviking-context>` 注入 | 有 | **无** |
+| `openviking-memory` / `openviking-skills` / `ov-experience-memory` | 有 | **无**（技能目录里消失） |
+| `mcp__openviking__*` 工具 | 有 | **无** |
+| 系统提示的 MCP resource servers 段（由已挂载的 MCP server 生成） | 有 | **整段消失** |
+| 新建会话 | — | **正常**（本次会话即新建） |
+
+**因此 TODO-1c 的失败分支完成**；成功分支要等 `ov` 记录恢复后，用**新会话**（晚激活）
+或再重启一次来确认。恢复记忆只需**重建那条 `ov` 记录**，**不必改代码** ——
+每个新会话都会重新确认，晚激活会把 MCP 与 skill 自己挂回来。
 
 **验证环境必须写清楚**：Node `v24.19.0`、本机 DSH `0.2.0-rc.2`、
 npm registry **不可达**（所以本机跑测试靠 §6.4 的 junction scaffold，
@@ -379,15 +422,45 @@ curl 必然缺 key，得到的 401 与插件的真实状态无关。
 不建 session，不写 pending queue。**不要在失败时回退到环境变量** ——
 那就等于绕过了"连接只来自 storage"这条规则，而且会把"没配置"伪装成"能用"。
 
+### 6.10 ★ `/storage/<name>` 的记录可以被移除：`200 {}` 不等于 key 坏
+
+**症状**：插件什么都不挂（或某会话被拒），日志 `credentials_unavailable {"stage":"response","status":200}`。
+很容易误判成"key 失效"或"插件坏了"。
+
+**这不是异常，是这套设计的事实上的总开关**：`ov` 记录存在 ⇒ 记忆可用；记录被移除 ⇒
+每个新会话都被拒、MCP 工具与 skill 都不激活。**操作员可以据此按机器关闭记忆，不需要改代码。**
+（2026-10-13 就是这样一次**有意的故障注入**，用来验证"没有账号"的场景，见 §5.3。）
+
+**2026-10-13 实测**（同一把 `AIFE_API_KEY`、同一分钟）：
+
+| 端点 | 结果 | 含义 |
+|---|---|---|
+| `/storage/ntfy` | `200 {name,uid,pwd}` | **key 有效**，遮蔽与查询链路都正常 |
+| `/storage/ov` | `200 {}` | 查询执行了，但**这条记录不存在** |
+
+而 `200 {}` 与"key 不存在"（`/storage/ov` 对假 key 也是 `200 {}`）**长得一模一样** ——
+所以单看目标的返回值无法区分"记录没了"和"key 错了"。
+
+**诊断法（一次就够）**：打**同一个端点族的另一个 name**（如 `/storage/ntfy`）。
+它返回数据 ⇒ key 与链路没问题，缺的是目标记录；它也回 `{}` ⇒ 才怀疑 key。
+
+**其它已确认的性质**（2026-10-13）：`GET /storage/ov`、`POST {}` 都是 `500 apikey无效`
+（只接受 `POST` + 非空 `apiKey`）；`/storage/ov/` 与 `/storage/ov` 等价；
+`/storage/openviking` 会 `500 … openviking.nools ENOENT`（说明路由按 `<name>.nools` 映射）。
+
+**教训**：这个端点的"数据不存在"是 `200`，所以**必须**把"缺少字段"当失败（插件已如此），
+且排障时**先用对照端点把 key 从嫌疑名单里划掉**。
+
 ---
 
 ## 7. 待办（下一步改造候选）
 
 | # | 事项 | 状态 / 备注 |
 |---|---|---|
+| **0** | **`/storage/ov` 当前为空（有意为之）**：这是操作员移除账号/记录后的状态，用来验证"没有账号"的场景（§5.3/§6.10）。**恢复方法：重建该记录**，不必改代码（每会话重新确认 + 晚激活会接上） | 已知状态。此时重启 DSH = 记忆整体关闭、但会话创建正常 |
 | 1 | **真机验收 · 安装与激活**：装进 `web` profile 并确认真的起来 | **已完成 2026-10-12**（§5.1）：`link:` 安装、运行中热加载（未重启）、profile 注入 / 技能提供者 / MCP 工具面 / **采集** 全部实测通过 |
-| 1b | **真机验收 · 剩余项**：① 直接观察到 recall 注入块（`source="recall"`）② 确认 commit 真的触发（`turn/end` 达阈值或会话 dispose）③ 重启 DSH 后的稳定性 | 未做。③ 会中断当前会话，**先问** |
-| 1c | **让"连接改走 storage 查询"生效**：重启 DSH，确认日志出现 `credentials_resolved`、MCP 与技能仍挂载、且断网/清空 `refs.AIFE_API_KEY` 时变成 `credentials_unavailable` 且**什么都不挂** | 未做。本次是代码变更 → 必须重启（§6.7）；现在跑的还是旧的环境变量版本 |
+| 1b | **真机验收 · 剩余项**：① 直接观察到 recall 注入块（`source="recall"`）② 确认 commit 真的触发（`turn/end` 达阈值或会话 dispose）③ 重启 DSH 后的稳定性 | 未做（需先恢复 `ov` 记录才有记忆可验） |
+| 1c | **重启验证门控** | **失败分支完成 2026-10-13 08:57**（§5.4）：装载层仍在、注入/技能/MCP 工具全部不出现、新建会话正常。成功分支待 `ov` 记录恢复后用新会话（晚激活）确认 |
 | 2 | **清理 `memory-plugin-shared` 的上游冗余**（`sync.mjs` / `install.sh` / `bootstrap.sh` / ~40 个跑不了的测试），只留 `lib/` + `MANIFEST` | 未做。需确认（会删文件）。留着也不影响运行，只是噪音 + §6.1 的误跑风险 |
 | 3 | 把 §6.4 的 junction scaffold 换成正式 `npm ci`（或 pnpm），并把 `link:` 安装的 node_modules 依赖写进 README | 阻塞在 registry 不可达 |
 | 4 | 把 package 版本号策略定下来：本地化后是继续跟 upstream 0.5.23，还是自增（如 `0.5.23+local.1`） | 未决。`check:version` 要求 `PLUGIN_VERSION` == `package.json` 版本，改了要同步 `config.mjs` |
@@ -420,6 +493,12 @@ curl 必然缺 key，得到的 401 与插件的真实状态无关。
 | 2026-10-12 | fork 边界更新：`index.mjs` + 4 个 apply 层测试文件转入 `LOCALIZED`；`stored-credentials.mjs`、`stored-credentials.test.mjs`、`test-support.mjs` 转入 `LOCAL_ONLY`；`package.json` 的 `files` 增加一条 transform | `sync-upstream --check` 恢复 `in sync` |
 | 2026-10-12 | 新增 `scripts/check.mjs` 覆盖到 3 个新模块（83 modules）；README 的 Configuration / Behavior / Requirements 段改写为 storage 连接模型 | `npm run check` + `npm test` 全绿 |
 | 2026-10-12 | **假 key 的真机失败验证**：临时凭据文件放未知的 `AIFE_API_KEY` → 真端点回 `200 {}` → `apply()` 返回 false、`mounted: []`、零请求 | §5.2；该场景同时被 `index.test.mjs` 的负面测试固定 |
+| 2026-10-13 | **每新会话用 mask key 重新确认（方案 A）**：`agent/created` 里重新查询 → 成功则刷新连接并必要时**晚激活**；失败则该会话被拒（不注入/不召回/不采集，且**调用时拒绝** `mcp__openviking__*`）。门控改为"已确认集合"的**正向**判定（默认拒绝） | 111 项测试 / 110 通过 / 0 失败；新增两个测试（拒绝该会话、晚激活） |
+| 2026-10-13 | 测试替身修正：`on()` 从"只留最后一个监听器"改为**真正的 waterfall 组合**（`tools/pre-execute` 现在有两个监听器，旧替身会静默测错的那个） | 该缺陷曾让"拒绝桥接工具"的断言实际调到 URI guard |
+| 2026-10-13 | **真机发现 `/storage/ov` 返回 `200 {}`** —— 后经确认是操作员**有意移除**该账号/记录，用来测试"没有账号"场景。据此把它改写为"事实上的总开关"（§6.10），并把 TODO-0 从"阻塞项"改为"已知状态 + 恢复方法" | §5.3/§6.10/TODO-0 |
+| 2026-10-13 | **空记录与失败分开措辞**：`extractStoredConnection` 对"端点答了但没有连接"标记 `empty: true`；拒绝理由对空记录说 *"not enabled for this machine"*，对传输/500 类失败才说 *"failed at stage …"*。因为**未知 key 与被移除的记录在响应上不可区分**，空记录那句从不断言 key 错 | 新增/更新测试断言；`notJson` 不算 `empty` |
+| 2026-10-13 | **"没有账号"场景真机实测**：boot `activated:false, mounted:[], 545ms`；新会话 `undefined / 190ms / 注入 0 / 批次原样 / 工具被拒 / 无 state` | §5.3；并新增测试 *"a confirmation that cannot complete never blocks or fails session creation"* |
+| 2026-10-13 | **重启后真机确认（08:57，PID 10288）**：新代码 + 无账号 ⇒ 装载层仍在，但注入 / 3 个 skill / `mcp__openviking__*` / MCP resource servers 全部不出现，新建会话正常。**失败分支闭环，同时证明新代码已生效** | §5.4；TODO-1c 失败分支完成 |
 
 ---
 

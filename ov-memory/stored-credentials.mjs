@@ -186,6 +186,11 @@ export function extractStoredConnection(payload) {
     return {
       ok: false,
       stage: "response",
+      // The endpoint answered with a well-formed body that carries no connection.
+      // Measured: an unknown key and a deliberately removed record are
+      // indistinguishable here, so this flag means "no stored connection for this
+      // credential" — never "the key is wrong".
+      empty: true,
       error: `storage response carries no ${[url ? null : URL_FIELD, apiKey ? null : KEY_FIELD].filter(Boolean).join(" and ")}`
         + ` (received: ${keys.length > 0 ? keys.join(", ") : "no fields"})`,
     };
@@ -205,7 +210,10 @@ export function extractStoredConnection(payload) {
  * - `credential` — no readable `AIFE_API_KEY` in the credential file
  * - `request`    — the lookup could not be made, or the endpoint rejected it
  *                  (measured: `500` means the request shape was refused)
- * - `response`   — the endpoint answered, but without a usable connection
+ * - `response`   — the endpoint answered, but without a usable connection. When
+ *                  the body was well-formed and simply carried no connection, the
+ *                  failure also sets `empty: true`, which is the state an operator
+ *                  creates by removing the stored record for this credential.
  *
  * @returns `{ ok: true, url, apiKey, ref }` or `{ ok: false, stage, error, status? }`.
  */

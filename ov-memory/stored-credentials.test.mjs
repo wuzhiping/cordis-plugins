@@ -127,6 +127,9 @@ test("the storage response supplies both fields, or the failure names what arriv
   const empty = extractStoredConnection({});
   assert.equal(empty.ok, false);
   assert.equal(empty.stage, "response");
+  // "No stored connection" — the state an operator creates by removing the record,
+  // and the state an unknown key lands in. It must not read as "your key is wrong".
+  assert.equal(empty.empty, true);
   assert.match(empty.error, /OPENVIKING_URL and OPENVIKING_API_KEY/);
   assert.match(empty.error, /no fields/);
 
@@ -202,6 +205,7 @@ test("failure stages: config, credential, request and response are distinct", as
     const empty = await fetchStoredConnection({ env, fetchImpl: storageResponse({}) });
     assert.equal(empty.stage, "response");
     assert.equal(empty.status, 200);
+    assert.equal(empty.empty, true, "an empty record is flagged, so the wording can differ");
     assert.match(empty.error, /carries no/);
 
     const notJson = await fetchStoredConnection({
@@ -209,6 +213,7 @@ test("failure stages: config, credential, request and response are distinct", as
       fetchImpl: async () => new Response("boom", { status: 200 }),
     });
     assert.equal(notJson.stage, "response");
+    assert.equal(notJson.empty, undefined, "a malformed answer is not the same as an empty record");
     assert.match(notJson.error, /did not return JSON/);
 
     const down = await fetchStoredConnection({

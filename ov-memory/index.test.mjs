@@ -1,10 +1,37 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { apply } from "./index.mjs";
-import { installStoredCredentials } from "./test-support.mjs";
+import { installStoredCredentials, TEST_CONNECTION } from "./test-support.mjs";
+
+/**
+ * A registry with Cordis's waterfall shape: one entry per event, listeners
+ * composed in registration order, each receiving `(payload, next)`.
+ *
+ * A plain `Map` keeping the last listener is enough until an event has two —
+ * `tools/pre-execute` now has the session gate and the URI guard — at which point
+ * it silently tests the wrong one.
+ */
+function makeHandlers() {
+  const listeners = new Map();
+  return {
+    on(name, handler) {
+      if (!listeners.has(name)) listeners.set(name, []);
+      listeners.get(name).push(handler);
+    },
+    get(name) {
+      const chain = listeners.get(name) ?? [];
+      const run = (index, payload, next) => {
+        const handler = chain[index];
+        if (!handler) return next ? next() : undefined;
+        return handler(payload, () => run(index + 1, payload, next));
+      };
+      return (payload, next) => run(0, payload, next);
+    },
+  };
+}
 
 test("session filtering skips subagents without changing main-session recall", async () => {
-  const handlers = new Map();
+  const handlers = makeHandlers();
   let memoryRuntime;
   const ctx = {
     logger: { debug() {} },
@@ -17,9 +44,7 @@ test("session filtering skips subagents without changing main-session recall", a
     },
     tools: { register() {} },
     plugin() {},
-    on(name, handler) {
-      handlers.set(name, handler);
-    },
+    on: handlers.on,
   };
 
   const agent = {
@@ -57,11 +82,15 @@ test("session filtering skips subagents without changing main-session recall", a
       skipSubagentSessions: true,
     });
 
-    // Registered synchronously by `apply`, so both exist well before the lookup
-    // answers; the listeners themselves are what gate on `active`.
+    // Registered synchronously by `apply`, so both exist well before the lookups
+    // answer; the listeners themselves are what gate on the session's confirmation.
     const created = handlers.get("agent/created");
     assert.equal(typeof created, "function");
     const preStep = handlers.get("agent/pre-step");
+
+    // The real sequence: DSH settles `agent/created` — where this session is
+    // confirmed — before the first pre-step of that session.
+    await created({ agent, source: "startup", signal: new AbortController().signal });
 
     await preStep({
       agent,
@@ -110,7 +139,7 @@ test("session filtering skips subagents without changing main-session recall", a
 });
 
 async function mountPlugin() {
-  const handlers = new Map();
+  const handlers = makeHandlers();
   let runtime;
   const ctx = {
     logger: { debug() {} },
@@ -123,9 +152,7 @@ async function mountPlugin() {
     },
     tools: { register() {} },
     plugin() {},
-    on(name, handler) {
-      handlers.set(name, handler);
-    },
+    on: handlers.on,
   };
   const restore = installStoredCredentials();
   try {
@@ -168,9 +195,13 @@ function startupAgent(id = "dsh-startup") {
 async function withQuietFetch(run) {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => response({ rendered: "" });
+  // The per-session confirmation runs inside `agent/created`, so the lookup has to
+  // be answerable for as long as the handler calls are — not just around `apply`.
+  const restoreCredentials = installStoredCredentials();
   try {
     return await run();
   } finally {
+    restoreCredentials();
     globalThis.fetch = originalFetch;
   }
 }
@@ -230,38 +261,178 @@ test("dsh 0.1.x: source-less agent/created defers startup to agent/session-start
 
 test("agent/created returns on abort and never rejects on startup failure", async () => {
   const { handlers, runtime } = await mountPlugin();
-  let release;
-  runtime.initializeState = () => new Promise(resolve => {
-    release = resolve;
-  });
-  const controller = new AbortController();
-  const agent = startupAgent("dsh-aborted");
-  const pending = handlers.get("agent/created")({
-    agent,
-    source: "startup",
-    signal: controller.signal,
-  });
-  controller.abort();
-  assert.equal(await pending, undefined);
-  release({ ready: false });
-  assert.deepEqual(agent.injected, []);
+  // These handlers are called directly, so the per-session confirmation needs an
+  // answerable lookup for the whole test — not just around `apply`.
+  const restoreCredentials = installStoredCredentials();
+  try {
+    let release;
+    runtime.initializeState = () => new Promise(resolve => {
+      release = resolve;
+    });
+    const controller = new AbortController();
+    const agent = startupAgent("dsh-aborted");
+    const pending = handlers.get("agent/created")({
+      agent,
+      source: "startup",
+      signal: controller.signal,
+    });
+    // The session confirmation is awaited before `initializeState` is reached, so
+    // wait until that promise is actually pending — aborting earlier would leave
+    // `release` undefined and test the wrong thing.
+    for (let i = 0; i < 50 && !release; i += 1) await new Promise(resolve => setTimeout(resolve, 0));
+    controller.abort();
+    assert.equal(await pending, undefined);
+    release({ ready: false });
+    assert.deepEqual(agent.injected, []);
 
-  runtime.initializeState = async () => {
-    throw new Error("boom");
+    runtime.initializeState = async () => {
+      throw new Error("boom");
+    };
+    const failing = startupAgent("dsh-failing");
+    assert.equal(
+      await handlers.get("agent/created")({ agent: failing, source: "startup" }),
+      undefined,
+    );
+    assert.deepEqual(failing.injected, []);
+  } finally {
+    restoreCredentials();
+  }
+});
+
+// The mask-key lookup is re-asked for every new session, and a session whose
+// lookup comes back empty is refused even though the process is otherwise
+// connected: no injection, no recall, no capture, and no bridged tool calls.
+test("a session whose confirmation fails is refused while the process stays connected", async () => {
+  const { handlers, runtime } = await mountPlugin();
+  const restoreCredentials = installStoredCredentials({ body: {} });
+  try {
+    const agent = startupAgent("dsh-unconfirmed");
+    assert.equal(
+      await handlers.get("agent/created")({ agent, source: "startup", signal: new AbortController().signal }),
+      undefined,
+    );
+    assert.deepEqual(agent.injected, [], "no profile injection");
+
+    const input = [message("what did we decide")];
+    const decision = await handlers.get("agent/pre-step")({
+      agent,
+      messages: input,
+      signal: new AbortController().signal,
+    }, async () => ({ kind: "enter", messages: input }));
+    assert.deepEqual(decision.messages, input, "the batch enters untouched");
+
+    handlers.get("session/event")(agent.session, { type: "user/message", data: message("remember this") });
+    handlers.get("session/event")(agent.session, { type: "turn/end", data: {} });
+    await handlers.get("session/flush")(agent.session);
+    assert.equal(runtime.states.has(agent.session.id), false, "no session state");
+
+    // The bridge cannot be unmounted per session, so the refusal happens here.
+    const denied = await handlers.get("tools/pre-execute")({
+      name: "mcp__openviking__search",
+      arguments: { query: "x" },
+      agent: { session: { id: agent.session.id } },
+    }, async () => ({ kind: "allow" }));
+    assert.equal(denied.kind, "deny");
+    // An empty record is a *state*, not a fault: this is what removing the stored
+    // connection for a machine looks like, so the wording must not send the reader
+    // after a broken key.
+    assert.match(denied.reason, /not enabled for this machine/);
+    assert.match(denied.reason, /no stored connection/);
+    assert.doesNotMatch(denied.reason, /check refs\.AIFE_API_KEY and the storage endpoint\.$/);
+
+    // An unrelated tool is untouched, and so is the URI guard.
+    assert.deepEqual(
+      await handlers.get("tools/pre-execute")({ name: "read", arguments: { file_path: "/tmp/a" } }, async () => ({ kind: "allow" })),
+      { kind: "allow" },
+    );
+  } finally {
+    restoreCredentials();
+  }
+});
+
+// `agent/created` is serial and holds the new session's queued input until its
+// listeners settle, so an unreachable storage endpoint must cost the session a
+// bounded delay and nothing else: it can still be created, just without memory.
+test("a confirmation that cannot complete never blocks or fails session creation", async () => {
+  const { handlers } = await mountPlugin();
+  const restoreCredentials = installStoredCredentials({
+    responses: [{ networkError: "getaddrinfo ENOTFOUND abc.feg.com.tw" }],
+  });
+  try {
+    const agent = startupAgent("dsh-network-down");
+    const startedAt = Date.now();
+    assert.equal(
+      await handlers.get("agent/created")({ agent, source: "startup", signal: new AbortController().signal }),
+      undefined,
+      "the listener resolves to undefined; anything else bails the serial dispatch",
+    );
+    assert.ok(Date.now() - startedAt < 2000, "a network failure must settle immediately, not stall");
+    assert.deepEqual(agent.injected, []);
+
+    const denied = await handlers.get("tools/pre-execute")({
+      name: "mcp__openviking__search",
+      arguments: { query: "x" },
+      agent: { session: { id: agent.session.id } },
+    }, async () => ({ kind: "allow" }));
+    assert.equal(denied.kind, "deny");
+    assert.match(denied.reason, /failed at stage "request"/, "a transport failure reads differently");
+  } finally {
+    restoreCredentials();
+  }
+});
+
+// 方案 A's other half: a boot-time failure no longer needs a DSH restart. The
+// first session that confirms mounts the bridge and the skill provider itself.
+test("late activation: a failed boot lookup is recovered by the next session", async () => {
+  const handlers = makeHandlers();
+  let runtime;
+  const mounted = [];
+  const ctx = {
+    logger: { debug() {} },
+    provide(name, value) {
+      if (name === "openvikingMemory") runtime = value;
+    },
+    effect(execute) {
+      execute();
+      return async () => {};
+    },
+    plugin: (plugin, config) => mounted.push({ name: plugin.name, config }),
+    tools: { register() {} },
+    on: handlers.on,
   };
-  const failing = startupAgent("dsh-failing");
-  assert.equal(
-    await handlers.get("agent/created")({ agent: failing, source: "startup" }),
-    undefined,
-  );
-  assert.deepEqual(failing.injected, []);
+
+  // Call 1 (boot) has no connection in it; call 2 (the first session) succeeds.
+  const restoreCredentials = installStoredCredentials({
+    responses: [
+      { body: {} },
+      { body: { OPENVIKING_URL: TEST_CONNECTION.url, OPENVIKING_API_KEY: TEST_CONNECTION.apiKey } },
+    ],
+  });
+  try {
+    assert.equal(await apply(ctx, { endpoint: "http://127.0.0.1:1933", workspacePeer: false }), false);
+    assert.deepEqual(mounted, [], "nothing mounted while the lookup fails");
+
+    runtime.initializeState = async state => {
+      state.profileBlock = "profile";
+      state.ready = true;
+      return state;
+    };
+    const agent = startupAgent("dsh-late");
+    await handlers.get("agent/created")({ agent, source: "startup", signal: new AbortController().signal });
+
+    assert.deepEqual(mounted.map(entry => entry.name).sort(), ["mcp-client", "skill-filesystem"]);
+    assert.equal(agent.injected.length, 1, "the confirming session is usable");
+    runtime.stopDrainer();
+  } finally {
+    restoreCredentials();
+  }
 });
 
 // The whole point of routing the connection through the storage lookup: a
 // machine that cannot resolve one gets no tool surface, no skills, and no
 // session state — not a bundle that quietly reaches some other server.
 test("a failed credential lookup activates nothing", async () => {
-  const handlers = new Map();
+  const handlers = makeHandlers();
   let runtime;
   const mounted = [];
   const registered = [];
@@ -276,9 +447,7 @@ test("a failed credential lookup activates nothing", async () => {
     },
     plugin: (plugin, config) => mounted.push({ name: plugin.name, config }),
     tools: { register: definition => registered.push(definition) },
-    on(name, handler) {
-      handlers.set(name, handler);
-    },
+    on: handlers.on,
   };
 
   const calls = [];
@@ -307,7 +476,9 @@ test("a failed credential lookup activates nothing", async () => {
       undefined,
     );
     assert.deepEqual(agent.injected, []);
-    assert.deepEqual(agent.effects, []);
+    // The teardown hook is registered before the lookup so cleanup can never be
+    // skipped; on its own it is inert, because no session state was ever created.
+    assert.deepEqual(agent.effects, ["openvikingMemory.disposeSession()"]);
     handlers.get("session/event")(
       { id: "no-credentials", header: { cwd: "/workspace" } },
       { type: "user/message", data: message("Remember this despite no connection.") },

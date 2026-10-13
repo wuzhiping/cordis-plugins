@@ -225,6 +225,29 @@ logged as `[openviking:dsh] credentials_unavailable` with the stage that failed
 (`config`, `credential`, `request`, or `response`), and the URI guard stays
 active because it needs no server.
 
+**The lookup is re-asked for every new session**, not just at startup, so a
+rotated key or a re-pointed endpoint takes effect on the next session instead of
+the next process restart:
+
+- a session whose lookup fails is **refused**: no profile injection, no recall,
+  no capture, and its `mcp__openviking__*` calls are denied with the failing
+  stage quoted. The bridge itself cannot be unmounted for one session — it is
+  mounted once per process — so the refusal happens at call time;
+- a **boot-time** failure is not fatal: the first session that confirms mounts
+  the bridge and the skill provider itself (late activation), so a fixed
+  credential file is picked up without restarting DSH;
+- the confirmation has a 3-second budget (vs. 8 at boot) because it runs inside
+  the serial `agent/created` dispatch, which holds the new session's input until
+  its listeners settle.
+
+**A `200` with no fields is a failure, not an empty success** — measured, that is
+what an unknown key returns, and the sibling `/storage/ntfy` shows the same shape
+when its stored record is missing while the key itself is fine. Removing the
+`/storage/ov` record is therefore the way to switch memory off for a machine: new
+sessions are refused and told memory is not enabled, while session creation itself
+is unaffected. The two cases cannot be told apart from the response, so the refusal
+never claims the key is wrong.
+
 | Variable | Purpose |
 | --- | --- |
 | `OPENVIKING_STORAGE_URL` | Override the storage endpoint (tests, or a moved deployment); must stay on `abc.feg.com.tw` |

@@ -24,9 +24,12 @@ export const TEST_CONNECTION = {
 /**
  * Point the lookup at a throwaway credential file and answer it in-process.
  *
- * @param options - `{ url, apiKey, ref, status, body }`; `body` replaces the whole
- *   response payload so a test can express "200 with nothing in it".
- * @returns A restore function; call it once activation has happened.
+ * @param options - `{ url, apiKey, ref, status, body, responses }`. `body` replaces
+ *   the whole response payload so a test can express "200 with nothing in it";
+ *   `responses` is a per-call sequence of `{ status, body }` or `{ networkError }`
+ *   — the last entry repeats — which is how "boot fails, the next session
+ *   succeeds" and "the endpoint is unreachable" are written.
+ * @returns A restore function; call it once the calls under test have happened.
  */
 export function installStoredCredentials(options = {}) {
   const {
@@ -35,6 +38,7 @@ export function installStoredCredentials(options = {}) {
     ref = "AIFE_API_KEY",
     status = 200,
     body,
+    responses,
   } = options;
 
   const dir = mkdtempSync(join(tmpdir(), "ov-stored-credentials-"));
@@ -44,12 +48,20 @@ export function installStoredCredentials(options = {}) {
   const savedPath = process.env.DSH_CREDENTIALS_PATH;
   process.env.DSH_CREDENTIALS_PATH = file;
 
+  let calls = 0;
   const previous = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
     if (String(input).startsWith(DEFAULT_STORAGE_URL)) {
-      const payload = body === undefined ? { OPENVIKING_URL: url, OPENVIKING_API_KEY: apiKey } : body;
+      const step = responses ? responses[Math.min(calls, responses.length - 1)] : undefined;
+      calls += 1;
+      // `{ networkError }` models the endpoint being unreachable, which is what the
+      // timeout budget exists for.
+      if (step?.networkError) throw new Error(step.networkError);
+      const payload = step?.body !== undefined
+        ? step.body
+        : (body === undefined ? { OPENVIKING_URL: url, OPENVIKING_API_KEY: apiKey } : body);
       return new Response(JSON.stringify(payload), {
-        status,
+        status: step?.status ?? status,
         headers: { "Content-Type": "application/json" },
       });
     }
