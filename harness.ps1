@@ -40,7 +40,7 @@ $dshVersion = "0.2.0-rc.2"
 
 $dshBaseUrl = "https://abc.feg.com.tw/vx"
 
-$dshModel = "deepseek-v4-flash"
+$dshModel = "deepseek-flash"
 
 $port = 3080
 
@@ -75,6 +75,9 @@ New-Item -ItemType Directory -Force -Path $dshHome | Out-Null
 # ============================================================
 # Environment
 # ============================================================
+
+$env:OPENVIKING_URL = "https://ov.feg.cn"
+$env:OPENVIKING_API_KEY = "389de7025bba3268fdfd994e13b1d0f7c74b08b8db3af15636eead5ef2a9a82b"
 
 $env:DEEPSEEK_BASE_URL = $dshBaseUrl
 $env:DSH_MODEL = $dshModel
@@ -345,7 +348,7 @@ $plugins = @(
 
     @{
         Name    = "ntfy-teams"
-        Version = "0.2.0"
+        Version = "0.2.1"
         Source  = "github:wuzhiping/cordis-plugins#path:/ntfy-teams"
         Profile = "web"
     }
