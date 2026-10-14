@@ -10,6 +10,8 @@ set -Eeuo pipefail
 # Base paths
 # ---------------------------
 BASE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+BASE="/Applications/ABC.app/Contents/Resources"
+
 NODE_DIR="$BASE/node"
 GLOBAL_DIR="$NODE_DIR/global"
 CACHE_DIR="$NODE_DIR/cache"
@@ -178,7 +180,7 @@ PLUGIN_VERSIONS=(
   "0.1.0"
   "1.0.0"
   "0.2.0"
-  "0.2.0"
+  "0.2.1"
 )
 PLUGIN_SOURCES=(
   "github:wuzhiping/cordis-plugins#path:/zhtw-traditional-chinese"
@@ -269,7 +271,10 @@ process_output() {
     DSH_URL="$url"
     printf '%s\n' "$url" > "$BASE/harness.txt"
     log "<<<<$url>>>>"
-  done < <(printf '%s\n' "$clean_line" | grep -Eo 'https?://[^[:space:]]+' || true)
+  #done < <(printf '%s\n' "$clean_line" | grep -Eo 'https?://[^[:space:]]+' || true)
+  done <<EOF
+    $(printf '%s\n' "$clean_line" | grep -Eo 'https?://[^[:space:]]+' || true)
+EOF
 }
 
 # ---------------------------
