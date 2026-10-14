@@ -16,7 +16,13 @@ window.__ModuleLoader__.load({
     var exports = module.exports;
 
     var React = require("react");
+    var ReactDOM = require("react-dom");
     var e = React.createElement;
+    // ⚠️ `createPortal` 是 **react-dom** 的導出，不是 react 的。
+    // 之前寫 `React.createPortal` 得到 `is not a function`，於是以為「這個 React 太舊沒有
+    // portal」—— 其實是 React 18.3.1，只是拿錯模組。portal 是解決「預覽彈窗被其他
+    // 浮動按鈕蓋住」的關鍵：掛到 document.body 之後就進根層疊上下文，z-index 才真的有效。
+    var createPortal = ReactDOM.createPortal;
 
     // ---------------------------------------------------------------------
     // 1. 樣式:藏掉橫向捲動條(改由“按住內容拖”平移)+ 專家寵物的動效
@@ -277,7 +283,50 @@ window.__ModuleLoader__.load({
       + ".st-pet-float{animation:st-pet-float 3.4s ease-in-out infinite}"
       + ".st-pet-hop{animation:st-pet-hop .55s ease-out 1}"
       + ".st-pet-eyes{transform-box:fill-box;transform-origin:center;animation:st-pet-blink 5.4s ease-in-out infinite}"
-      + ".st-pet-sway{animation:st-pet-sway 4.6s ease-in-out infinite}";
+      + ".st-pet-sway{animation:st-pet-sway 4.6s ease-in-out infinite}"
+      // 預覽彈窗的反色（跟主區反色）：DSH 沒暴露 inverse 主題 token，但
+      // `--dsw-static-neutral-100/900` 是固定色票（不隨主題變），可以直接拿來用。
+      // 用 `body[data-ds-dark-theme]` 選深色主題 —— 這是 DSH 自己切主題時寫的屬性。
+      // 為什麼走 CSS 而不是 JS：JSX 的引數列裡不能放 `var`，之前的寫法用了未宣告的
+      // 賦值，`'use strict'` 下直接拋 ReferenceError，把整個面板的 render 炸掉
+      // （症狀：模板列表整批消失）。CSS 沒有這個問題，而且主題切換會即時跟著變。
+      //
+      // 除了 modal 自己，**內部元素也要跟著反色** —— 它們原本用
+      // `--dsw-alias-border-l2` / `--dsw-alias-bg-layer-1` 這類會反轉的 alias token，
+      // 在反色後的 modal 上會變成「淺底淺框」（關閉鈕邊框看不見）或「一塊突兀的深色」
+      // （loading overlay）。所以在這裡定義一組 `--stm-*` 變數，內部元素引用它們。
+      + ".st-preview-modal{"
+      +   "--stm-bg:var(--dsw-static-neutral-900,#0f0f0f);"       // 淺色主題 → modal 深
+      +   "--stm-fg:var(--dsw-static-neutral-100,#f5f5f5);"
+      +   "--stm-border:rgba(245,245,245,.34);"                    // 深底上的分隔線
+      +   "--stm-skel:rgba(245,245,245,.10);"                      // 骨架在深底上
+      +   "--stm-btn-bg:rgba(245,245,245,.10);"                    // 按鈕底
+      +   "--stm-btn-bg-hover:rgba(245,245,245,.20);"              // 按鈕 hover 底
+      +   "--stm-ring:var(--stm-bg);"                             // 4px 外框 = 跟 header 同色
+      +   "background:var(--stm-bg);color:var(--stm-fg);"
+      + "}"
+      + "body[data-ds-dark-theme] .st-preview-modal{"
+      +   "--stm-bg:var(--dsw-static-neutral-100,#f5f5f5);"       // 深色主題 → modal 亮
+      +   "--stm-fg:var(--dsw-static-neutral-900,#0f0f0f);"
+      +   "--stm-border:rgba(15,15,15,.34);"                       // 亮底上的分隔線
+      +   "--stm-skel:rgba(15,15,15,.08);"
+      +   "--stm-btn-bg:rgba(15,15,15,.07);"
+      +   "--stm-btn-bg-hover:rgba(15,15,15,.14);"
+      +   "--stm-ring:var(--stm-bg);"                             // 4px 外框 = 跟 header 同色
+      +   "background:var(--stm-bg);color:var(--stm-fg);"
+      + "}"
+      // 關閉鈕：border + 淡底 + hover。走 CSS（而不是 inline）才能真正有 :hover。
+      // 之前只有 1px 的弱邊框，在反色後的 modal 上幾乎看不出「這是顆按鈕」。
+      + ".st-preview-close{"
+      +   "border:1px solid var(--stm-border);"
+      +   "background:var(--stm-btn-bg);"
+      +   "color:var(--stm-fg);"
+      +   "padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600;"
+      +   "cursor:pointer;line-height:1.4;"
+      +   "transition:background .12s ease,border-color .12s ease;"
+      + "}"
+      + ".st-preview-close:hover{background:var(--stm-btn-bg-hover);border-color:var(--stm-fg)}"
+      + ".st-preview-close:active{transform:translateY(1px)}";
 
     function installStyles() {
       var tag = document.createElement("style");
@@ -1014,32 +1063,46 @@ window.__ModuleLoader__.load({
         padding: "3px 9px", borderRadius: 999, whiteSpace: "nowrap",
       },
       previewModal: {
-        position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
-        background: "var(--dsw-alias-bg-layer-1)", borderRadius: 12,
-        width: "min(860px, 90vw)", height: "min(640px, 82vh)",
+        // 2026-10-14 第三次調整：反色 —— modal 背景永遠跟主區**反色**。
+        //   深色主題：modal 亮灰 (#f5f5f5) + 黑色字
+        //   淺色主題：modal 深灰 (#0f0f0f) + 白色字
+        // 顏色**不放在這裡** —— inline style 會蓋過 CSS class，而反色要靠
+        // `body[data-ds-dark-theme]` 這個選擇器切。所以 background/color 交給
+        // CSS_TEXT 裡的 `.st-preview-modal` 兩條規則（見 CSS_TEXT）。
+        // 這裡只留幾何 / 排版 / 4px 反色外框。
+        // 外框用 `--stm-ring`（= modal 底色的反色，也就是主區那一側的顏色），
+        // 四邊各 4px，把彈窗跟主區切開。因為 left/right/top/bottom 都設了，
+        // 邊框會落在這個盒子**內側**，不會把彈窗推出視口。
+        position: "fixed", top: "5%", left: "5%", right: "5%", bottom: "5%",
+        border: "4px solid var(--stm-ring, #0f0f0f)",
+        borderRadius: 8,
         display: "flex", flexDirection: "column", overflow: "hidden",
         zIndex: 99999, boxShadow: "0 24px 60px rgba(15, 23, 42, 0.3)",
       },
       previewBackdrop: { position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.5)", zIndex: 99998 },
       previewHeader: {
-        padding: "10px 14px", borderBottom: "1px solid var(--dsw-alias-border-l2)",
+        // 用 --stm-border（反色後的分隔線）；`--dsw-alias-border-l2` 在反色 modal 上
+        // 是「淺底淺框」，看不見。
+        padding: "10px 14px", borderBottom: "1px solid var(--stm-border, rgba(15,15,15,.2))",
         display: "flex", alignItems: "center", justifyContent: "space-between",
         fontWeight: 600, fontSize: 13,
       },
-      previewClose: {
-        border: "1px solid var(--dsw-alias-border-l2)", background: "transparent",
-        padding: "4px 10px", borderRadius: 6, fontSize: 12, cursor: "pointer",
-      },
+      // previewClose 已移到 CSS（`.st-preview-close`）—— inline style 沒辦法做 :hover，
+      // 而關閉鈕需要 hover 回饋才看得出「這是顆按鈕」。
       previewBody: { flex: 1, position: "relative", display: "flex", flexDirection: "column" },
       previewOverlay: {
-        position: "absolute", inset: 0, background: "var(--dsw-alias-bg-layer-1)",
+        // 載入中的遮罩：底色跟 modal 一致（不透明的反色底），文字用反色前景
+        position: "absolute", inset: 0, background: "var(--stm-bg, #f5f5f5)",
         display: "flex", flexDirection: "column", gap: 12,
         alignItems: "center", justifyContent: "center",
-        color: "var(--dsw-alias-label-tertiary)", fontSize: 12, padding: "0 32px", textAlign: "center",
+        color: "var(--stm-fg, #0f0f0f)", fontSize: 12, padding: "0 32px", textAlign: "center",
+        opacity: .92,
       },
       previewHint: { color: "var(--dsw-alias-state-warn-primary)", fontSize: 11, lineHeight: 1.5, maxWidth: 420 },
-      previewSkel: { width: "72%", height: 12, borderRadius: 6, background: SKEL_BG },
-      iframe: { flex: 1, border: "none", width: "100%" },
+      previewSkel: { width: "72%", height: 12, borderRadius: 6, background: "var(--stm-skel, rgba(15,15,15,.08))" },
+      // iframe 給不透明底色（否則會透出 modal 後面的內容）。用 modal 自己的底色，
+      // 視覺上無縫；`background` 在 iframe 上會成為文件尚未繪製時的底色。
+      iframe: { flex: 1, border: "none", width: "100%", background: "var(--stm-bg, #f5f5f5)" },
     };
 
     /**
@@ -1576,11 +1639,20 @@ window.__ModuleLoader__.load({
                     }),
                   ),
         ),
-        preview && e("div", { style: S.previewBackdrop, onClick: closePreview },
-          e("div", { style: S.previewModal, onClick: function (ev) { ev.stopPropagation(); } },
+        // 整棵預覽子樹 portal 到 document.body —— 這是「不被其他浮動按鈕蓋住」的關鍵。
+        //
+        // 為什麼需要 portal：這個元件的祖先鏈（composer dock → composerStack → 對話欄）
+        // 裡有帶 transform / z-index 的元素，會形成**新的層疊上下文**，把
+        // `z-index: 99999` 鎖在裡面。於是 DSH 對話欄自己的「回到底部」浮動鈕
+        // （在另一個層疊上下文）就畫在 modal 之上 —— 實測就是使用者回報的遮擋。
+        // 掛到 body 之後沒有這種祖先，modal 進入根層疊上下文，99999 才真的有效。
+        preview && createPortal(
+          e("div", { style: S.previewBackdrop, onClick: closePreview },
+          // `.st-preview-modal` 帶反色（見 CSS_TEXT）；幾何在 S.previewModal。
+          e("div", { className: "st-preview-modal", style: S.previewModal, onClick: function (ev) { ev.stopPropagation(); } },
             e("div", { style: S.previewHeader },
               e("span", null, "預覽 · " + preview.title),
-              e("button", { style: S.previewClose, onClick: closePreview }, "關閉"),
+              e("button", { className: "st-preview-close", onClick: closePreview }, "關閉"),
             ),
             e("div", { style: S.previewBody },
               preview.url && e("iframe", {
@@ -1599,6 +1671,8 @@ window.__ModuleLoader__.load({
               ),
             ),
           ),
+          ),
+          document.body
         ),
       );
     }
