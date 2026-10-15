@@ -705,10 +705,14 @@ function withClass(tree, className) {
       };
     }
   });
-  // 這台測試機器的 React 替身不跑計時器，而情境 2 要驗的是「載入之後」的行為
-  // （倒數窗口本身由情境 1c 單獨驗），所以先把倒數關掉。
+  // 這台測試機器的 React 替身不跑計時器（setInterval 是 no-op），所以倒數
+  // 只能靠「第一次 render 前先把起點往回推」來跳過 —— effect 在 mount 時會
+  // 同步呼一次 tick()，那時就會判定 fraction<=0 並 setPreload(false)。
+  // **必須在任何 render 之前呼叫**：effect deps 是 [preload, frame]，第一次
+  // 跑完之後不會因為時間流逝而重跑，晚呼叫就沒有效果。
   configured.internals.disarmPreload();
-  await settle(configured);
+  configured.internals.fastForwardPreload();
+  const newTabTree = await settle(configured);
 
   check('a configured panel does NOT create an iframe (new-tab mode)', function () {
     // OPEN_IN_NEW_WINDOW = true 時，phase=frame 走的是「在新分頁開啟」卡，
@@ -718,26 +722,51 @@ function withClass(tree, className) {
   });
 
   check('a configured panel shows the new-tab card with the host url', function () {
-    const tree = configured.runtime.render(
-      configured.internals.WorkspacePanel,
-      configured.internals.__panelProps
-    );
-    configured.runtime.flushEffects();
-    const text = textOf(tree);
+    const text = textOf(newTabTree);
     // 標題、說明、路徑都在文字節點裡。
     assert.ok(text.includes('在新分頁開啟工作區'), '應該有標題：' + text.slice(0, 200));
     assert.ok(text.includes('/dashboard'), '應該把登入後要開啟的路徑也帶出來');
     // 完整登入網址在 textarea 的 value 屬性裡（textOf 只走 children，所以另外抓）。
-    const textareas = walk(tree, []).filter(function (e) { return e.tag === 'textarea'; });
+    const textareas = walk(newTabTree, []).filter(function (e) { return e.tag === 'textarea'; });
     assert.equal(textareas.length, 1, '應該有一個 textarea 顯示網址');
     assert.equal(textareas[0].props.value, url, 'textarea.value 應該是宿主給的完整網址');
     assert.equal(textareas[0].props.readOnly, true);
-    // 主按鈕要能點。
-    const openButton = walk(tree, []).filter(function (e) {
-      return e.tag === 'button' && String(e.props.className || '').includes('kw-btn-primary');
+    // 主按鈕：用 `<a target="_blank">`（Tauri WebView2 不吞這個；window.open 被吞）。
+    const openButton = walk(newTabTree, []).filter(function (e) {
+      return (e.tag === 'button' || e.tag === 'a') &&
+        String(e.props.className || '').includes('kw-btn-primary');
     })[0];
-    assert.ok(openButton, '應該有主按鈕');
-    assert.equal(typeof openButton.props.onClick, 'function', '主按鈕要有 onClick');
+    assert.ok(openButton, '應該有主按鈕（<a> 或 <button>）');
+    assert.equal(openButton.props.target, '_blank', '主按鈕要 target=_blank');
+    assert.equal(openButton.props.href, url, '主按鈕的 href 要是完整登入網址');
+    assert.ok(typeof openButton.props.onClick === 'function', '主按鈕要能 onClick（設 opened 狀態）');
+  });
+
+  // 切換路徑的倒數覆蓋層也要出現（以前只驗了「倒數結束後看到 NewTabView」，
+  // 沒驗倒數期間真的有覆蓋層）。這裡跑一輪 settle 讓 phase 走到 'frame'，
+  // 但 preload 維持 true（測試環境不跑計時器，時間不會前進）。
+  const newTabPreload = loadPlugin({
+    fetch: async function () {
+      return {
+        ok: true,
+        status: 200,
+        json: async function () {
+          return { ok: true, configured: true, apiKeySet: true, redirect: '/dashboard', url: url, mode: 'newtab' };
+        }
+      };
+    }
+  });
+  const preloadTree = await settle(newTabPreload, 3);
+
+  check('the new-tab path shows the 3s preload overlay before revealing the card', function () {
+    const text = textOf(preloadTree);
+    assert.ok(text.includes('即將載入工作區'),
+      '倒數期間應看到標題：' + text.slice(0, 200));
+    assert.equal(withClass(preloadTree, 'kw-overlay-click').length, 1,
+      '應有可點擊的倒數覆蓋層');
+    // 倒數還沒結束 → 不該看到 NewTabView 的主按鈕。
+    assert.equal(text.includes('在新分頁開啟工作區'), false,
+      '倒數期間不該先露出新分頁卡');
   });
 
   // ---------------------------------------------------------------------

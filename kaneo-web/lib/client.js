@@ -53,17 +53,23 @@ window.__ModuleLoader__.load({
     /**
      * 是否改用「在新分頁開啟」取代 iframe。
      *
-     * 設成 `true` 時,`phase='frame'` 不再建立 iframe,而是顯示一張「在新分頁開啟工作區」
-     * 的卡（按鈕用 `window.open` 帶 `noopener,noreferrer`）。這是針對該站台
-     * 限制 iframe 嵌入（同站 cookie 不能在跨站 iframe 裡被接受）這件事的暫時替代方案。
+     * 預設：**Tauri / Electron → true（新分頁）**；**Chrome / Edge 桌面版 → false（iframe）**。
      *
-     * `false` 時走原本的 iframe 路徑（倒數、進度環、診斷卡、persistent frame 都還在）。
+     * 判斷：依序檢查（任一命中即視為 embedded webview）
+     *   1. `window.__TAURI_INTERNALS__`（Tauri 2）— 最可靠
+     *   2. `window.__TAURI_IPC__`（Tauri 1）
+     *   3. userAgent 含 `Tauri/` 或 `Electron/`（Tauri 2 dev 模式、Electron 桌面 app）
+     *   否則 `false`（iframe 路徑）。
      *
-     * 預設改回 `false`：iframe 路徑預設是「原本的設計」，新分頁只是替代方案。
-     * 第一次開啟面板時若 host 端有 `mode` 設定，會被 `refresh()` 採用並覆蓋
-     * 這個預設值。
+     * 之後可被 host 的 `mode` 設定、面板內的「開啟工作區的方式」toggle 覆蓋。
      */
-    const OPEN_IN_NEW_WINDOW = false;
+    const OPEN_IN_NEW_WINDOW = (function () {
+      if (typeof window === 'undefined') return false;
+      if (window.__TAURI_INTERNALS__ || window.__TAURI_IPC__) return true;
+      if (typeof navigator === 'undefined') return false;
+      const ua = navigator.userAgent || '';
+      return /Tauri\/|Electron\//i.test(ua);
+    })();
     /** 倒數動畫的更新間隔（毫秒）。20fps 就足夠平滑，又不會太吵。 */
     const PRELOAD_TICK_MS = 50;
     /** 進度環的半徑與圓周（viewBox 是 48×48，圓心 24,24）。 */
@@ -148,6 +154,7 @@ window.__ModuleLoader__.load({
       'newtab.urlLabel': '要開啟的網址',
       'newtab.urlHelp': '這是登入用的單次連結，沒有狀態可以重看，按下「在新分頁開啟」即可。',
       'newtab.context': '登入後要開啟的路徑：',
+      'newtab.openedHint': '已送出開啟請求。若新分頁沒出現，請用左邊「複製網址」自己貼到瀏覽器開啟。',
       'mode.heading': '開啟工作區的方式',
       'mode.newtab': '在新分頁開啟（建議）',
       'mode.newtabHint': '登入會在頂層分頁生效（同站 cookie 不受限）。iframe 嵌入被擋時用這個。',
@@ -219,6 +226,7 @@ window.__ModuleLoader__.load({
       'newtab.urlLabel': 'URL to open',
       'newtab.urlHelp': 'The entry link is single-use. Press the button to open it in a new tab.',
       'newtab.context': 'Path to open after entry: ',
+      'newtab.openedHint': 'Open request sent. If no new tab appeared, use "Copy URL" on the left and paste it into your browser.',
       'mode.heading': 'How to open the workspace',
       'mode.newtab': 'Open in a new tab (recommended)',
       'mode.newtabHint': 'Sign-in happens at top level (SameSite cookies are accepted). Use this when iframe embedding is blocked.',
@@ -1134,17 +1142,19 @@ window.__ModuleLoader__.load({
       const opened = openedState[0];
       const setOpened = openedState[1];
 
+      // 主路徑是 `<a target="_blank">`：瀏覽器與 Tauri 的 WebView2 都會處理它。
+      // onClick 只是**保險**（有些環境把 <a> 的預設行為吃掉時再試一次
+      // window.open），並且同步把「已開啟」狀態設起來。
+      //
+      // **刻意不做 `location.href` 自動導向**：那會在「新分頁其實開了、但主視窗
+      // 仍保有焦點」的情況下把整個 DSH Web UI 置換成 Kaneo —— 使用者會直接失去
+      // 面板，代價遠大於「這次沒開成」。沒開成的話，下方一直可見的「複製網址」
+      // 就是可靠的退路。
       function open() {
+        setOpened(true);
         try {
-          // noopener,noreferrer：不要給新分頁 window.opener 也不送 Referer，
-          // 降低金鑰（雖然它已出現在網址裡）外洩到目標頁第三方資源的風險。
           window.open(url, '_blank', 'noopener,noreferrer');
-          setOpened(true);
-        } catch (err) {
-          // 瀏覽器擋彈窗：使用者得自己從位址列開。
-          // 我們不擋使用者 —— 顯示一個複製鈕讓他自己來。
-          setOpened(false);
-        }
+        } catch (err) { /* 被擋就算了，複製網址那顆還在 */ }
       }
 
       function copy() {
@@ -1186,19 +1196,27 @@ window.__ModuleLoader__.load({
           h(
             'div',
             { className: 'kw-row' },
-            opened
-              ? h('span', { className: 'kw-p kw-p-ok' }, '✓ ' + t('action.opened'))
-              : h('button', {
-                  type: 'button',
-                  className: 'kw-btn kw-btn-ghost',
-                  onClick: copy
-                }, t('action.copy')),
+            // 「複製網址」**永遠可見** —— 新分頁在少數環境（Tauri 未設
+            // setNewWindowHandler、嚴格彈窗政策）可能開不起來，這時它是可靠退路。
             h('button', {
               type: 'button',
+              className: 'kw-btn kw-btn-ghost',
+              onClick: copy
+            }, t('action.copy')),
+            // 主路徑用 `<a target="_blank">`：瀏覽器與 Tauri WebView2 都會處理，
+            // 不像 window.open 會被默吞。
+            h('a', {
+              href: url,
+              target: '_blank',
+              rel: 'noopener noreferrer',
               className: 'kw-btn kw-btn-primary',
               onClick: open
             }, '↗ ' + t('action.openNewTab'))
-          )
+          ),
+          // 按過之後的提示：若新分頁沒出現，明確告訴使用者改用複製網址。
+          opened
+            ? h('p', { className: 'kw-p kw-p-ok' }, '✓ ' + t('newtab.openedHint'))
+            : null
         )
       );
     }
@@ -1750,11 +1768,49 @@ window.__ModuleLoader__.load({
       } else if (mode === 'newtab' && typeof status.url === 'string' && status.url !== '') {
         // 該站台不允許 iframe 嵌入（SameSite cookie 限制）；用「在新分頁開啟」取代。
         // 切換這條路徑的使用者從設定表的「開啟工作區的方式」開關選「在新分頁開啟」。
-        body = h(NewTabView, {
-          t: t,
-          url: status.url,
-          redirect: status.redirect
-        });
+        // **跟 iframe 路徑一樣先倒數 3 秒**（每次打開都倒數）—— 倒數期間
+        // 整塊 NewTabView 卡被半透明覆蓋層擋住，3 秒後露出來。
+        // 用戶可主動點覆蓋層「中斷」倒數（直接進設定 / 重整）。
+        body = h(
+          'div',
+          { className: 'kw-center' },
+          preload
+            ? h(
+                'div',
+                {
+                  className: 'kw-overlay kw-overlay-click',
+                  role: 'button',
+                  tabIndex: 0,
+                  onClick: interruptPreload,
+                  onKeyDown: function (event) {
+                    if (event && (event.key === 'Enter' || event.key === ' ')) interruptPreload();
+                  }
+                },
+                h(
+                  'div',
+                  { className: 'kw-count' },
+                  h('svg', { className: 'kw-ring', viewBox: '0 0 48 48', 'aria-hidden': true },
+                    h('circle', { className: 'kw-ring-track', cx: 24, cy: 24, r: RING_RADIUS }),
+                    h('circle', {
+                      className: 'kw-ring-fill',
+                      cx: 24,
+                      cy: 24,
+                      r: RING_RADIUS,
+                      strokeDasharray: String(RING_CIRCUMFERENCE),
+                      style: { transform: 'scale(' + progress.fraction + ')' }
+                    })
+                  ),
+                  h('span', { className: 'kw-count-num' }, String(progress.seconds))
+                ),
+                h('div', { className: 'kw-h' }, t('preload.title')),
+                h('div', { className: 'kw-p' }, t('preload.hint'))
+              )
+            : h(NewTabView, {
+                t: t,
+                url: status.url,
+                redirect: status.redirect
+              })
+        );
       } else {
         body = h(
           'div',
