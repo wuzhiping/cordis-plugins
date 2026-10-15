@@ -1,0 +1,21 @@
+# kaneo-web bundle patch.
+#
+# A plain `- id:` row only patches an EXISTING loader entry, so a new plugin
+# arrives in an `insert:` block. The row's `name` is this package's own name:
+# @deepseek-ai/dsh-client-modules attaches a browser half to the Loader row
+# whose specifier is the bare package name, reads `dsh.client.platform: "web"`,
+# and serves ./lib/client.js to the page.
+#
+# `config.apiKey` starts empty on purpose: the panel shows a setup form until
+# the user saves one (or fetches one from the remote store).
+# `config.redirect` is the post-sign-in path inside Kaneo.
+#
+# `storageUrl` and `enableRestore` are intentionally NOT listed: they have schema
+# defaults (the BDD storage endpoint / true) and only need an entry here to point
+# this plugin at a different environment.
+- insert:
+    - id: kaneo-web
+      name: kaneo-web
+      config:
+        apiKey: ''
+        redirect: /dashboard

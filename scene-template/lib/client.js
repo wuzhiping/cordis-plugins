@@ -137,14 +137,18 @@ window.__ModuleLoader__.load({
       });
     }
 
-    /** 把遠端 payload 收成 §3.1 契約;形狀不對就抛,交給上層回退到 mock。 */
+    /** 把遠端 payload 收成 §3.1 契約。
+     *
+     * 空清單是合法狀態(此 preset 沒有場景、或是清單 API 本來就回 []) —— 不抛,
+     * 讓上層把 `source` 標成 `remote` 並照實顯示「清單是空的」,而不是回退成 mock + 「已回退」。
+     * 只有「id/name 缺漏」這種真錯才抛,讓上層走「連不上 / 形狀不對」路徑。 */
     function normalizeScenarios(payload) {
       var list = Array.isArray(payload)
         ? payload
         : (payload && Array.isArray(payload.scenarios)
             ? payload.scenarios
             : (payload && payload.data && Array.isArray(payload.data) ? payload.data : null));
-      if (!list || list.length === 0) throw new Error("unexpected scene list payload");
+      if (!list) throw new Error("unexpected scene list payload");
       return list.map(function (s) {
         if (!s || typeof s.id !== "string" || typeof s.name !== "string") {
           throw new Error("scene entry missing id/name");
@@ -704,8 +708,9 @@ window.__ModuleLoader__.load({
        * @returns Promise<{ scenarios, source }>。
        */
       listScenarios: function (preset) {
-        // 真接口 + 失敗回退:超時/非 2xx/形狀不對 → 用本檔案裡的 mock,
-        // 並把 source 帶回去(介面上 hover 場景列可確認來源)。
+        // 真接口。空清單是合法狀態(此 preset 沒有場景、或是清單 API 本來就回 []) ──
+        // 不回退 mock,直接回 [] + source:"remote" 讓面板照實顯示空狀態。
+        // 連不上 / 形狀不對 → [] + source:null,讓面板顯示「暫無場景」,不掛「已回退 mock」。
         //
         // ★ 這裡原本是 GET + `?_t=` 去破快取(因為回應只有弱 etag、沒有
         //   cache-control)。現在改成 POST,是為了讓**每個** scene 介面的 body
@@ -719,13 +724,9 @@ window.__ModuleLoader__.load({
         }).then(function (payload) {
           return { scenarios: normalizeScenarios(payload), source: "remote" };
         }).catch(function (err) {
-          console.warn("[scene-template] scene list remote failed, falling back to mock:", err && err.message ? err.message : err);
-          return delayed(LATENCY.list, {
-            scenarios: SCENARIOS.map(function (s) {
-              return { id: s.id, name: s.name, icon: s.icon, hasDynamicTemplates: s.hasDynamicTemplates };
-            }),
-            source: "mock",
-          });
+          // 連不上或形狀不對 → 空清單,不回退 mock;面板會顯示「暫無場景」。
+          console.warn("[scene-template] scene list remote failed:", err && err.message ? err.message : err);
+          return { scenarios: [], source: null };
         });
       },
       getScenario: function (id) {
@@ -1020,7 +1021,6 @@ window.__ModuleLoader__.load({
         paddingBottom: 2,
         cursor: "grab", userSelect: "none", touchAction: "pan-x",
       },
-      empty: { fontSize: 11, color: "var(--dsw-alias-label-tertiary)", padding: "4px 0", flex: "0 0 auto" },
       header: {
         display: "flex", alignItems: "center",
         gap: 8, minWidth: 0, marginBottom: 4,
@@ -1200,8 +1200,10 @@ window.__ModuleLoader__.load({
           setScenarios((r && r.scenarios) || []);
           setScenarioSource((r && r.source) || null);
         }).catch(function (err) {
-          console.error(err);
-          if (!cancel) setScenarios([]);
+          // 連不上 / 形狀不對 → 置空 + 清掉舊的 source,面板會顯示「暫無場景」,
+          // 不掛「已回退 mock」(空是合法狀態,不是 fail back)。
+          console.warn("[scene-template] scene list failed:", err && err.message ? err.message : err);
+          if (!cancel) { setScenarios([]); setScenarioSource(null); }
         });
         return function () { cancel = true; };
       }, [sessionId, agentPreset, tick]);
@@ -1333,7 +1335,9 @@ window.__ModuleLoader__.load({
                   return e("div", { key: "sk" + i, className: "st-skel", style: S.skelChip(true, w) });
                 })
               : scenarios.length === 0
-                ? e("span", { style: S.empty }, "暫無場景資料")
+                // 空清單是合法狀態 —— 不顯示提示,直接留白;頂部的"選個場景"標籤
+                // 與下方的空區塊就夠清楚。
+                ? null
                 : scenarios.map(function (s) {
                     return e("div", {
                       key: s.id,

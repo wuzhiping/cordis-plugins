@@ -1,0 +1,4 @@
+{
+  "title": "Kaneo",
+  "description": "Adds a Kaneo panel to the sidebar that embeds the workspace in an iframe. The API key is set by the user, and the server address and paths never appear in the UI."
+}

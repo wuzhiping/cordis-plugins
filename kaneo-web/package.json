@@ -1,0 +1,56 @@
+{
+  "name": "kaneo-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "在側邊欄新增一個「管線看板」面板：用 iframe 載入工作區。服務位址與登入路徑只留在宿主半邊，瀏覽器端看不到網域與路徑，介面也不出現產品名。API Key 預設未設定，使用者自行輸入（或從遠端取回）後才載入，redirect 預設 /dashboard 且可修改。",
+  "type": "commonjs",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "lib/secrets.js",
+    "cordis.patch.yml",
+    "locale/en.json",
+    "locale/zh.json",
+    "icon.svg",
+    "test/smoke.js",
+    "test/host-route.js",
+    "test/config-freshness.js",
+    "test/panel-render.js",
+    "test/frame-persistence.js",
+    "test/secrets.js",
+    "docs/remote-storage-payload.md",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "test": "node test/smoke.js && node test/host-route.js && node test/config-freshness.js && node test/panel-render.js && node test/frame-persistence.js && node test/secrets.js",
+    "test:smoke": "node test/smoke.js",
+    "test:route": "node test/host-route.js",
+    "test:config": "node test/config-freshness.js",
+    "test:panel": "node test/panel-render.js",
+    "test:frame": "node test/frame-persistence.js",
+    "test:secrets": "node test/secrets.js"
+  },
+  "icon": "./icon.svg",
+  "meta": {
+    "title": "管線看板",
+    "description": "在側邊欄新增一個面板，用 iframe 載入專案工作區。API Key 由使用者自行設定（或從遠端取回），服務位址與路徑不會出現在介面上。"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "license": "MIT"
+}

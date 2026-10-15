@@ -85,17 +85,24 @@ card.
 
 | endpoint | source |
 |---|---|
-| `scenarios.list` | **real API**: `GET https://abc.feg.com.tw/BDD/API/AI/dsh/scene/list?preset=<agent preset id>` — the list is **per agent preset**, so the current session's preset id travels as the `preset` query parameter (see *The list is per preset*) |
+| `scenarios.list` | **real API**: `POST https://abc.feg.com.tw/BDD/API/AI/dsh/scene/list` with `{"preset":"<agent preset id>"}` — the list is **per agent preset**, so the current session's preset id travels in the body (see *The list is per preset*) |
 | `scenarios.get` (detail + branches + templates) | **real API**: `POST https://abc.feg.com.tw/BDD/API/AI/dsh/scene/detail` with `{"id":"scn_writing"}` |
 | recommend (`✨ 推薦` / `🔄 換一批`) | **real API**: `POST https://abc.feg.com.tw/BDD/API/AI/dsh/scene/suggestion_template` with `{"scene_id":"scn_writing","content":"<composer draft>"}` |
 | `scenarios.templates` (dynamic templates), `templates.preview` | mock in `lib/client.js` (with `LATENCY`) — in practice the preview never needs the endpoint, because every template already carries a working `previewUrl` |
 
-Both real endpoints answer with `access-control-allow-origin: *` (their preflights return `204`
-with `allow-methods: GET,HEAD,PUT,PATCH,POST,DELETE`), and each is wrapped in a **mock fallback**:
-timeout (8s), a non-2xx status, a malformed payload, or a network error falls back to the embedded
-data. Hover says which one you are looking at — the chip row reports the scene list's source, the
-branch row and the template wall report the detail's, and the recommend button reports the
-recommendation's (`場景清單：遠端 API` / `…mock（遠端 API 失敗，已回退）`).
+The list, the detail and the recommendation endpoints answer with `access-control-allow-origin: *`
+(their preflights return `204` with `allow-methods: GET,HEAD,PUT,PATCH,POST,DELETE`). Their failure
+semantics differ on purpose:
+
+- **`scenarios.list` — empty is correct, no mock fallback.** The list endpoint serves a per-preset
+  catalogue; a preset with no scenarios yet (or an API that legitimately returns `scenarios: []`) is a
+  legal state, so the client treats both **empty** and **error** (timeout, non-2xx, malformed body) as
+  "no scenes" and renders the empty state. No mock fallback — that would lie about where the data
+  came from. The panel's tooltip reports the source honestly: `場景清單：遠端 API` when the call
+  succeeded (even with zero results), or stays blank when it failed.
+- **`scenarios.get` / `recommend` — mock fallback on error.** Timeout, non-2xx, or a malformed payload
+  falls back to the embedded mock data, and the tooltip reports the source so the user can tell
+  (`…mock（遠端 API 失敗，已回退）`).
 
 Two behaviours worth knowing about the recommendation endpoint:
 
