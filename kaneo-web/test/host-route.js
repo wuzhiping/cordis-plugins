@@ -192,6 +192,15 @@ function callRoute(harness, method, body, routePath, query) {
     assert.equal(status.json.redirect, '/dashboard');
   });
 
+  // **每個回應都要帶 mode** —— GET 漏掉 mode 是「使用者切換過的開啟方式
+  // 每次都被自動偵測蓋回預設值」這個 bug 的根因，所以這條單獨釘住。
+  check('GET carries the mode field (not just DELETE/PATCH/reset)', function () {
+    assert.ok(Object.prototype.hasOwnProperty.call(status.json, 'mode'),
+      'GET 回應必須有 mode 欄位；實得 ' + JSON.stringify(status.json));
+    assert.ok(status.json.mode === 'newtab' || status.json.mode === 'iframe',
+      'mode 只能是 newtab 或 iframe，實得 ' + JSON.stringify(status.json.mode));
+  });
+
   status = await callRoute(harness, 'POST', { apiKey: 'K-123', redirect: '/dashboard' });
   check('POST stores the key and returns a usable url', function () {
     assert.equal(status.status, 200);
@@ -330,6 +339,24 @@ function callRoute(harness, method, body, routePath, query) {
   status = await callRoute(harness, 'PATCH', {}, '/plugins/kaneo-web/config');
   check('PATCH with no actionable field is also rejected', function () {
     assert.equal(status.status, 400);
+  });
+
+  // 端到端來回：PATCH 存 iframe 之後，**GET 必須讀回 iframe**。
+  // 這是使用者症狀（「存了 iframe，重開又變回新分頁」）最直接的回歸測試 ——
+  // 只要 GET 忘記帶 mode，這條就會紅。
+  await callRoute(harness, 'PATCH', { mode: 'iframe' }, '/plugins/kaneo-web/config');
+  const roundTrip = await callRoute(harness, 'GET');
+  check('mode survives a PATCH -> GET round-trip', function () {
+    assert.equal(roundTrip.status, 200);
+    assert.equal(roundTrip.json.mode, 'iframe',
+      'PATCH 存了 iframe，GET 就必須讀回 iframe；實得 ' + JSON.stringify(roundTrip.json));
+  });
+
+  // 反向也要成立（避免只是硬編某個值）。
+  await callRoute(harness, 'PATCH', { mode: 'newtab' }, '/plugins/kaneo-web/config');
+  const roundTripBack = await callRoute(harness, 'GET');
+  check('mode round-trips back to newtab as well', function () {
+    assert.equal(roundTripBack.json.mode, 'newtab');
   });
 
   status = await callRoute(harness, 'GET');

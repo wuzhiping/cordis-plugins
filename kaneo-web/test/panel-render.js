@@ -818,6 +818,34 @@ function withClass(tree, className) {
     assert.equal(iframed.iframes().length, 1);
   });
 
+  // ---------------------------------------------------------------------
+  // 情境 2c：宿主**不回** mode（舊版或漏欄位）→ 使用者存過的選擇仍然生效
+  // ---------------------------------------------------------------------
+  const storedMode = loadPlugin({
+    fetch: async function () {
+      return {
+        ok: true,
+        status: 200,
+        json: async function () {
+          // 注意：**沒有 mode 欄位** —— 模擬舊版宿主。
+          return { ok: true, configured: true, apiKeySet: true, redirect: '/dashboard', url: url };
+        }
+      };
+    }
+  });
+  // 使用者上次選了 iframe：必須在任何 render 之前先寫進去（useState 初始值會讀它）。
+  storedMode.localStorage.setItem('kaneo-web.mode', 'iframe');
+  storedMode.internals.fastForwardPreload();
+  await settle(storedMode);
+
+  check('a stored mode survives a host that omits the mode field', function () {
+    assert.equal(storedMode.iframes().length, 1,
+      '宿主沒回 mode 時，應該沿用使用者存過的 iframe；實得 ' + storedMode.iframes().length);
+  });
+
+  // 清掉，避免污染後續測試（store 是同一個物件）。
+  storedMode.localStorage.removeItem('kaneo-web.mode');
+
   console.log('');
   console.log(process.exitCode === 1 ? 'failed' : 'all ' + passed + ' checks passed');
 })().catch(function (err) {

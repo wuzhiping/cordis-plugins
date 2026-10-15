@@ -77,6 +77,16 @@ window.__ModuleLoader__.load({
     const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
     /** 瀏覽器上一次看到的路徑（非機密，只有路徑；金鑰永不進瀏覽器儲存）。 */
     const LAST_PATH_KEY = 'kaneo-web.lastPath';
+    /**
+     * 使用者選過的「開啟工作區的方式」（`newtab` / `iframe`）。
+     *
+     * 這是**非機密的 UI 偏好**，不是設定本身 —— 正式來源仍然是宿主的 `mode`。
+     * 存在這裡的理由：宿主的舊版本（或未來哪天又漏回 `mode` 欄位）不會回這個值，
+     * 那時面板就會掉回自動偵測的預設值，使用者「明明切過、重開又跳回去」。
+     * 有了這一層，即使宿主沉默，使用者的選擇也留得住。
+     * 讀取順序：宿主有回 → 用宿主的；宿主沉默 → 用這裡；都沒有 → 自動偵測。
+     */
+    const MODE_KEY = 'kaneo-web.mode';
     /** Locale namespace。 */
     const NS = 'kaneo-web';
 
@@ -561,6 +571,38 @@ window.__ModuleLoader__.load({
         return safeSitePath(localStorage.getItem(LAST_PATH_KEY));
       } catch (err) {
         return null;
+      }
+    }
+
+    /**
+     * 讀使用者上次選的開啟方式；讀不到或值不合法就回 null（讓上層走自動偵測）。
+     *
+     * 一定要驗形狀：瀏覽器儲存可能被手改或外掛亂寫，只接受兩個合法值。
+     *
+     * @returns `'newtab' | 'iframe' | null`。
+     */
+    function readStoredMode() {
+      try {
+        if (typeof localStorage === 'undefined') return null;
+        const value = localStorage.getItem(MODE_KEY);
+        return value === 'iframe' || value === 'newtab' ? value : null;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    /**
+     * 記住使用者選的開啟方式（非機密 UI 偏好；金鑰永不進瀏覽器儲存）。
+     *
+     * @param value - `'newtab'` 或 `'iframe'`。
+     */
+    function persistStoredMode(value) {
+      if (value !== 'iframe' && value !== 'newtab') return;
+      try {
+        if (typeof localStorage === 'undefined') return;
+        localStorage.setItem(MODE_KEY, value);
+      } catch (err) {
+        // 寫不進去（無痕、被擋）不影響功能：只是下次重開會回到自動偵測。
       }
     }
 
@@ -1266,12 +1308,16 @@ window.__ModuleLoader__.load({
       const diag = diagState[0];
       const setDiag = diagState[1];
       // 用哪種方式開工作區：`newtab`（在新分頁，預設，繞開 iframe 限制）、
-      // `iframe`（原本的 iframe 嵌入，可能被擋）。這是**面板自己的狀態**，
-      // 不是從 host 拉下來的 —— 預設值在 OPEN_IN_NEW_WINDOW 常數；host 的
-      // `mode` 設定只透過 setMode()/PATCH 寫回，後續 refresh() 不覆蓋這個值，
-      // 這樣 iframe 自動偵測到 iframe 不可用時切到 newtab 才不會被下一次的
-      // 狀態查詢蓋回去。
-      const modeState = React.useState(OPEN_IN_NEW_WINDOW ? 'newtab' : 'iframe');
+      // `iframe`（原本的 iframe 嵌入，可能被擋）。
+      //
+      // 初始值的優先序：
+      //   1. 瀏覽器記住的使用者選擇（MODE_KEY）—— 使用者切過就以他為準
+      //   2. OPEN_IN_NEW_WINDOW 自動偵測（Tauri/Electron → newtab）
+      // 宿主若有回 `mode`，`refresh()` 會用宿主的值覆蓋上面兩者（宿主是正式來源），
+      // 並順手把值同步回這裡，讓兩份不會分歧。
+      const modeState = React.useState(
+        readStoredMode() || (OPEN_IN_NEW_WINDOW ? 'newtab' : 'iframe')
+      );
       const mode = modeState[0];
       const setMode = modeState[1];
       // 切換時的忙碌狀態（PATCH 來回期間不讓使用者再點）。
@@ -1327,10 +1373,12 @@ window.__ModuleLoader__.load({
       /** 問宿主現在能不能載入；帶上「上次那一頁」，讓宿主直接組好要去的網址。 */
       const refresh = React.useCallback(async function () {
         const next = await fetchStatus(preferredRedirect(''));
-        // 永遠以 host 給的 mode 為準：使用者切換模式時是 React state 與 PATCH 同時改，
-        // PATCH 成功後下次 refresh 會拿到新值；這樣面板的視覺永遠與磁碟一致。
+        // 宿主有回 `mode` 就以它為準（正式來源），並把值同步回瀏覽器儲存，
+        // 讓下次「宿主沉默」時仍有正確的偏好可用。宿主沒回時這裡不動 ——
+        // 初始值（儲存的偏好或自動偵測）保持有效。
         if (next.mode === 'iframe' || next.mode === 'newtab') {
           setMode(next.mode);
+          persistStoredMode(next.mode);
         }
         if (next.ok === true && next.configured === true && typeof next.url === 'string') {
           setStatus({
@@ -1657,13 +1705,20 @@ window.__ModuleLoader__.load({
         setForceShown(false);
         preloadArmed = true; // 讓下次重設：再次走倒數 → 建 iframe。
         setPreload(true);
+        // 使用者的選擇先記在瀏覽器（即使宿主沒有 PATCH 路由、或 PATCH 失敗，
+        // 下次重開也維持他選的方式，不會被自動偵測蓋掉）。
+        persistStoredMode(next);
         // 寫進宿主（背景）。失敗時退回面板狀態。
         switchMode(next).then(function (result) {
           setModeBusy(false);
-          if (result.ok !== true) setMode(previous);
+          if (result.ok !== true) {
+            setMode(previous);
+            persistStoredMode(previous);
+          }
         }).catch(function () {
           setModeBusy(false);
           setMode(previous);
+          persistStoredMode(previous);
         });
       }
 

@@ -191,19 +191,29 @@ check('client bundle never names the server or the sign-in path', function () {
   }
 });
 
-check('browser storage is only used for the non-secret last page', function () {
-  // 這條刻意收窄但不放鬆：localStorage 只用來記「上次停在哪一頁」（非機密），
+check('browser storage only keeps non-secret UI preferences', function () {
+  // 這條刻意收窄但不放鬆：localStorage 只准記「非機密的使用者偏好」——
+  // 目前是「上次停在哪一頁」與「用哪種方式開工作區」這兩個鍵。
   // 其他儲存一律不准用；而且寫進去的鍵名必須看得出來不是金鑰。
   const forbidden = ['sessionStorage', 'document.cookie', 'indexedDB'];
   for (const needle of forbidden) {
     assert.equal(clientCode.includes(needle), false, 'client.js 不该使用 ' + needle);
   }
-  assert.ok(clientCode.includes('kaneo-web.lastPath'), '應該只有這一個儲存用途');
-  // 只有 setItem 的最後路徑那一處；不得出現把金鑰寫進儲存的字樣。
+  // 白名單：只有這兩個鍵可以進瀏覽器儲存。
+  const allowedKeys = ['kaneo-web.lastPath', 'kaneo-web.mode'];
+  for (const key of allowedKeys) {
+    assert.ok(clientCode.includes(key), '應該有這個儲存鍵：' + key);
+  }
   const setItemLines = clientCode.split('\n').filter((line) => line.includes('localStorage.setItem'));
-  assert.equal(setItemLines.length, 1, 'localStorage.setItem 應該只有一處：' + setItemLines.join(' | '));
-  assert.ok(setItemLines[0].includes('LAST_PATH_KEY'), '寫入的必須是路徑鍵：' + setItemLines[0].trim());
-  assert.equal(/apiKey/i.test(setItemLines[0]), false, '不得把金鑰寫進瀏覽器儲存');
+  assert.equal(setItemLines.length, allowedKeys.length,
+    'localStorage.setItem 的數量要跟白名單一致：' + setItemLines.join(' | '));
+  for (const line of setItemLines) {
+    assert.ok(/LAST_PATH_KEY|MODE_KEY/.test(line), '只能用白名單的鍵：' + line.trim());
+    assert.equal(/apiKey/i.test(line), false, '不得把金鑰寫進瀏覽器儲存');
+  }
+  // 最關鍵的安全斷言：整份 bundle 不得把 apiKey 交給任何儲存 API。
+  assert.equal(/localStorage\.setItem\([^)]*apiKey/i.test(clientCode), false,
+    '金鑰永遠不得進瀏覽器儲存');
 });
 
 check('the remembered path is guarded against open redirects', function () {

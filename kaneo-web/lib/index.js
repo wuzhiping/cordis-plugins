@@ -700,7 +700,11 @@ function apply(ctx, config) {
             configured: resolved.ok === true,
             apiKeySet: resolved.apiKeySet === true,
             redirect: resolved.redirect,
-            url: resolved.ok === true ? resolved.url : null
+            url: resolved.ok === true ? resolved.url : null,
+            // **一定要回 `mode`**：面板用這個值決定「在新分頁開啟」還是「iframe 內嵌」。
+            // 這裡漏掉的話，面板永遠停在初始值（自動偵測的結果），使用者切換過
+            // 的模式會被無聲蓋掉 —— 症狀就是「怎麼存都回到新分頁」。
+            mode: readMode(currentConfig())
           });
           return;
         }
