@@ -712,6 +712,10 @@ window.__ModuleLoader__.load({
           configured: payload.configured === true,
           redirect: typeof payload.redirect === 'string' ? payload.redirect : '',
           url: typeof payload.url === 'string' ? payload.url : null,
+          // 宿主說值存在哪裡、以及有沒有退回本機備用檔。帶著走是為了讓
+          // 「存起來了，但其實沒進 profile 設定」這件事看得見，不是靜默吞掉。
+          storage: typeof payload.storage === 'string' ? payload.storage : undefined,
+          warning: typeof payload.warning === 'string' ? payload.warning : undefined,
           error: typeof payload.error === 'string'
             ? payload.error
             : (response.ok ? undefined : 'HTTP ' + response.status)

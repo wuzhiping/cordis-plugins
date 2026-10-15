@@ -37,6 +37,10 @@ const NS = 'kaneo-web';
 /** 遮蔽金钥与凭证档解析（与 ntfy-teams 同一份公式）。 */
 const secrets = require('./secrets.js');
 
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+
 /** 面板网址前缀。**只有这个档案知道**，浏览器半边看不到。 */
 const SIGN_IN_PATH = '/api/auth/api-key/sign-in';
 
@@ -472,6 +476,128 @@ function schemaSource() {
   return SCHEMA;
 }
 
+// =============================================================================
+// 备用储存（settings 服务不可用时的退路）
+// =============================================================================
+//
+// 为什么需要这一层：settings.update 在下面这种情况会抛错 ——
+//
+//   No configurable plugin entry "kaneo-web"
+//
+// 也就是这个外挂**没有被加进 profile 的可设定清单**：也许 bundle patch 没被
+// 套用、也许装到了别的 profile、也许 profile 里的行 id 跟这里的 NS 对不上。
+// 这时使用者连 API Key 都存不了、模式也切不动 —— 面板等于废掉。
+//
+// 所以：settings 能用就优先用（它是正式机制，会写进 profile 的
+// cordis.patch.yml），不能用时退回这个外挂自己的一个小 JSON 档。
+// 档里只放**非机密的路径**与 **apiKey**（跟 cordis.patch.yml 同一等级的
+// 本机档案储存，权限 0600），不放任何浏览器看得到的东西。
+//
+// 优先序（见 currentConfig）：settings 的值先铺底，**备用档的栏位覆盖上去**。
+// 这样是安全的，因为只有在 settings 写失败时才会写进备用档，而 settings
+// 一旦写入成功就会把该栏位从备用档清掉 —— 备用档永远只持有
+// 「settings 存不进去的那些栏位」。
+
+/** 备用档里允许出现的栏位（白名单，避免任何东西被顺手写进去）。 */
+const FALLBACK_FIELDS = ['apiKey', 'redirect', 'mode'];
+
+/**
+ * 备用档路径。
+ *
+ * 顺序：`DSH_KANEO_WEB_CONFIG`（测试／特殊部署覆写）→ profile 目录
+ * （跟 settings 写的 cordis.patch.yml 同一个地方，最直觉）→ `$DSH_HOME`
+ * → `~/.dsh`。
+ *
+ * @returns 绝对路径；无法决定时回 null。
+ */
+function fallbackFilePath() {
+  const override = process.env.DSH_KANEO_WEB_CONFIG;
+  if (typeof override === 'string' && override.trim() !== '') return override.trim();
+  if (process.env.DSH_PROFILE_DIR) return path.join(process.env.DSH_PROFILE_DIR, 'kaneo-web.config.json');
+  const home = process.env.DSH_HOME || path.join(os.homedir(), '.dsh');
+  return path.join(home, 'kaneo-web.config.json');
+}
+
+/**
+ * 读备用档。
+ *
+ * 一律回物件：读不到、坏了、权限不对都回 `{}` —— 这一层是退路，
+ * 它自己坏掉不该让面板跟着坏。只取白名单栏位。
+ *
+ * @returns `{ apiKey?, redirect?, mode? }`。
+ */
+function readFallbackConfig() {
+  const file = fallbackFilePath();
+  if (file === null) return {};
+  try {
+    const text = fs.readFileSync(file, 'utf8');
+    const parsed = JSON.parse(text);
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    const out = {};
+    for (const key of FALLBACK_FIELDS) {
+      if (typeof parsed[key] === 'string' && parsed[key] !== '') out[key] = parsed[key];
+    }
+    return out;
+  } catch (err) {
+    return {};
+  }
+}
+
+/**
+ * 把欄位合并进备用档（读-改-写）。
+ *
+ * @param patch - 要写入的欄位（白名单外的会被忽略）。
+ * @returns `{ ok, file?, error? }`。
+ */
+function writeFallbackConfig(patch) {
+  const file = fallbackFilePath();
+  if (file === null) return { ok: false, error: '無法決定備用設定檔的路徑' };
+  try {
+    const next = Object.assign({}, readFallbackConfig());
+    for (const key of FALLBACK_FIELDS) {
+      if (patch[key] !== undefined && patch[key] !== null) next[key] = String(patch[key]);
+    }
+    const dir = path.dirname(file);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    // 0600：只有本使用者读得到（跟 settings 写的 profile patch 同等级）。
+    fs.writeFileSync(file, JSON.stringify(next, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 });
+    return { ok: true, file: file };
+  } catch (err) {
+    return { ok: false, error: errorText(err) };
+  }
+}
+
+/**
+ * 从备用档移除欄位（settings 写入成功时调用，避免两份分歧）。
+ *
+ * @param fields - 要移除的欄位名。
+ * @returns `{ ok, error? }`（失败不影响主流程）。
+ */
+function clearFallbackFields(fields) {
+  const file = fallbackFilePath();
+  if (file === null) return { ok: true };
+  try {
+    const current = readFallbackConfig();
+    const next = Object.assign({}, current);
+    let changed = false;
+    for (const key of fields) {
+      if (Object.prototype.hasOwnProperty.call(next, key)) {
+        delete next[key];
+        changed = true;
+      }
+    }
+    if (!changed) return { ok: true };
+    if (Object.keys(next).length === 0) {
+      fs.rmSync(file, { force: true });
+      return { ok: true };
+    }
+    fs.writeFileSync(file, JSON.stringify(next, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: errorText(err) };
+  }
+}
+
 /**
  * 外挂本体的 Config：两个 volatile 栏位，都可以即时改、不必重启。
  *
@@ -547,20 +673,43 @@ function apply(ctx, config) {
     const fromFiber = fiber !== null && fiber !== undefined ? fiber.config : undefined;
     const hasFiber = fromFiber !== null && fromFiber !== undefined && typeof fromFiber === 'object';
     const hasLive = live !== null && typeof live === 'object';
-    if (!hasFiber && !hasLive) return {};
-    if (!hasFiber) return live;
-    if (!hasLive) return fromFiber;
 
-    const merged = {};
-    // 順序：先 `fromFiber`（drives 一切），再 `live`（補 fiber 沒有的鍵）。
-    // 對 `fromFiber` 的每個鍵都要 `unwrapConfig`（volatile ref 用 `.get()` 解）
-    // —— 直接放 ref 進 merged，後面讀 `merged.mode` 拿到的會是 function 而不是
-    // 字串，判斷 `mode === 'iframe'` 永遠是 false。
-    for (const key of Object.keys(fromFiber)) merged[key] = unwrapConfig(fromFiber[key]);
-    for (const key of Object.keys(live)) {
-      if (merged[key] === undefined) merged[key] = live[key];
+    // 先算出 settings 那一层的值（单出口，后面统一叠备用档）。
+    let merged;
+    if (!hasFiber && !hasLive) {
+      merged = {};
+    } else if (!hasFiber) {
+      merged = Object.assign({}, live);
+    } else if (!hasLive) {
+      merged = {};
+      for (const key of Object.keys(fromFiber)) merged[key] = unwrapConfig(fromFiber[key]);
+    } else {
+      merged = {};
+      // 順序：先 `fromFiber`（drives 一切），再 `live`（補 fiber 沒有的鍵）。
+      // 對 `fromFiber` 的每個鍵都要 `unwrapConfig`（volatile ref 用 `.get()` 解）
+      // —— 直接放 ref 進 merged，後面讀 `merged.mode` 拿到的會是 function 而不是
+      // 字串，判斷 `mode === 'iframe'` 永遠是 false。
+      for (const key of Object.keys(fromFiber)) merged[key] = unwrapConfig(fromFiber[key]);
+      for (const key of Object.keys(live)) {
+        if (merged[key] === undefined) merged[key] = live[key];
+      }
     }
+
+    // 备用档**覆盖**在上面：它只持有「settings 写不进去的欄位」（写入成功时
+    // 会立刻从备用档清掉），所以覆盖是安全的 —— 而且是必要的，否则
+    // settings 里那份旧的（或根本不存在的）值会盖掉使用者刚存的新值。
+    const fallback = readFallbackConfig();
+    for (const key of Object.keys(fallback)) merged[key] = fallback[key];
     return merged;
+  }
+
+  /**
+   * 现在的值是从哪里来的（给回应带出去，方便诊断「为什么存不起来」）。
+   *
+   * @returns `'settings' | 'file'`。
+   */
+  function configSource() {
+    return Object.keys(readFallbackConfig()).length > 0 ? 'file' : 'settings';
   }
 
   if (CONFIG_SCHEMA === undefined) {
@@ -580,23 +729,93 @@ function apply(ctx, config) {
    * @param redirect - 使用者输入的路径（空字串代表沿用现值）。
    * @returns Promise<{ ok, error? }>。
    */
+  /**
+   * 把欄位寫進設定：**先試 settings，失敗就退回本外掛自己的備用檔**。
+   *
+   * settings 是正式機制（寫進 profile 的 cordis.patch.yml、會被就地重載），
+   * 能用就一定用它。它會拋錯的情況是「這個外掛不在 profile 的可設定清單裡」
+   * （`No configurable plugin entry "kaneo-web"`）—— 那時退回備用檔，面板照樣
+   * 能用，而不是整個廢掉。
+   *
+   * settings 寫入成功時會把對應欄位從備用檔清掉，避免兩份分歧。
+   *
+   * @param patch - 例如 `{ apiKey: 'K' }` 或 `{ mode: 'iframe' }`。
+   * @returns Promise<{ ok, storage?, warning?, error? }>。
+   */
+  async function writeConfig(patch) {
+    const fields = Object.keys(patch);
+    const settings = getSettings(ctx);
+    if (settings !== null && settings !== undefined && typeof settings.update === 'function') {
+      try {
+        await settings.update(NS, patch, undefined);
+        // 正式機制寫成功了 → 備用檔不該再持有這些欄位（否則會蓋掉剛寫的值）。
+        clearFallbackFields(fields);
+        return { ok: true, storage: 'settings' };
+      } catch (err) {
+        // 落到下面的備用檔；把 settings 的錯誤留著回報，方便診斷。
+        const fallback = writeFallbackConfig(patch);
+        if (fallback.ok) {
+          return {
+            ok: true,
+            storage: 'file',
+            warning: '設定服務無法寫入（' + errorText(err) + '），已改存在本機備用檔。'
+          };
+        }
+        return { ok: false, error: '储存失败：' + errorText(err) + '；備用檔也失敗：' + fallback.error };
+      }
+    }
+    // 根本沒有 settings 服務 → 直接用備用檔。
+    const fallback = writeFallbackConfig(patch);
+    if (fallback.ok) {
+      return {
+        ok: true,
+        storage: 'file',
+        warning: '設定服務不可用，已改存在本機備用檔。'
+      };
+    }
+    return { ok: false, error: '设定服务不可用，且備用檔寫入失敗：' + fallback.error };
+  }
+
+  /**
+   * 移除欄位（回到 schema 預設）。
+   *
+   * 同樣先試 settings 的 `mutate` + `unset`（語意正確：是「移除」不是「寫空字串」），
+   * 失敗就從備用檔刪掉對應欄位。
+   *
+   * @param paths - 欄位路徑，例如 `[['apiKey']]`。
+   * @returns Promise<{ ok, storage?, error? }>。
+   */
+  async function removeConfigFields(paths) {
+    const fields = paths.map(function (p) { return p.join('.'); });
+    const settings = getSettings(ctx);
+    if (settings !== null && settings !== undefined && typeof settings.mutate === 'function') {
+      try {
+        const ops = paths.map(function (p) { return { op: 'unset', path: p }; });
+        await settings.mutate(NS, ops, undefined);
+        clearFallbackFields(fields);
+        return { ok: true, storage: 'settings' };
+      } catch (err) {
+        const cleared = clearFallbackFields(fields);
+        if (cleared.ok) return { ok: true, storage: 'file' };
+        return { ok: false, error: '清除失敗：' + errorText(err) };
+      }
+    }
+    const cleared = clearFallbackFields(fields);
+    if (cleared.ok) return { ok: true, storage: 'file' };
+    return { ok: false, error: '設定服務不可用，且備用檔清除失敗：' + cleared.error };
+  }
+
+  /**
+   * 存 API Key（與可選的路徑）。
+   *
+   * @param apiKey - 使用者输入的金钥。
+   * @param redirect - 使用者输入的路径（空字串代表沿用现值）。
+   * @returns Promise<{ ok, storage?, warning?, error? }>。
+   */
   async function persist(apiKey, redirect) {
     const patch = { apiKey: apiKey };
     if (redirect !== null) patch.redirect = redirect;
-
-    const settings = getSettings(ctx);
-    if (settings === null || settings === undefined || typeof settings.update !== 'function') {
-      return {
-        ok: false,
-        error: '设定服务不可用（这个组合没有挂载 @deepseek-ai/dsh-settings），无法储存 API Key'
-      };
-    }
-    try {
-      await settings.update(NS, patch, undefined);
-      return { ok: true };
-    } catch (err) {
-      return { ok: false, error: '储存失败：' + errorText(err) };
-    }
+    return writeConfig(patch);
   }
 
   /**
@@ -614,45 +833,17 @@ function apply(ctx, config) {
    */
   async function unsetFields(paths) {
     const fields = Array.isArray(paths) && paths.length > 0 ? paths : [['apiKey']];
-    const settings = getSettings(ctx);
-    if (settings === null || settings === undefined || typeof settings.mutate !== 'function') {
-      return {
-        ok: false,
-        error: '設定服務不可用（這個組合沒有掛載 @deepseek-ai/dsh-settings），無法清除設定'
-      };
-    }
-    try {
-      const ops = fields.map(function (path) { return { op: 'unset', path: path }; });
-      await settings.mutate(NS, ops, undefined);
-      return { ok: true };
-    } catch (err) {
-      return { ok: false, error: '清除失敗：' + errorText(err) };
-    }
+    return removeConfigFields(fields);
   }
 
   /**
-   * 把部份欄位合併進現有 Config（用 volatile schema update，不動金鑰）。
-   *
-   * 用 `settings.update` 而不是 `mutate`：panel 的 PATCH 走的是「把整個物件
-   * 完整重寫」這條路，**會**還沒寫進去（mutate 不會）但**不會**刪掉已儲存的欄位。
+   * 把部份欄位合併進現有 Config（不動金鑰）。
    *
    * @param patch - 例如 `{ mode: 'iframe' }`。
-   * @returns Promise<{ ok, error? }>。
+   * @returns Promise<{ ok, storage?, error? }>。
    */
   async function persistPatch(patch) {
-    const settings = getSettings(ctx);
-    if (settings === null || settings === undefined || typeof settings.update !== 'function') {
-      return {
-        ok: false,
-        error: '設定服務不可用（這個組合沒有掛載 @deepseek-ai/dsh-settings），無法更新模式'
-      };
-    }
-    try {
-      await settings.update(NS, patch, undefined);
-      return { ok: true };
-    } catch (err) {
-      return { ok: false, error: '更新失敗：' + errorText(err) };
-    }
+    return writeConfig(patch);
   }
 
   /**
@@ -704,7 +895,8 @@ function apply(ctx, config) {
             // **一定要回 `mode`**：面板用這個值決定「在新分頁開啟」還是「iframe 內嵌」。
             // 這裡漏掉的話，面板永遠停在初始值（自動偵測的結果），使用者切換過
             // 的模式會被無聲蓋掉 —— 症狀就是「怎麼存都回到新分頁」。
-            mode: readMode(currentConfig())
+            mode: readMode(currentConfig()),
+            storage: configSource()
           });
           return;
         }
@@ -722,7 +914,8 @@ function apply(ctx, config) {
             apiKeySet: resolved.apiKeySet === true,
             redirect: resolved.redirect,
             url: resolved.ok === true ? resolved.url : null,
-            mode: readMode(currentConfig())
+            mode: readMode(currentConfig()),
+            storage: configSource()
           });
           return;
         }
@@ -754,6 +947,7 @@ function apply(ctx, config) {
           sendJson(res, 200, {
             ok: true,
             mode: readMode(currentConfig()),
+            storage: configSource(),
             configured: resolved.ok === true,
             apiKeySet: resolved.apiKeySet === true,
             redirect: resolved.redirect,
@@ -824,7 +1018,12 @@ function apply(ctx, config) {
           configured: true,
           apiKeySet: true,
           redirect: resolved.redirect,
-          url: resolved.url
+          url: resolved.url,
+          // 值存在哪裡（`settings` = 正式機制；`file` = 本機備用檔）。
+          // 帶出去是為了讓「為什麼存起來了卻好像沒生效」這類問題一眼可判。
+          storage: configSource(),
+          mode: readMode(currentConfig()),
+          warning: saved.warning
         });
       } catch (err) {
         // 路由里任何未预期的例外都要变成回应，不能让请求悬着。
@@ -864,7 +1063,8 @@ function apply(ctx, config) {
           apiKeySet: resolved.apiKeySet === true,
           redirect: resolved.redirect,
           url: resolved.ok === true ? resolved.url : null,
-          mode: readMode(currentConfig())
+          mode: readMode(currentConfig()),
+            storage: configSource()
         });
       } catch (err) {
         sendJson(res, 500, { ok: false, error: 'kaneo-web: ' + errorText(err) });

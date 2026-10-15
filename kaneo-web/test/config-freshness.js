@@ -16,6 +16,18 @@
 // =============================================================================
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+
+// **測試隔離**：外掛在 settings 寫不進去時會退回自己的備用設定檔，一定要
+// 指到暫存路徑，否則測試會寫進真實 profile 目錄。
+const FALLBACK_FILE = path.join(os.tmpdir(), 'kaneo-web-test-cfg-' + process.pid + '.json');
+process.env.DSH_KANEO_WEB_CONFIG = FALLBACK_FILE;
+process.on('exit', function () {
+  try { fs.rmSync(FALLBACK_FILE, { force: true }); } catch (err) { /* 沒差 */ }
+});
+
 const host = require('../lib/index.js');
 
 let passed = 0;

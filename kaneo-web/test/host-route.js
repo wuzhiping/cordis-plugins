@@ -19,6 +19,18 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+
+// **測試隔離**：外掛在 settings 服務寫不進去時，會退回自己的備用設定檔
+// （正常情況下是 profile 目錄底下的 kaneo-web.config.json）。測試用的假
+// settings 服務常常是「故意失敗」的，所以一定要先把備用檔指到暫存路徑，
+// 否則跑一次測試就會污染真實 profile（實測踩過：寫出了 apiKey）。
+const FALLBACK_FILE = path.join(os.tmpdir(), 'kaneo-web-test-' + process.pid + '.json');
+process.env.DSH_KANEO_WEB_CONFIG = FALLBACK_FILE;
+function cleanupFallback() {
+  try { fs.rmSync(FALLBACK_FILE, { force: true }); } catch (err) { /* 沒差 */ }
+}
+process.on('exit', cleanupFallback);
+
 const host = require('../lib/index.js');
 
 let passed = 0;
@@ -367,13 +379,47 @@ function callRoute(harness, method, body, routePath, query) {
     assert.equal(status.json.url, null);
   });
 
+  // 沒有 settings 服務時**不再整個失敗**：外掛有自己的備用檔，面板照樣能用。
+  // （以前這裡斷言 500 —— 那正是「新裝使用者存不了任何東西」的來源之一。）
   const deg = makeHarness({ settings: false });
   host.apply(deg.ctx, { apiKey: 'K', redirect: '/dashboard' });
   status = await callRoute(deg, 'POST', { apiKey: 'K-NEW' });
-  check('without a settings service the failure is explicit', function () {
-    assert.equal(status.status, 500);
-    assert.equal(status.json.ok, false);
-    assert.ok(status.json.error.includes('dsh-settings'), status.json.error);
+  check('without a settings service the key lands in the fallback store', function () {
+    assert.equal(status.status, 200);
+    assert.equal(status.json.ok, true);
+    assert.equal(status.json.configured, true);
+    assert.ok(status.json.url.includes('K-NEW'), '存進去的金鑰要能組出網址：' + status.json.url);
+  });
+
+  const degGet = await callRoute(deg, 'GET');
+  check('the fallback store is read back on the next request', function () {
+    assert.equal(degGet.json.configured, true);
+    assert.ok(degGet.json.url.includes('K-NEW'), degGet.json.url);
+  });
+
+  // 反向：settings 恢復可用時，寫入會走 settings 並把備用檔清乾淨。
+  const both = makeHarness({});
+  host.apply(both.ctx, { apiKey: '', redirect: '/dashboard' });
+  status = await callRoute(both, 'POST', { apiKey: 'K-FRESH' });
+  check('with a working settings service the write goes through it', function () {
+    assert.equal(status.status, 200);
+    assert.equal(status.json.storage, 'settings');
+  });
+
+  // 使用者的原始症狀：settings 不可用時切 iframe **不該 500**，而且要能讀回。
+  const degPatch = makeHarness({ settings: false });
+  host.apply(degPatch.ctx, { apiKey: 'K', redirect: '/dashboard' });
+  const patchStatus = await callRoute(degPatch, 'PATCH', { mode: 'iframe' }, '/plugins/kaneo-web/config');
+  check('without a settings service the mode switch still succeeds', function () {
+    assert.equal(patchStatus.status, 200);
+    assert.equal(patchStatus.json.ok, true);
+    assert.equal(patchStatus.json.mode, 'iframe');
+  });
+
+  const degModeGet = await callRoute(degPatch, 'GET');
+  check('the switched mode is read back from the fallback store', function () {
+    assert.equal(degModeGet.json.mode, 'iframe',
+      '實得 ' + JSON.stringify(degModeGet.json));
   });
 
   harness.dispose();
