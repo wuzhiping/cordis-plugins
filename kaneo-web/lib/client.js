@@ -250,7 +250,9 @@ window.__ModuleLoader__.load({
       // 置中卡片（設定表 / 錯誤 / 載入）
       '.kw-center{flex:1 1 auto;min-height:0;display:flex;align-items:center;' +
         'justify-content:center;padding:24px;overflow:auto}',
-      '.kw-card{width:100%;max-width:420px;box-sizing:border-box;display:flex;' +
+      // 設定表容器：寬度 420 → 630（+50%），容納「開啟工作區的方式」兩張並排卡
+      // 與長 redirect 輸入框不擠。
+      '.kw-card{width:100%;max-width:630px;box-sizing:border-box;display:flex;' +
         'flex-direction:column;gap:12px;padding:20px;border-radius:14px;' +
         'border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}',
       '.kw-h{font-size:15px;line-height:22px;font-weight:600;color:var(--dsw-alias-label-primary)}',
@@ -278,7 +280,8 @@ window.__ModuleLoader__.load({
       // 重置區塊
       '.kw-reset{display:flex;flex-direction:column;gap:6px;padding-top:4px;' +
         'border-top:.5px solid var(--dsw-alias-border-l1)}',
-      '.kw-stack{display:flex;flex-direction:column;gap:8px;width:100%;max-width:420px}',
+      // 設定浮層的寬度：420 → 630（與 .kw-card 同步）。
+      '.kw-stack{display:flex;flex-direction:column;gap:8px;width:100%;max-width:630px}',
       '.kw-p-ok{color:var(--dsw-alias-state-success-primary)}',
 
       // 進面板時的倒數窗口（整塊可點 = 打斷登入）
@@ -1205,6 +1208,19 @@ window.__ModuleLoader__.load({
         ? props.t
         : fallbackT;
 
+      // 卸載時拆掉已建好的 iframe —— 這樣下次 mount（從對話切回管線看板）
+      // 倒數 effect 才不會被 `frame !== null` 守衛早退、秒數才能重新走。
+      // 否則：第一次 mount → 建 iframe → 切到對話（panel unmount）→ 切回
+      // 管線看板（panel mount）→ frame 仍在（被 parkFrame 停放）→ 倒數
+      // effect 看到 `frame !== null` 早退、秒數永遠是初始的 3。
+      React.useEffect(function () {
+        return function () {
+          if (typeof destroyFrame === 'function') {
+            try { destroyFrame(); } catch (err) { /* 已經被拆掉了 */ }
+          }
+        };
+      }, []);
+
       // phase: 'loading' | 'setup' | 'frame' | 'error'
       const phaseState = React.useState('loading');
       const phase = phaseState[0];
@@ -1274,6 +1290,9 @@ window.__ModuleLoader__.load({
 
       const hostRef = React.useRef(null);
 
+      // 把已建好的 iframe 搬到主機節點：這個 effect 放在 `showFrame` 宣告
+      // 之後才合法（下面），所以定義在下面。
+
       /**
        * 要帶進登入網址的路徑：**先看上次停在哪一頁**，沒有才用伺服器給的預設。
        *
@@ -1336,7 +1355,12 @@ window.__ModuleLoader__.load({
       // 達不到「跳過倒數」的效果）。
       React.useEffect(function () {
         if (!preload) return undefined;
-        if (phase !== 'frame' || frame !== null) return undefined;
+        // 不管 frame 是否已建 —— 第二次 mount 時 frame 仍指著上次建好的
+        // iframe（被 parkFrame 停放），倒數仍要跑：覆蓋層會擋住 iframe，
+        // 3 秒後 `preload` 變 false，iframe 元素已經在主機節點（iframe effect
+        // 也跑了 appendChild），就直接露出來 —— **不會**重新走金鑰交換流程。
+        // 不檢查 phase：第二次 mount 時 phase 暫時是 'loading'，但 preload
+        // 為 true 表示「要倒數」，這個 effect 應該立刻跑。
         const startedAt = getPreloadStart();
         const totalMs = PRELOAD_SECONDS * 1000;
         function tick() {
@@ -1351,9 +1375,9 @@ window.__ModuleLoader__.load({
         const timer = setInterval(tick, PRELOAD_TICK_MS);
         return function () {
           clearInterval(timer);
-          preloadStartedAt = 0; // 下次面板進入倒數時，從頭再算 3 秒。
+          preloadStartedAt = 0;
         };
-      }, [preload, phase]);
+      }, [preload, frame]);
 
       /**
        * 打斷登入：把倒數結束掉並切到設定畫面。
@@ -1373,6 +1397,13 @@ window.__ModuleLoader__.load({
       // 完全沒有副作用（沒有任何請求飛出去、也沒有半個登入被觸發）。
       // `mode === 'newtab'` 時 iframe 路徑整個關閉，這個 effect 也不再跑
       // —— 面板改顯示「在新分頁開啟」卡，url 與金鑰都不會送到 iframe。
+      //
+      // **重要**：守衛不檢查 `frame !== null` —— 第二次 mount 時 `frame` 仍指
+      // 著已建好的 iframe（被 `parkFrame` 停放）。這個 effect 進去時呼叫
+      // `navigateFrame(status.url)` 早退（同網址不重設 src），但仍會
+      // `appendChild` 把 iframe 從停放區搬到主機節點 —— 所以第二次打開
+      // 「管線看板」時**直接**看到 iframe，倒數覆蓋層會擋住它 3 秒。
+      // 倒數 effect 同步跑（看 `frame === null`），所以秒數會動。
       React.useEffect(function () {
         if (mode === 'newtab') return undefined;
         if (phase !== 'frame' || typeof status.url !== 'string' || preload > 0) return undefined;
@@ -1620,8 +1651,29 @@ window.__ModuleLoader__.load({
 
       const check = checkNoteOf(restore.check, t);
 
+      // 「已建好的 iframe」優先：不管 phase 是什麼，只要 frame 還在就把
+      // iframe 拉回主機節點渲染。這是修「第二次打開管線看板一直卡在載入中」
+      // —— 第二次 mount 時 `phase` 重置為 `'loading'`，但 `frame`（module 級 closure
+      // 變數）仍指著已建好的 iframe DOM，所以這裡直接渲染 iframe 路徑，
+      // 同時讓下面的 effect 在 `phase` 切到 'frame' 後決定要不要重建。
+      const hasLiveFrame = frame !== null && frameUrl !== null;
+      const showFrame = hasLiveFrame || (mode === 'iframe' && phase !== 'setup' && phase !== 'error');
+
+      // 已有 iframe → 立刻搬到主機節點（不必等 phase 切到 frame）。
+      // 這修「第二次打開管線看板 → phase 重置為 loading → iframe effect
+      // 不重跑 → 卡在載入中」的問題。
+      React.useEffect(function () {
+        if (!showFrame) return undefined;
+        const host = hostRef.current;
+        if (host === null || host === undefined) return undefined;
+        if (frame === null || frameUrl === null) return undefined;
+        try {
+          if (frame.parentNode !== host) host.appendChild(frame);
+        } catch (err) { /* 已在主機上就什麼都不做 */ }
+      }, [showFrame]);
+
       let body;
-      if (phase === 'loading') {
+      if (phase === 'loading' && !showFrame) {
         body = h(
           'div',
           { className: 'kw-center' },
