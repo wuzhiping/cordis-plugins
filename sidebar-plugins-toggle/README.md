@@ -61,3 +61,7 @@ spt-diag:h=1 nav=1 row=6 sel=1 nth=1 m=1 by=label lab=系统外掛 disp=none css
 
 已用 `install_bundle` 裝進 profile `web`（`link:` 指向本目錄）。
 移除：`plugin_manager` 的 `remove_bundle`，target = `sidebar-plugins-toggle`。
+
+> ⚠️ `cordis-plugins/dshReset.ps1` 會把**不在 `$allowedPlugins` 白名單裡的外掛全部移除**。
+> 這個 bundle 的名字已在白名單裡（2026-10-17 加入）；若改名或換 profile，記得同步，
+> 否則下次跑 reset 就會被卸載 —— 症狀是「重新整理後側欄那一行又跑出來」。
