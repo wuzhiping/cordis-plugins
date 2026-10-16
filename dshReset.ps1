@@ -74,6 +74,7 @@ $allowedPlugins = @(
     'zhtw-traditional-chinese',
     'ntfy-teams',
     'ov-memory'
+    'sidebar-plugins-toggle'
 )
 
 $plugins = $output |
