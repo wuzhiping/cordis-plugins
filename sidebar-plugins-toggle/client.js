@@ -43,14 +43,12 @@ window.__ModuleLoader__.load({
     ].join("");
 
     var zh = {
-      title: "隱藏側欄的「系统外掛」選單",
-      "desc.hidden": "目前已隱藏：側欄看不到這個入口。取消勾選即恢復顯示；外掛管理頁面本身不受影響。",
-      "desc.shown": "目前顯示中：側欄看得到這個入口。勾選即隱藏；外掛管理頁面本身不受影響。"
+      title: "隱藏側欄的「系统外掛」入口",
+      desc: "取消勾選即恢復顯示。"
     };
     var en = {
       title: "Hide the “系统外掛” entry in the sidebar",
-      "desc.hidden": "Currently hidden: the sidebar entry is gone. Clear the box to show it again; the Plugins page itself is unaffected.",
-      "desc.shown": "Currently shown: the sidebar entry is visible. Tick the box to hide it; the Plugins page itself is unaffected."
+      desc: "Clear the box to show it again."
     };
 
     function readHidden() {
@@ -82,7 +80,7 @@ window.__ModuleLoader__.load({
       return h("div", { className: "spt-row" },
         h("div", { className: "spt-rowText" },
           h("div", { className: "spt-title" }, t("title")),
-          h("div", { className: "spt-desc" }, t(hidden ? "desc.hidden" : "desc.shown"))),
+          h("div", { className: "spt-desc" }, t("desc"))),
         h("div", { className: "spt-control" },
           h("input", {
             type: "checkbox",
