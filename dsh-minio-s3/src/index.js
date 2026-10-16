@@ -46,6 +46,10 @@ const VERSION = '1.0.0'
 
 /** 瀏覽器一次上傳的上限（宿主會整包放進記憶體算簽章 hash）。 */
 const MAX_UPLOAD_BYTES = 256 * 1024 * 1024
+/** 單一 multipart 片的 body 上限（＝宿主那一片的尖峰記憶體）。 */
+const MAX_PART_BYTES = 64 * 1024 * 1024
+/** uploadId 是不透明字串，長度上限夠寬但要有界（它會被放進 query）。 */
+const UPLOAD_ID_MAX = 2048
 /** 工作區檔案 ↔ 物件搬移的上限。 */
 const MAX_TRANSFER_BYTES = 512 * 1024 * 1024
 /** 工具一次讀進模型上下文的預設／上限。 */
@@ -99,6 +103,11 @@ const ROUTE = {
   uploadPath: BASE + '/upload-path',
   downloadPath: BASE + '/download-path',
   exportConfig: BASE + '/export',
+  uploadInit: BASE + '/upload/init',
+  uploadPart: BASE + '/upload/part',
+  uploadComplete: BASE + '/upload/complete',
+  uploadAbort: BASE + '/upload/abort',
+  uploadStatus: BASE + '/upload/status',
 }
 
 // ---------------------------------------------------------------------------
@@ -158,12 +167,22 @@ async function readJson(req) {
   }
 }
 
-/** 客戶端斷線時中止上游（回傳的 signal 直接交給 S3 客戶端）。 */
-function abortOnClose(req) {
+/**
+ * 客戶端斷線時中止上游（回傳的 signal 直接交給 S3 客戶端）。
+ *
+ * **一定要看 `res` 而不是 `req`**：`req` 的 `'close'` 在**請求 body 讀完**就會觸發
+ * （Node 對 IncomingMessage 的語意），所以拿它當「斷線」用，會在 multipart 上傳
+ * 「收完這一片的 body、正要送給 S3」的那一刻把請求自己 abort 掉 —— 每一次上傳都失敗，
+ * 而且是那種看起來像網路問題的失敗。`res` 的 `'close'` 才是連線層的事件：回應還沒
+ * 寫完就關掉，才代表客戶端跑了。
+ */
+function abortOnDisconnect(res) {
   const controller = new AbortController()
-  req.on('close', () => {
+  const onClose = () => {
+    if (res && res.writableFinished) return   // 正常寫完 → 不是斷線
     try { controller.abort() } catch {}
-  })
+  }
+  if (res && typeof res.once === 'function') res.once('close', onClose)
   return controller
 }
 
@@ -321,7 +340,12 @@ function shapeListing(bucket, prefix, listing) {
     name: core.baseName(entry),
   }))
   const objects = listing.contents
-    // 空資料夾標記（`a/`）同時出現在 CommonPrefixes 與 Contents，只留一份。
+    // `prefix` 自己就是「你現在所在的資料夾」的標記物件（key === prefix，例如
+    // 在 `docs/` 底下列出 `docs/`）。MinIO 在前綴等於 key 時會把它放進 Contents
+    // 而不是 CommonPrefixes，於是它會變成一個 0 位元組、名字叫 `docs` 的假檔案 ——
+    // 空資料夾看起來就有東西。這一個一定要濾掉。
+    .filter((entry) => entry.key !== prefix)
+    // 子資料夾的標記（`a/`）同時出現在 CommonPrefixes 與 Contents，只留一份。
     .filter((entry) => !(core.isFolderKey(entry.key) && entry.size === 0 && folders.some((f) => f.prefix === entry.key)))
     .map((entry) => ({
       key: entry.key,
@@ -354,6 +378,7 @@ module.exports = {
   // 匯出給測試直接驅動（不經過 cordis）。
   resolveInWorkspace,
   shapeListing,
+  abortOnDisconnect,
   ROUTE,
 
   apply(ctx) {
@@ -405,7 +430,7 @@ module.exports = {
         return
       }
       try {
-        const payload = await run(s3, abortOnClose(req).signal)
+        const payload = await run(s3, abortOnDisconnect(res).signal)
         sendJson(res, 200, { ok: true, ...payload })
       } catch (error) {
         if (!isS3Error(error)) logger.warn('dsh-minio-s3: ' + ((error && error.stack) || error))
@@ -540,6 +565,7 @@ module.exports = {
               'content-type': meta.contentType || 'application/octet-stream',
               'content-length': String(meta.size),
               'cache-control': 'no-store',
+              'accept-ranges': 'bytes',
             }
             if (meta.etag) headers.etag = '"' + meta.etag + '"'
             res.writeHead(200, headers)
@@ -552,21 +578,66 @@ module.exports = {
 
         // 客戶端斷線就中止上游：沒有這個，處理器會卡在等 `drain`（已 destroy 的
         // ServerResponse 永遠不會發出 drain），上游 socket 也跟著懸在那裡。
-        const abort = new AbortController()
-        const onClose = () => abort.abort()
-        req.on('close', onClose)
+        // 判準是 `res`（連線層），不是 `req`（body 讀完就 close）——見 abortOnDisconnect。
+        const abort = abortOnDisconnect(res)
+
+        // ---- Range / 斷點續傳 ------------------------------------------------
+        //
+        // MinIO 的 GET 原生支援 Range（實測 206 + Content-Range），所以轉發就好，
+        // 不需要在宿主切片。但有兩個它不處理、必須我們自己來的地方：
+        //
+        //   1. **If-Range 被忽略**：實測帶一個不符的 ETag 仍回 206。若照它的行為
+        //      走，客戶端續傳時若物件已被覆寫，就會把新內容接在舊資料後面 —— 一個
+        //      看起來成功、內容卻壞掉的檔案。所以這裡自己比對 ETag，不符就退回
+        //      200 全量。
+        //   2. **416 不帶 Content-Range**：實測只回一段 XML，客戶端拿不到物件大小。
+        //      這裡補上 `Content-Range: bytes */size`。
+        const rangeHeader = typeof req.headers.range === 'string' ? req.headers.range : ''
+        const ifRange = typeof req.headers['if-range'] === 'string' ? req.headers['if-range'].trim() : ''
+        let effectiveRange = rangeHeader || undefined
+        if (rangeHeader && ifRange) {
+          try {
+            const meta = await s3.headObject(target.bucket, target.key)
+            const wanted = ifRange.replace(/^W\//, '').replace(/"/g, '')
+            const actual = String(meta.etag || '').replace(/"/g, '')
+            if (wanted === '' || wanted !== actual) {
+              // 物件換了（或客戶端沒給有效的 ETag）→ 不要續傳，回全量
+              effectiveRange = undefined
+            }
+          } catch (error) {
+            sendJson(res, statusOfError(error), payloadFor(error, s3))
+            return
+          }
+        }
 
         let upstream
         try {
           upstream = await s3.getObject({
             bucket: target.bucket,
             key: target.key,
+            range: effectiveRange,
             stream: true,
             signal: abort.signal,
+            allowStatus: [416], // 越界是正常結果，讓呼叫端補 Content-Range
           })
         } catch (error) {
-          req.off('close', onClose)
           sendJson(res, statusOfError(error), payloadFor(error, s3))
+          return
+        }
+
+        if (upstream.status === 416) {
+          try { await upstream.body?.cancel() } catch {}
+          let size = null
+          try { size = (await s3.headObject(target.bucket, target.key)).size } catch {}
+          const headers = { 'cache-control': 'no-store', 'accept-ranges': 'bytes' }
+          if (size !== null) headers['content-range'] = `bytes */${size}`
+          const body = JSON.stringify({ ok: false, code: 'RangeNotSatisfiable', size })
+          res.writeHead(416, {
+            ...headers,
+            'content-type': 'application/json; charset=utf-8',
+            'content-length': Buffer.byteLength(body),
+          })
+          res.end(body)
           return
         }
 
@@ -583,17 +654,20 @@ module.exports = {
           'content-length': upstream.headers.get('content-length') || '',
           'cache-control': 'no-store',
           'x-content-type-options': 'nosniff',
+          'accept-ranges': 'bytes',
           etag: upstream.headers.get('etag') || '',
         }
+        const contentRange = upstream.headers.get('content-range')
+        if (contentRange) headers['content-range'] = contentRange
         if (!inlineSafe) {
           headers['content-disposition'] = 'attachment; filename*=UTF-8\'\'' + encodeURIComponent(core.baseName(target.key))
         }
         for (const key of Object.keys(headers)) if (headers[key] === '') delete headers[key]
-        res.writeHead(200, headers)
+        // 206 是「部分內容」；客戶端靠它判斷續傳成功（200 代表伺服器忽略了 Range）。
+        res.writeHead(upstream.status === 206 ? 206 : 200, headers)
         const reader = upstream.body && typeof upstream.body.getReader === 'function' ? upstream.body.getReader() : null
         if (!reader) {
           res.end(Buffer.from(await upstream.arrayBuffer()))
-          req.off('close', onClose)
           return
         }
         try {
@@ -607,7 +681,6 @@ module.exports = {
           // 串流中斷：標頭已經送出去了，只能斷線讓瀏覽器知道下載不完整。
           if (!abort.signal.aborted) logger.warn('dsh-minio-s3: 下載串流中斷 ' + ((error && error.message) || error))
         } finally {
-          req.off('close', onClose)
           if (abort.signal.aborted) {
             try { await reader.cancel() } catch {}
           }
@@ -802,6 +875,240 @@ module.exports = {
       })
     }
 
+    // -----------------------------------------------------------------------
+    // Multipart 上傳（大檔／斷點續傳）
+    //
+    // 位元組走模式 A：瀏覽器／工具把「一片」送到這裡，宿主簽章後轉給 MinIO。
+    // 宿主記憶體 = 一片（MAX_PART_BYTES），不再是整個檔案。
+    //
+    // 設計與真機實測見 docs/resumable-transfer.md。
+    // -----------------------------------------------------------------------
+
+    /** uploadId 會進 query string：擋掉空值、超長與控制字元。 */
+    function checkUploadId(value) {
+      const id = typeof value === 'string' ? value.trim() : ''
+      if (id === '') return { ok: false, error: '缺少 uploadId' }
+      if (id.length > UPLOAD_ID_MAX) return { ok: false, error: 'uploadId 過長' }
+      if (/[\u0000-\u001f\u007f]/.test(id)) return { ok: false, error: 'uploadId 含控制字元' }
+      return { ok: true, uploadId: id }
+    }
+
+    /** 片號：S3 是 1..10000。 */
+    function checkPartNumber(value) {
+      const number = Number(value)
+      if (!Number.isInteger(number) || number < 1 || number > core.MAX_PARTS) {
+        return { ok: false, error: `partNumber 必須是 1..${core.MAX_PARTS} 的整數` }
+      }
+      return { ok: true, partNumber: number }
+    }
+
+    /**
+     * `POST /upload/init`
+     *
+     * 續傳的核心：先看同一個 key 有沒有未完成的 upload。有就沿用它的 uploadId 並回
+     * 伺服器手上已有的片（客戶端只補缺的）；沒有才開一個新的。同一 key 的其他殘留
+     * upload 一併放棄，避免愈積愈多。
+     */
+    async function handleUploadInit(req, res) {
+      const payload = await readJson(req)
+      const target = core.checkTarget(payload.bucket, payload.key)
+      if (!target.ok) {
+        sendJson(res, 400, { ok: false, error: target.error })
+        return
+      }
+      const size = Number(payload.size)
+      if (!Number.isFinite(size) || size < 0) {
+        sendJson(res, 400, { ok: false, error: 'size 必須是非負整數（位元組）' })
+        return
+      }
+      // partSize 由宿主決定：上限受 MAX_PART_BYTES 約束（那是記憶體），
+      // 因此超大物件可能撞到 10000 片的天花板 —— 那就明確拒絕，而不是產生一個
+      // 之後必定失敗的計畫。
+      const plan = core.planParts(size, { maxPartSize: MAX_PART_BYTES })
+      if (plan.partCount > core.MAX_PARTS) {
+        sendJson(res, 400, {
+          ok: false,
+          error: `物件太大：以每片 ${plan.partSize} bytes 需要 ${plan.partCount} 片，超過 S3 的 ${core.MAX_PARTS} 片上限`,
+        })
+        return
+      }
+      await withClient(req, res, false, async (s3, signal) => {
+        const inProgress = await s3.listMultipartUploads({ bucket: target.bucket, prefix: target.key, signal })
+        const same = inProgress
+          .filter((entry) => entry.key === target.key)
+          .sort((a, b) => (a.initiated < b.initiated ? 1 : -1)) // 最新的一個優先
+        let uploadId = ''
+        let parts = []
+        if (same.length > 0) {
+          uploadId = same[0].uploadId
+          parts = (await s3.listParts({ bucket: target.bucket, key: target.key, uploadId, signal })).parts
+          for (const stale of same.slice(1)) {
+            try {
+              await s3.abortMultipartUpload({ bucket: target.bucket, key: target.key, uploadId: stale.uploadId, signal })
+            } catch { /* 清不掉的殘留不該擋住當前上傳 */ }
+          }
+        } else {
+          const created = await s3.createMultipartUpload({
+            bucket: target.bucket,
+            key: target.key,
+            contentType: payload.contentType,
+            signal,
+          })
+          uploadId = created.uploadId
+        }
+        return {
+          bucket: target.bucket,
+          key: target.key,
+          uploadId,
+          partSize: plan.partSize,
+          partCount: plan.partCount,
+          size,
+          resumed: parts.length > 0,
+          parts,
+          mode: 'proxy',
+        }
+      })
+    }
+
+    /** `PUT /upload/part?bucket=&key=&uploadId=&partNumber=`，body 就是那一片的位元組。 */
+    async function handleUploadPart(req, res) {
+      const url = new URL(req.url || '/', 'http://dsh.local')
+      const target = core.checkTarget(url.searchParams.get('bucket'), url.searchParams.get('key'))
+      if (!target.ok) {
+        sendJson(res, 400, { ok: false, error: target.error })
+        return
+      }
+      const id = checkUploadId(url.searchParams.get('uploadId'))
+      if (!id.ok) {
+        sendJson(res, 400, { ok: false, error: id.error })
+        return
+      }
+      const part = checkPartNumber(url.searchParams.get('partNumber'))
+      if (!part.ok) {
+        sendJson(res, 400, { ok: false, error: part.error })
+        return
+      }
+      let body
+      try {
+        body = await readBody(req, MAX_PART_BYTES)
+      } catch (error) {
+        sendJson(res, error.status || 413, { ok: false, error: error.message })
+        return
+      }
+      await withClient(req, res, false, async (s3, signal) => s3.uploadPart({
+        bucket: target.bucket,
+        key: target.key,
+        uploadId: id.uploadId,
+        partNumber: part.partNumber,
+        body,
+        contentType: req.headers['content-type'],
+        signal,
+      }))
+    }
+
+    /** `POST /upload/complete` `{bucket,key,uploadId,parts:[{partNumber,etag}]}` */
+    async function handleUploadComplete(req, res) {
+      const payload = await readJson(req)
+      const target = core.checkTarget(payload.bucket, payload.key)
+      if (!target.ok) {
+        sendJson(res, 400, { ok: false, error: target.error })
+        return
+      }
+      const id = checkUploadId(payload.uploadId)
+      if (!id.ok) {
+        sendJson(res, 400, { ok: false, error: id.error })
+        return
+      }
+      const parts = Array.isArray(payload.parts) ? payload.parts : []
+      if (parts.length === 0) {
+        sendJson(res, 400, { ok: false, error: '需要 parts（至少一片）' })
+        return
+      }
+      if (parts.length > core.MAX_PARTS) {
+        sendJson(res, 400, { ok: false, error: `parts 超過 ${core.MAX_PARTS} 片` })
+        return
+      }
+      for (const entry of parts) {
+        const part = checkPartNumber(entry && entry.partNumber)
+        if (!part.ok) {
+          sendJson(res, 400, { ok: false, error: part.error })
+          return
+        }
+        if (typeof (entry && entry.etag) !== 'string' || entry.etag.length > 512) {
+          sendJson(res, 400, { ok: false, error: `part ${entry && entry.partNumber} 的 etag 不合法` })
+          return
+        }
+      }
+      await withClient(req, res, false, async (s3, signal) => {
+        const result = await s3.completeMultipartUpload({
+          bucket: target.bucket,
+          key: target.key,
+          uploadId: id.uploadId,
+          parts,
+          signal,
+        })
+        let size = null
+        try { size = (await s3.headObject(target.bucket, target.key, { signal })).size } catch { /* 只是附加資訊 */ }
+        return { ...result, size }
+      })
+    }
+
+    /** `POST /upload/abort` — 放棄上傳（一定要做，否則已上傳的片會一直佔空間）。 */
+    async function handleUploadAbort(req, res) {
+      const payload = await readJson(req)
+      const target = core.checkTarget(payload.bucket, payload.key)
+      if (!target.ok) {
+        sendJson(res, 400, { ok: false, error: target.error })
+        return
+      }
+      const id = checkUploadId(payload.uploadId)
+      if (!id.ok) {
+        sendJson(res, 400, { ok: false, error: id.error })
+        return
+      }
+      await withClient(req, res, false, async (s3, signal) => s3.abortMultipartUpload({
+        bucket: target.bucket,
+        key: target.key,
+        uploadId: id.uploadId,
+        signal,
+      }))
+    }
+
+    /**
+     * `GET /upload/status?bucket=&key=` — 未完成的上傳與「已經收到哪些片」。
+     *
+     * 面板重整、或工具重跑時靠這個對帳（**以伺服器的 ListParts 為真相**）。
+     * 省略 key 就列出該桶所有未完成的上傳。
+     */
+    async function handleUploadStatus(req, res) {
+      const url = new URL(req.url || '/', 'http://dsh.local')
+      const target = core.checkTarget(url.searchParams.get('bucket'), url.searchParams.get('key'), { allowEmptyKey: true })
+      if (!target.ok) {
+        sendJson(res, 400, { ok: false, error: target.error })
+        return
+      }
+      await withClient(req, res, false, async (s3, signal) => {
+        const inProgress = await s3.listMultipartUploads({
+          bucket: target.bucket,
+          prefix: target.key || '',
+          signal,
+        })
+        const selected = target.key === '' ? inProgress : inProgress.filter((entry) => entry.key === target.key)
+        const uploads = []
+        for (const entry of selected) {
+          let parts = []
+          let truncated = false
+          try {
+            const listed = await s3.listParts({ bucket: target.bucket, key: entry.key, uploadId: entry.uploadId, signal })
+            parts = listed.parts
+            truncated = listed.isTruncated
+          } catch { /* upload 可能剛被清掉：列出來但沒有片 */ }
+          uploads.push({ ...entry, parts, truncated })
+        }
+        return { bucket: target.bucket, key: target.key || null, uploads }
+      })
+    }
+
     async function handleUploadPath(req, res) {
       const payload = await readJson(req)
       const workspace = workspaceOf(ctx.sessions, payload.sessionId)
@@ -901,6 +1208,11 @@ module.exports = {
       [ROUTE.uploadPath, handleUploadPath],
       [ROUTE.downloadPath, handleDownloadPath],
       [ROUTE.exportConfig, handleExport],
+      [ROUTE.uploadInit, handleUploadInit],
+      [ROUTE.uploadPart, handleUploadPart],
+      [ROUTE.uploadComplete, handleUploadComplete],
+      [ROUTE.uploadAbort, handleUploadAbort],
+      [ROUTE.uploadStatus, handleUploadStatus],
     ]
 
     for (const [routePath, handler] of table) {

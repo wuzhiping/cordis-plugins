@@ -46,8 +46,14 @@ cordis-plugins/dsh-minio-s3/
 | PUT | `/plugins/dsh-minio-s3/buckets?bucket=` | 建立桶 |
 | DELETE | `/plugins/dsh-minio-s3/buckets?bucket=` | 刪除桶（僅空桶） |
 | GET | `/plugins/dsh-minio-s3/objects?bucket=&prefix=&token=&delimiter=/` | 一層列表（folders + objects） |
-| GET / PUT / DELETE | `/plugins/dsh-minio-s3/object?bucket=&key=` | 下載（`inline=1` 供預覽）／上傳／刪除單一物件 |
-| POST | `/plugins/dsh-minio-s3/delete` | 批次刪除 `{bucket, keys[]}` |
+| GET / HEAD | `/plugins/dsh-minio-s3/object?bucket=&key=` | 下載（`inline=1` 供預覽）／**支援 `Range` 斷點續傳**（206/416 + `Accept-Ranges`）／刪除單一物件 |
+| PUT | `/plugins/dsh-minio-s3/object?bucket=&key=` | 單次 PUT 上傳（≤ 256 MB；大檔走下面的 multipart） |
+| POST | `/plugins/dsh-minio-s3/delete` | 批次刪除 `{bucket, keys[]}`（逐 key 失敗會自動退回單物件刪除） |
+| POST | `/plugins/dsh-minio-s3/upload/init` | 開始或**接手** multipart 上傳 `{bucket, key, size, contentType?}` → `{uploadId, partSize, partCount, resumed, parts}` |
+| PUT | `/plugins/dsh-minio-s3/upload/part?bucket=&key=&uploadId=&partNumber=` | 上傳一片（body ＝ 該片位元組，≤ 64MiB）→ `{partNumber, size, etag}` |
+| POST | `/plugins/dsh-minio-s3/upload/complete` | 收尾 `{bucket, key, uploadId, parts:[{partNumber, etag}]}` → `{etag, location, size}` |
+| POST | `/plugins/dsh-minio-s3/upload/abort` | 放棄上傳（清掉伺服器上的片） |
+| GET | `/plugins/dsh-minio-s3/upload/status?bucket=&key=` | 未完成的上傳與已收到的片（續傳對帳用） |
 | POST | `/plugins/dsh-minio-s3/folder` | 建立資料夾標記 `{bucket, key: "a/b/"}` |
 | POST | `/plugins/dsh-minio-s3/copy` | 伺服器端複製 `{bucket, fromKey, toKey}`（改名 = copy + delete） |
 | GET | `/plugins/dsh-minio-s3/presign?bucket=&key=&expires=` | 產生簽章連結（1 小時預設，最長 7 天） |
@@ -247,10 +253,54 @@ npm run live         # 對「正在運行的宿主外掛」做一次實機檢查
 
 ## 已知限制
 
-- **上傳會整包進宿主記憶體**：`PUT /object` 上限 256MB、工作區搬移 512MB；下載是
-  串流的（瀏覽器端與宿主端都不落地整份）。**時間**方面：時間預算只管到標頭，下載
-  沒有總時長上限；超過 8MB 的上傳不套預算，若連線或端點卡住，只能靠呼叫端（工具
-  的 `timeoutMs`、或瀏覽器關掉連線）中止。
+### 面板顯示「dsh-minio-s3: import failed」或整個頁籤消失
+
+2026-10-17 實際發生過一次，原因與處置：
+
+1. **產物壞掉**：外掛的 CSS 寫在 `client/index.js` 的 template literal 裡，註解中只要出現
+   一個反引號，字串就提前結束 → `client/bundle.js` 語法錯誤 → 瀏覽器只說
+   「import failed」，整個面板開不起來。
+   **現在有兩道防呆**：`npm run build:client` 會先解析產物，壞的就**不寫檔**（保留上一份
+   可用的）並以非 0 結束；`test/client-bundle.test.js` 也會盯產物（`npm test`）。
+2. **外掛被外殼從 profile 移除**：client 半邊載入失敗後，profile 的
+   `package.json`（`link:` 依賴 + `dsh.profile.bundles`）會少掉這個 bundle，於是 loader
+   清單裡完全沒有它。恢復方式（本機路徑）：
+
+   ```
+   plugin_manager install_bundle C:/Users/shawoo/Desktop/feg.cn/cordis-plugins/dsh-minio-s3
+   ```
+
+   它會補回依賴、bundle 條目、`node_modules` 連結並立即套用（**不用重啟**，client 半邊
+   會拿到新的 rev）。驗證方式：看 `/` 的 `__DSH_BOOT__` 是否含
+   `{id:"dsh-minio-s3", url:"plugins/??dsh-minio-s3/client.js&rev=…"}`，且那個 URL 回 200。
+
+- **空資料夾的標記**：S3 沒有真正的資料夾，空資料夾是一個 key 以 `/` 結尾的 0 位元組物件
+  （`docs/`）。列根目錄時 MinIO 把它放在 `CommonPrefixes`（顯示為資料夾）；但列 `docs/`
+  自己時，它的 key 等於前綴，MinIO 會放進 `Contents` —— 面板與工具會**濾掉 key === 前綴
+  的那一筆**，否則空資料夾裡會冒出一個 0 位元組的同名檔案。真的 0 位元組檔案不受影響。
+- **斷點續傳：下載、上傳、面板全都支援了**（Phase 1–3 完成；Phase 4 的 presigned 直傳未做）。
+  實作與真機實測見 [`docs/resumable-transfer.md`](docs/resumable-transfer.md)。
+  - **下載（外掛 + skill 都有）**：`/object` 轉發 `Range` → `206` + `Content-Range` +
+    `Accept-Ranges`；越界 → `416` + `Content-Range: bytes */size`；**`If-Range` 由宿主自己
+    比對**（實測 MinIO 會忽略它，若照它走，物件被覆寫時續傳會拼出壞檔）。`minio.mjs get
+    --continue` 以本地檔大小續傳、串流寫檔，完成後單片物件驗 MD5。
+  - **上傳（skill 與面板都有）**：S3 multipart，`partSize`
+    預設 8MiB（自動放大以滿足「片數 ≤ 10000」），預設 3 片併發、逐片 3 次退避重試、逐片
+    比對 MD5；中斷後同一行加 `--resume` 只補缺的片。驗證用**複合 ETag**
+    （`md5(各片 md5 串接)-片數`），因為 multipart 的最終 ETag 不是物件 MD5。
+  - **面板上傳（已接 multipart）**：> 32 MB 自動走 multipart（每檔 3 片併發、逐檔進度條、
+    **暫停／繼續／取消**），> 256 MB 不再是上限；≤ 32 MB 仍走單次 PUT（最快）。中斷或關掉
+    頁面後，**重新選同一個檔案上傳就會續傳**（伺服器接手，面板會顯示「已收到 N 片」）；
+    工具列下方另有「未完成的上傳」清單，可一鍵放棄。舊宿主（未重載）沒有 multipart 路由時
+    會自動退回單次 PUT，> 256 MB 則明說要重啟 DSH。
+  - **面板下載**：由瀏覽器自己的下載 UI 顯示進度，且因為已有 `Accept-Ranges` 而能自動續傳；
+    面板內自製的下載進度條（可直接寫檔、可暫停）不在目前範圍。
+  - 記憶體：宿主上限 256 MB（單次 PUT）／每片 64 MiB（multipart）；`minio.mjs` 的
+    `get`／`upload` 都是串流，只有 `cat` 有 64 MiB 緩衝上限。
+- **`S3 單次 PUT` 上限 5 GB、multipart 上限 5 TB**；本外掛宿主端單片上限 64 MiB，
+  因此單一物件上限約 640 GB（10000 × 64 MiB）—— 超過就回 400 並說明。
+- **時間預算只管到標頭**：下載沒有總時長上限；超過 8MB 的上傳不套預算，若連線或端點
+  卡住，只能靠呼叫端（工具的 `timeoutMs`、或瀏覽器關掉連線）中止。
 - **列表只做一層**：`delimiter=/` 的一頁（最多 1000 個 key）。UI 只提示「已截斷」，
   沒有接 `nextToken` 翻頁；工具可以自己傳 `prefix`／`recursive` 縮小範圍。
 - **改名 = 複製 + 刪除**：S3 沒有 rename；兩步之間失敗會留下兩份，UI 會顯示錯誤。

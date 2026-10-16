@@ -223,7 +223,11 @@ class S3Client {
         if (timer) clearTimeout(timer)
       }
 
-      if (response.ok) {
+      // `allowStatus`：有些狀態碼是**要傳給呼叫端處理**的正常結果，不是錯誤。
+      // 典型例子是 Range 請求越界回的 416 —— 那個回應本身帶著「物件多大」的線索，
+      // 包成例外就把資訊丟了。
+      const allowed = Array.isArray(options.allowStatus) ? options.allowStatus : []
+      if (response.ok || allowed.includes(response.status)) {
         this.learnedRegion = this.region
         return response
       }
@@ -349,6 +353,10 @@ class S3Client {
   /**
    * 讀物件。預設回一串 bytes（上限 maxBytes）；`stream: true` 時直接回
    * Response，讓宿主把 body 轉接出去（下載不進宿主記憶體）。
+   *
+   * @param {object} params
+   * @param {string} [params.range] `bytes=a-b`；原封不動交給 S3（它自己算最準）
+   * @param {number[]} [params.allowStatus] 不想被包成例外的狀態碼（例如 416）
    */
   async getObject(params) {
     const input = params || {}
@@ -360,6 +368,7 @@ class S3Client {
       headers,
       operation: 'GetObject',
       signal: input.signal,
+      allowStatus: input.allowStatus,
     })
     if (input.stream) return response
 
@@ -497,9 +506,141 @@ class S3Client {
     return result
   }
 
-  /** 伺服器端複製（同桶改名／換前綴用）。 */
-  async copyObject(params) {
+  // -------------------------------------------------------------------------
+  // Multipart（大檔上傳與斷點續傳）
+  //
+  // 全部形狀都在真機 MinIO 上實測過（詳見 docs/resumable-transfer.md）：
+  //   - UploadPart 的 ETag 是「該片的 MD5」
+  //   - ListParts 的 ETag 是 XML 轉義的 `&#34;…&#34;`
+  //   - Complete 的最終 ETag 是 `md5(各片 md5 串接)-片數`，不是物件 MD5
+  //   - 非最後一片 < 5MiB → Complete 回 400 EntityTooSmall
+  //   - 未完成的 upload 可用 ListMultipartUploads 找回（續傳的依據）
+  // -------------------------------------------------------------------------
+
+  /** 開始一個 multipart 上傳（`Content-Type` 只能在這一步指定）。 */
+  async createMultipartUpload(params) {
     const input = params || {}
+    const headers = {}
+    if (input.contentType) headers['Content-Type'] = input.contentType
+    for (const [name, value] of Object.entries(input.metadata || {})) {
+      if (value === undefined || value === null) continue
+      headers['x-amz-meta-' + String(name).toLowerCase()] = String(value)
+    }
+    const { text } = await this.sendText({
+      method: 'POST',
+      url: this.withQuery(this.objectUrl(input.bucket, input.key), [['uploads', '']]),
+      headers,
+      operation: 'CreateMultipartUpload',
+      signal: input.signal,
+    })
+    const uploadId = core.xmlText(text, 'UploadId') || ''
+    if (uploadId === '') {
+      throw new S3Error({ code: 'NoUploadId', message: 'CreateMultipartUpload 沒有回 UploadId' }, { operation: 'CreateMultipartUpload' })
+    }
+    return { bucket: input.bucket, key: input.key, uploadId }
+  }
+
+  /** 上傳一片。同一 `partNumber` 重傳會覆蓋舊片（所以重試是安全的）。 */
+  async uploadPart(params) {
+    const input = params || {}
+    const body = input.body === undefined || input.body === null ? Buffer.alloc(0) : input.body
+    const headers = {}
+    if (input.contentType) headers['Content-Type'] = input.contentType
+    const response = await this.send({
+      method: 'PUT',
+      url: this.withQuery(this.objectUrl(input.bucket, input.key), [
+        ['partNumber', String(input.partNumber)],
+        ['uploadId', input.uploadId],
+      ]),
+      headers,
+      body,
+      operation: 'UploadPart',
+      signal: input.signal,
+      // 一片最大可能就是 partSize（8MiB 起跳，可到 5GiB）：時間預算照大 body 的規則處理
+      timeoutMs: input.timeoutMs,
+    })
+    return {
+      partNumber: Number(input.partNumber),
+      size: Buffer.isBuffer(body) ? body.length : Buffer.byteLength(String(body)),
+      etag: (response.headers.get('etag') || '').replace(/"/g, ''),
+    }
+  }
+
+  /** 伺服器手上已經有哪些片（續傳的真相來源）。 */
+  async listParts(params) {
+    const input = params || {}
+    const { text } = await this.sendText({
+      method: 'GET',
+      url: this.withQuery(this.objectUrl(input.bucket, input.key), [['uploadId', input.uploadId]]),
+      operation: 'ListParts',
+      signal: input.signal,
+    })
+    return core.parseListParts(text)
+  }
+
+  /** 列出未完成的 multipart 上傳（客戶端弄丟 `uploadId` 時用它找回）。 */
+  async listMultipartUploads(params) {
+    const input = params || {}
+    const { text } = await this.sendText({
+      method: 'GET',
+      url: this.withQuery(this.objectUrl(input.bucket, ''), [
+        ['uploads', ''],
+        ['prefix', input.prefix === undefined ? '' : input.prefix],
+        ['encoding-type', 'url'],
+        ['max-uploads', String(Math.max(1, Math.min(1000, Number(input.maxUploads || 1000))))],
+      ]),
+      operation: 'ListMultipartUploads',
+      signal: input.signal,
+    })
+    return core.parseListMultipartUploads(text)
+  }
+
+  /** 收尾：把所有片串成物件。`parts` 需帶每片的 `etag`（來源見 `uploadPart`）。 */
+  async completeMultipartUpload(params) {
+    const input = params || {}
+    const body = Buffer.from(core.buildCompleteMultipartXml(input.parts), 'utf8')
+    const { text } = await this.sendText({
+      method: 'POST',
+      url: this.withQuery(this.objectUrl(input.bucket, input.key), [['uploadId', input.uploadId]]),
+      headers: { 'Content-Type': 'application/xml' },
+      body,
+      operation: 'CompleteMultipartUpload',
+      signal: input.signal,
+    })
+    return { ...core.parseCompleteMultipartResult(text), bucket: input.bucket, key: input.key }
+  }
+
+  /** 放棄上傳（清掉伺服器上已收的片；失敗的流程一定要呼叫，否則片會一直佔空間）。 */
+  async abortMultipartUpload(params) {
+    const input = params || {}
+    await this.send({
+      method: 'DELETE',
+      url: this.withQuery(this.objectUrl(input.bucket, input.key), [['uploadId', input.uploadId]]),
+      operation: 'AbortMultipartUpload',
+      signal: input.signal,
+    })
+    return { aborted: true, uploadId: input.uploadId }
+  }
+
+  /** 簽單一片的 presigned PUT（瀏覽器可直打 MinIO，位元組不經宿主）。 */
+  presignUploadPart(params) {
+    const input = params || {}
+    return core.presignUrl({
+      url: this.withQuery(this.objectUrl(input.bucket, input.key), [
+        ['partNumber', String(input.partNumber)],
+        ['uploadId', input.uploadId],
+      ]),
+      method: 'PUT',
+      accessKey: this.accessKey,
+      secretKey: this.secretKey,
+      region: this.region,
+      expires: input.expires === undefined ? 600 : input.expires,
+      now: input.now,
+    })
+  }
+
+  /** 伺服器端複製（同桶改名／換前綴用）。 */
+  async copyObject(params) {    const input = params || {}
     const source = '/' + core.uriEncode(input.bucket) + '/' + core.uriEncodePath(input.fromKey)
     const url = this.objectUrl(input.bucket, input.toKey)
     const response = await this.send({

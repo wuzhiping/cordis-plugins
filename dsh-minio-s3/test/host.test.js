@@ -47,7 +47,9 @@ function createFakeMinio() {
     ['dsh', new Map()],
     ['empty-bucket', new Map()],
   ])
-  const state = { calls: [], storageCalls: 0, authHeaders: [] }
+  const state = { calls: [], storageCalls: 0, authHeaders: [], makeBatchFail: false, uploadSeq: 0 }
+  /** 未完成的 multipart 上傳：uploadId → {id, bucket, key, initiated, contentType, parts} */
+  const multipart = new Map()
 
   function listXml(bucket, prefix, delimiter) {
     const store = buckets.get(bucket)
@@ -125,6 +127,18 @@ function createFakeMinio() {
       if (method === 'HEAD') {
         return new Response(null, { status: buckets.has(bucket) ? 200 : 404 })
       }
+      if (method === 'GET' && url.searchParams.has('uploads')) {
+        // ListMultipartUploads
+        if (!buckets.has(bucket)) return new Response('<Error><Code>NoSuchBucket</Code></Error>', { status: 404 })
+        const prefix = url.searchParams.get('prefix') || ''
+        const rows = [...multipart.values()]
+          .filter((upload) => upload.bucket === bucket && upload.key.startsWith(prefix))
+          .map((upload) => '<Upload><Key>' + xmlEscape(minioEncode(upload.key)) + '</Key>'
+            + '<UploadId>' + xmlEscape(upload.id) + '</UploadId>'
+            + '<Initiated>' + upload.initiated + '</Initiated></Upload>')
+        return new Response('<?xml version="1.0"?><ListMultipartUploadsResult><Bucket>' + xmlEscape(bucket) + '</Bucket>'
+          + '<EncodingType>url</EncodingType>' + rows.join('') + '</ListMultipartUploadsResult>', { status: 200 })
+      }
       if (method === 'GET') {
         if (!buckets.has(bucket)) return new Response('<Error><Code>NoSuchBucket</Code></Error>', { status: 404 })
         const prefix = url.searchParams.get('prefix') || ''
@@ -159,6 +173,78 @@ function createFakeMinio() {
     const store = buckets.get(bucket)
     if (!store) return new Response('<Error><Code>NoSuchBucket</Code><Message>no bucket</Message></Error>', { status: 404 })
 
+    // ---- multipart 狀態機（形狀照真機 MinIO 實測） --------------------------
+    if (url.searchParams.has('uploads') || url.searchParams.has('uploadId')) {
+      const uploadId = url.searchParams.get('uploadId') || ''
+
+      if (method === 'POST' && url.searchParams.has('uploads')) {
+        state.uploadSeq += 1
+        const id = 'upload-' + state.uploadSeq + '.probe'
+        multipart.set(id, {
+          id, bucket, key, initiated: '2026-10-16T15:00:0' + (state.uploadSeq % 10) + '.000Z',
+          contentType: headers['Content-Type'] || headers['content-type'] || 'binary/octet-stream',
+          parts: new Map(),
+        })
+        return new Response('<?xml version="1.0"?><InitiateMultipartUploadResult><Bucket>' + xmlEscape(bucket)
+          + '</Bucket><Key>' + xmlEscape(minioEncode(key)) + '</Key><UploadId>' + xmlEscape(id)
+          + '</UploadId></InitiateMultipartUploadResult>', { status: 200 })
+      }
+
+      const upload = multipart.get(uploadId)
+      if (method === 'PUT' && url.searchParams.has('partNumber')) {
+        if (!upload) return new Response('<Error><Code>NoSuchUpload</Code><Message>no upload</Message></Error>', { status: 404 })
+        const partNumber = Number(url.searchParams.get('partNumber'))
+        const etag = require('node:crypto').createHash('md5').update(body).digest('hex')
+        upload.parts.set(partNumber, { body, etag }) // 同片重傳＝覆蓋
+        return new Response(null, { status: 200, headers: { etag: '"' + etag + '"' } })
+      }
+
+      if (method === 'GET' && url.searchParams.has('uploadId')) {
+        if (!upload) return new Response('<Error><Code>NoSuchUpload</Code><Message>no upload</Message></Error>', { status: 404 })
+        const rows = [...upload.parts.entries()].sort((a, b) => a[0] - b[0]).map(([partNumber, part]) =>
+          '<Part><PartNumber>' + partNumber + '</PartNumber><ETag>&#34;' + part.etag + '&#34;</ETag>'
+          + '<Size>' + part.body.length + '</Size></Part>')
+        return new Response('<?xml version="1.0"?><ListPartsResult><Bucket>' + xmlEscape(bucket) + '</Bucket>'
+          + '<Key>' + xmlEscape(minioEncode(key)) + '</Key><UploadId>' + xmlEscape(uploadId) + '</UploadId>'
+          + '<IsTruncated>false</IsTruncated>' + rows.join('') + '</ListPartsResult>', { status: 200 })
+      }
+
+      if (method === 'POST' && url.searchParams.has('uploadId')) {
+        if (!upload) return new Response('<Error><Code>NoSuchUpload</Code><Message>no upload</Message></Error>', { status: 404 })
+        const requested = [...body.toString('utf8').matchAll(/<Part>[\s\S]*?<\/Part>/g)].map((match) => ({
+          partNumber: Number((/<PartNumber>(\d+)<\/PartNumber>/.exec(match[0]) || [])[1]),
+          etag: ((/<ETag>([^<]*)<\/ETag>/.exec(match[0]) || [])[1] || '').replace(/"/g, ''),
+        }))
+        const missing = requested.filter((entry) => !upload.parts.has(entry.partNumber))
+        if (missing.length > 0) {
+          return new Response('<Error><Code>InvalidPart</Code><Message>One or more of the specified parts could not be found</Message></Error>', { status: 400 })
+        }
+        const bad = requested.find((entry) => upload.parts.get(entry.partNumber).etag !== entry.etag)
+        if (bad) return new Response('<Error><Code>InvalidPart</Code><Message>ETag mismatch</Message></Error>', { status: 400 })
+        // MinIO 實測：非最後一片 < 5MiB → EntityTooSmall
+        const ordered = requested.map((entry) => upload.parts.get(entry.partNumber))
+        const tooSmall = ordered.slice(0, -1).some((part) => part.body.length < 5 * 1024 * 1024)
+        if (ordered.length > 1 && tooSmall) {
+          return new Response('<Error><Code>EntityTooSmall</Code><Message>Your proposed upload is smaller than the minimum allowed object size.</Message></Error>', { status: 400 })
+        }
+        const joined = Buffer.concat(ordered.map((part) => part.body))
+        const etag = require('node:crypto').createHash('md5')
+          .update(Buffer.concat(ordered.map((part) => Buffer.from(part.etag, 'hex')))).digest('hex') + '-' + ordered.length
+        store.set(key, { body: joined, etag, contentType: upload.contentType })
+        multipart.delete(uploadId)
+        return new Response('<?xml version="1.0"?><CompleteMultipartUploadResult><Location>http://minio.test:7000/'
+          + xmlEscape(bucket) + '/' + xmlEscape(key) + '</Location><Bucket>' + xmlEscape(bucket) + '</Bucket><Key>'
+          + xmlEscape(key) + '</Key><ETag>&#34;' + etag + '&#34;</ETag></CompleteMultipartUploadResult>', { status: 200 })
+      }
+
+      if (method === 'DELETE' && url.searchParams.has('uploadId')) {
+        if (!upload) return new Response('<Error><Code>NoSuchUpload</Code><Message>no upload</Message></Error>', { status: 404 })
+        multipart.delete(uploadId)
+        return new Response(null, { status: 204 })
+      }
+      return new Response('<Error><Code>MethodNotAllowed</Code></Error>', { status: 405 })
+    }
+
     if (method === 'PUT' && headers['x-amz-copy-source']) {
       const raw = String(headers['x-amz-copy-source'])
       const source = decodeURIComponent(raw.replace(/^\//, ''))
@@ -180,13 +266,35 @@ function createFakeMinio() {
     if (method === 'GET' || method === 'HEAD') {
       const entry = store.get(key)
       if (!entry) return new Response('<Error><Code>NoSuchKey</Code><Message>no key</Message><Resource>' + xmlEscape(key) + '</Resource></Error>', { status: 404 })
+      const range = headers.Range || headers.range
+      const baseHeaders = {
+        'content-type': entry.contentType,
+        etag: '"' + entry.etag + '"',
+        'accept-ranges': 'bytes',
+      }
       if (method === 'HEAD') {
-        return new Response(null, {
-          status: 200,
-          headers: { 'content-type': entry.contentType, 'content-length': String(entry.body.length), etag: '"' + entry.etag + '"' },
+        return new Response(null, { status: 200, headers: { ...baseHeaders, 'content-length': String(entry.body.length) } })
+      }
+      if (typeof range === 'string' && /^bytes=(\d*)-(\d*)$/.test(range.trim())) {
+        // 只支援單段 range（與 MinIO 相同；多段一律降級全量）
+        const match = /^bytes=(\d*)-(\d*)$/.exec(range.trim())
+        const size = entry.body.length
+        const start = match[1] === '' ? null : Number(match[1])
+        const end = match[2] === '' ? size - 1 : Number(match[2])
+        const from = start === null ? Math.max(0, size - end) : start
+        const to = start === null ? size - 1 : Math.min(end, size - 1)
+        if (from >= size || from > to) {
+          // 實測 MinIO 的 416 **不帶** Content-Range；假伺服器刻意照抄這個缺陷，
+          // 「宿主必須自己補」才真的被測到。
+          return new Response('<Error><Code>InvalidRange</Code><Message>The requested range is not satisfiable</Message></Error>', { status: 416 })
+        }
+        const slice = entry.body.subarray(from, to + 1)
+        return new Response(slice, {
+          status: 206,
+          headers: { ...baseHeaders, 'content-length': String(slice.length), 'content-range': `bytes ${from}-${to}/${size}` },
         })
       }
-      return new Response(entry.body, { status: 200, headers: { 'content-type': entry.contentType, 'content-length': String(entry.body.length) } })
+      return new Response(entry.body, { status: 200, headers: { ...baseHeaders, 'content-length': String(entry.body.length) } })
     }
     if (method === 'DELETE') {
       store.delete(key)
@@ -479,7 +587,11 @@ test('物件生命週期：上傳 → 列表 → 下載 → 預覽 → 改名 �
     })
     assert.equal(single.status, 200)
     const remaining = jsonBody(await call(objects, { url: host.ROUTE.objects + '?bucket=dsh&prefix=logs/' }))
-    assert.deepEqual(remaining.objects.map((entry) => entry.key), ['logs/'])
+    // `logs/` 是「這個資料夾自己」的標記，不該被當成資料夾裡面的一個 0 位元組檔案。
+    assert.deepEqual(remaining.objects.map((entry) => entry.key), [], '空資料夾裡不該有東西')
+    // 但根目錄要看得到這個資料夾
+    const roots = jsonBody(await call(objects, { url: host.ROUTE.objects + '?bucket=dsh' }))
+    assert.deepEqual(roots.folders.map((entry) => entry.prefix), ['logs/'])
 
     const batch = await call(routes.get(host.ROUTE.del), {
       method: 'POST',
@@ -626,6 +738,368 @@ test('batch delete：逐 key 失敗時宿主自己退回單物件刪除（不能
     }))
     assert.deepEqual(after.objects, [], '物件真的刪掉了')
   })
+})
+
+test('Range／斷點續傳：206、416 補 Content-Range、If-Range 不符退回 200', async (t) => {
+  await withHost(t, {}, async ({ routes }) => {
+    const object = routes.get(host.ROUTE.object)
+    const key = 'range/data.bin'
+    const payload = Buffer.from('0123456789abcdefghij', 'utf8') // 20 bytes
+    await call(object, {
+      method: 'PUT',
+      url: host.ROUTE.object + '?bucket=dsh&key=' + encodeURIComponent(key),
+      headers: { 'content-type': 'application/octet-stream' },
+      body: payload,
+    })
+    const url = host.ROUTE.object + '?bucket=dsh&key=' + encodeURIComponent(key)
+
+    // 沒有 Range：仍要 200，但一定要有 Accept-Ranges（否則瀏覽器／curl 不會續傳）
+    const plain = await call(object, { url })
+    assert.equal(plain.status, 200)
+    assert.equal(plain.headers['accept-ranges'], 'bytes')
+    assert.equal(plain.headers['content-length'], '20')
+    assert.equal(plain.headers['content-range'], undefined)
+
+    // 中間段：206 + Content-Range + 段長度 + 正確的位元組
+    const middle = await call(object, { url, headers: { range: 'bytes=5-9' } })
+    assert.equal(middle.status, 206)
+    assert.equal(middle.headers['content-range'], 'bytes 5-9/20')
+    assert.equal(middle.headers['content-length'], '5')
+    assert.equal(middle.body.toString('utf8'), '56789')
+    assert.equal(middle.headers['accept-ranges'], 'bytes')
+
+    // 開放式尾段（續傳的形狀）
+    const tail = await call(object, { url, headers: { range: 'bytes=15-' } })
+    assert.equal(tail.status, 206)
+    assert.equal(tail.headers['content-range'], 'bytes 15-19/20')
+    assert.equal(tail.body.toString('utf8'), 'fghij')
+
+    // 越界：416 + 我們自己補的 Content-Range: bytes */size（MinIO 不給）
+    const beyond = await call(object, { url, headers: { range: 'bytes=999-' } })
+    assert.equal(beyond.status, 416)
+    assert.equal(beyond.headers['content-range'], 'bytes */20')
+    assert.equal(jsonBody(beyond).code, 'RangeNotSatisfiable')
+
+    // If-Range 相符 → 續傳（206）
+    const matching = await call(object, {
+      url,
+      headers: { range: 'bytes=10-19', 'if-range': '"' + require('node:crypto').createHash('md5').update(payload).digest('hex') + '"' },
+    })
+    assert.equal(matching.status, 206)
+    assert.equal(matching.body.toString('utf8'), 'abcdefghij')
+
+    // If-Range 不符 → 忽略 Range，回 200 全量（MinIO 自己會回 206，所以這是宿主補的保護）
+    const stale = await call(object, { url, headers: { range: 'bytes=10-19', 'if-range': '"deadbeefdeadbeefdeadbeefdeadbeef"' } })
+    assert.equal(stale.status, 200, '物件換過就不能續傳，否則會拼出壞檔')
+    assert.equal(stale.body.length, 20)
+    assert.equal(stale.headers['content-range'], undefined)
+
+    // HEAD 也要報 Accept-Ranges
+    const head = await call(object, { method: 'HEAD', url })
+    assert.equal(head.status, 200)
+    assert.equal(head.headers['accept-ranges'], 'bytes')
+    assert.equal(head.headers['content-length'], '20')
+  })
+})
+
+test('multipart 上傳：init → 分片 → complete，且續傳只補缺的片', async (t) => {
+  await withHost(t, {}, async ({ routes }) => {
+    const KEY = 'big/multipart.bin'
+    const PART = 8 * 1024 * 1024
+    // 2.5 片：兩個滿片 + 一個半片（總長 20MiB）
+    const payload = Buffer.alloc(20 * 1024 * 1024, 0x5a)
+    const total = payload.length
+    const slice = (n) => payload.subarray((n - 1) * PART, Math.min(n * PART, total))
+
+    const init = await call(routes.get(host.ROUTE.uploadInit), {
+      method: 'POST',
+      url: host.ROUTE.uploadInit,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ bucket: 'dsh', key: KEY, size: total, contentType: 'application/octet-stream' }),
+    })
+    const planned = jsonBody(init)
+    assert.equal(init.status, 200)
+    assert.equal(planned.partSize, PART)
+    assert.equal(planned.partCount, 3)
+    assert.equal(planned.resumed, false)
+    assert.equal(planned.mode, 'proxy')
+    assert.ok(planned.uploadId)
+
+    const putPart = (partNumber, body) => call(routes.get(host.ROUTE.uploadPart), {
+      method: 'PUT',
+      url: host.ROUTE.uploadPart + '?' + new URLSearchParams({
+        bucket: 'dsh', key: KEY, uploadId: planned.uploadId, partNumber: String(partNumber),
+      }).toString(),
+      headers: { 'content-type': 'application/octet-stream' },
+      body,
+    })
+
+    const p1 = jsonBody(await putPart(1, slice(1)))
+    const p2 = jsonBody(await putPart(2, slice(2)))
+    assert.equal(p1.partNumber, 1)
+    assert.equal(p1.size, PART)
+    assert.match(p1.etag, /^[0-9a-f]{32}$/)
+
+    // 同片重傳＝覆蓋（重試安全）
+    const p2again = jsonBody(await putPart(2, slice(2)))
+    assert.equal(p2again.etag, p2.etag)
+
+    // 模擬「面板重整／工具重跑」：再 init 一次同一個 key → resumed，且看得到已完成的片
+    const resume = jsonBody(await call(routes.get(host.ROUTE.uploadInit), {
+      method: 'POST',
+      url: host.ROUTE.uploadInit,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ bucket: 'dsh', key: KEY, size: total }),
+    }))
+    assert.equal(resume.uploadId, planned.uploadId, '要沿用同一個 uploadId')
+    assert.equal(resume.resumed, true)
+    assert.deepEqual(resume.parts.map((part) => part.partNumber).sort(), [1, 2])
+
+    // /upload/status 也是同樣的真相來源
+    const status = jsonBody(await call(routes.get(host.ROUTE.uploadStatus), {
+      url: host.ROUTE.uploadStatus + '?' + new URLSearchParams({ bucket: 'dsh', key: KEY }).toString(),
+    }))
+    assert.equal(status.uploads.length, 1)
+    assert.deepEqual(status.uploads[0].parts.map((part) => part.partNumber), [1, 2])
+
+    // 補最後一片 → complete
+    const p3 = jsonBody(await putPart(3, slice(3)))
+    assert.equal(p3.size, total - 2 * PART)
+    const done = await call(routes.get(host.ROUTE.uploadComplete), {
+      method: 'POST',
+      url: host.ROUTE.uploadComplete,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        bucket: 'dsh', key: KEY, uploadId: planned.uploadId,
+        parts: [p1, p2, p3].map((part) => ({ partNumber: part.partNumber, etag: part.etag })),
+      }),
+    })
+    const completed = jsonBody(done)
+    assert.equal(done.status, 200)
+    assert.equal(completed.size, total)
+    assert.match(completed.etag, /-[0-9]+$/, '最終 ETag 帶片數後綴')
+
+    // 物件內容正確（用外掛自己的下載路徑取回全量）
+    const fetched = await call(routes.get(host.ROUTE.object), {
+      url: host.ROUTE.object + '?' + new URLSearchParams({ bucket: 'dsh', key: KEY }).toString(),
+    })
+    assert.equal(fetched.status, 200)
+    assert.equal(fetched.body.length, total)
+    assert.ok(fetched.body.equals(payload), '位元組要完全一致')
+
+    // 完成後 upload 就不在了
+    const after = jsonBody(await call(routes.get(host.ROUTE.uploadStatus), {
+      url: host.ROUTE.uploadStatus + '?' + new URLSearchParams({ bucket: 'dsh', key: KEY }).toString(),
+    }))
+    assert.equal(after.uploads.length, 0)
+  })
+})
+
+test('multipart：缺片、片太小、abort、參數不合法都有明確回應', async (t) => {
+  await withHost(t, {}, async ({ routes }) => {
+    const KEY = 'big/edge.bin'
+    const PART = 8 * 1024 * 1024
+    const payload = Buffer.alloc(20 * 1024 * 1024, 0x11)
+    const init = jsonBody(await call(routes.get(host.ROUTE.uploadInit), {
+      method: 'POST',
+      url: host.ROUTE.uploadInit,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ bucket: 'dsh', key: KEY, size: payload.length }),
+    }))
+    const putPart = (partNumber, body) => call(routes.get(host.ROUTE.uploadPart), {
+      method: 'PUT',
+      url: host.ROUTE.uploadPart + '?' + new URLSearchParams({
+        bucket: 'dsh', key: KEY, uploadId: init.uploadId, partNumber: String(partNumber),
+      }).toString(),
+      body,
+    })
+    const complete = (parts) => call(routes.get(host.ROUTE.uploadComplete), {
+      method: 'POST',
+      url: host.ROUTE.uploadComplete,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ bucket: 'dsh', key: KEY, uploadId: init.uploadId, parts }),
+    })
+
+    const p1 = jsonBody(await putPart(1, payload.subarray(0, PART)))
+
+    // **重要的實測語意**：S3/MinIO 不知道「這個物件應該多大」，所以送一份不完整的
+    // 片清單是會成功的 —— 只是物件被截斷。保護必須在客戶端：host 回傳 size，
+    // 面板／minio.mjs 拿它與本地檔比對。
+    const truncated = await complete([{ partNumber: 1, etag: p1.etag }])
+    assert.equal(truncated.status, 200, '少送片不是伺服器錯誤，是客戶端要驗')
+    assert.equal(jsonBody(truncated).size, PART, '回傳的 size 讓客戶端發現只上傳了一片')
+
+    // 片號有洞（1、3 但缺 2）→ InvalidPart
+    const reopen = jsonBody(await call(routes.get(host.ROUTE.uploadInit), {
+      method: 'POST',
+      url: host.ROUTE.uploadInit,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ bucket: 'dsh', key: KEY, size: payload.length }),
+    }))
+    const g1 = jsonBody(await call(routes.get(host.ROUTE.uploadPart), {
+      method: 'PUT',
+      url: host.ROUTE.uploadPart + '?' + new URLSearchParams({ bucket: 'dsh', key: KEY, uploadId: reopen.uploadId, partNumber: '1' }).toString(),
+      body: payload.subarray(0, PART),
+    }))
+    const gap = await call(routes.get(host.ROUTE.uploadComplete), {
+      method: 'POST',
+      url: host.ROUTE.uploadComplete,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        bucket: 'dsh', key: KEY, uploadId: reopen.uploadId,
+        parts: [{ partNumber: 1, etag: g1.etag }, { partNumber: 3, etag: 'deadbeef' }],
+      }),
+    })
+    assert.equal(gap.status, 400)
+    assert.equal(jsonBody(gap).code, 'InvalidPart')
+
+    // ETag 對不上
+    const wrongEtag = await call(routes.get(host.ROUTE.uploadComplete), {
+      method: 'POST',
+      url: host.ROUTE.uploadComplete,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        bucket: 'dsh', key: KEY, uploadId: reopen.uploadId,
+        parts: [{ partNumber: 1, etag: 'deadbeefdeadbeefdeadbeefdeadbeef' }],
+      }),
+    })
+    assert.equal(wrongEtag.status, 400)
+
+    // 參數不合法：片號 0、缺 uploadId、body 超過上限
+    const badPart = await call(routes.get(host.ROUTE.uploadPart), {
+      method: 'PUT',
+      url: host.ROUTE.uploadPart + '?' + new URLSearchParams({ bucket: 'dsh', key: KEY, uploadId: reopen.uploadId, partNumber: '0' }).toString(),
+      body: Buffer.alloc(4),
+    })
+    assert.equal(badPart.status, 400)
+    const noId = await call(routes.get(host.ROUTE.uploadPart), {
+      method: 'PUT',
+      url: host.ROUTE.uploadPart + '?' + new URLSearchParams({ bucket: 'dsh', key: KEY, partNumber: '1' }).toString(),
+      body: Buffer.alloc(4),
+    })
+    assert.equal(noId.status, 400)
+    assert.match(jsonBody(noId).error, /uploadId/)
+
+    // abort 之後就找不到這個 upload
+    const aborted = await call(routes.get(host.ROUTE.uploadAbort), {
+      method: 'POST',
+      url: host.ROUTE.uploadAbort,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ bucket: 'dsh', key: KEY, uploadId: reopen.uploadId }),
+    })
+    assert.equal(aborted.status, 200)
+    const afterAbort = await call(routes.get(host.ROUTE.uploadComplete), {
+      method: 'POST',
+      url: host.ROUTE.uploadComplete,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ bucket: 'dsh', key: KEY, uploadId: reopen.uploadId, parts: [{ partNumber: 1, etag: g1.etag }] }),
+    })
+    assert.equal(afterAbort.status, 404)
+    assert.equal(jsonBody(afterAbort).code, 'NoSuchUpload')
+
+    // 非最後一片 < 5MiB → EntityTooSmall
+    const smallInit = jsonBody(await call(routes.get(host.ROUTE.uploadInit), {
+      method: 'POST',
+      url: host.ROUTE.uploadInit,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ bucket: 'dsh', key: 'big/small.bin', size: 2 * 1024 * 1024 }),
+    }))
+    const tiny = Buffer.alloc(1024 * 1024, 7)
+    const s1 = jsonBody(await call(routes.get(host.ROUTE.uploadPart), {
+      method: 'PUT',
+      url: host.ROUTE.uploadPart + '?' + new URLSearchParams({ bucket: 'dsh', key: 'big/small.bin', uploadId: smallInit.uploadId, partNumber: '1' }).toString(),
+      body: tiny,
+    }))
+    const s2 = jsonBody(await call(routes.get(host.ROUTE.uploadPart), {
+      method: 'PUT',
+      url: host.ROUTE.uploadPart + '?' + new URLSearchParams({ bucket: 'dsh', key: 'big/small.bin', uploadId: smallInit.uploadId, partNumber: '2' }).toString(),
+      body: tiny,
+    }))
+    const tooSmall = await call(routes.get(host.ROUTE.uploadComplete), {
+      method: 'POST',
+      url: host.ROUTE.uploadComplete,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        bucket: 'dsh', key: 'big/small.bin', uploadId: smallInit.uploadId,
+        parts: [{ partNumber: 1, etag: s1.etag }, { partNumber: 2, etag: s2.etag }],
+      }),
+    })
+    assert.equal(tooSmall.status, 400)
+    assert.equal(jsonBody(tooSmall).code, 'EntityTooSmall')
+
+    // 太大的物件：片數會超過 10000 → init 就明確拒絕
+    const tooBig = await call(routes.get(host.ROUTE.uploadInit), {
+      method: 'POST',
+      url: host.ROUTE.uploadInit,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ bucket: 'dsh', key: 'big/huge.bin', size: 10001 * 64 * 1024 * 1024 }),
+    })
+    assert.equal(tooBig.status, 400)
+    assert.match(jsonBody(tooBig).error, /物件太大/)
+  })
+})
+
+test('abortOnDisconnect：回應寫完才 close 不算斷線；沒寫完就 close 才算', () => {
+  const makeRes = () => {
+    const handlers = { close: [] }
+    return {
+      writableFinished: false,
+      once(event, handler) { if (event === 'close') handlers.close.push(handler) },
+      emit(event) { if (event === 'close') for (const handler of handlers.close) handler() },
+    }
+  }
+
+  // 正常完成：res.end() 之後 close（writableFinished=true）→ 不可以中止上游
+  const finished = makeRes()
+  const normal = host.abortOnDisconnect(finished)
+  finished.writableFinished = true
+  finished.emit('close')
+  assert.equal(normal.signal.aborted, false, '回應正常寫完不是斷線')
+
+  // 客戶端跑掉：回應還沒寫完就 close → 中止上游
+  const dropped = makeRes()
+  const aborted = host.abortOnDisconnect(dropped)
+  dropped.emit('close')
+  assert.equal(aborted.signal.aborted, true, '沒寫完就 close 要中止上游')
+
+  // 沒有 once 的物件（簡化過的 res）也不能炸
+  const bare = host.abortOnDisconnect({})
+  assert.equal(bare.signal.aborted, false)
+})
+
+test('列表整形：資料夾標記不可以變成「資料夾裡面的 0 位元組檔案」', () => {
+  // 真實 MinIO 的形狀（2026-10-17 實測桶 dsh）：
+  //   prefix=''      → contents=[兩個真檔], commonPrefixes=['docs/']
+  //   prefix='docs/' → contents=[{key:'docs/', size:0}], commonPrefixes=[]
+  // 第二個就是「進入空資料夾後看到一個叫 docs 的 0 byte 檔」的原因。
+  const root = host.shapeListing('dsh', '', {
+    contents: [
+      { key: '9571573.jpg', size: 26970 },
+      { key: 'CLIENT.txt', size: 105567 },
+    ],
+    commonPrefixes: ['docs/'],
+  })
+  assert.deepEqual(root.folders.map((entry) => entry.name), ['docs'])
+  assert.deepEqual(root.objects.map((entry) => entry.key), ['9571573.jpg', 'CLIENT.txt'])
+
+  const inside = host.shapeListing('dsh', 'docs/', {
+    contents: [{ key: 'docs/', size: 0 }],
+    commonPrefixes: [],
+  })
+  assert.deepEqual(inside.folders, [])
+  assert.deepEqual(inside.objects, [], '空資料夾裡面就是空的')
+
+  // 子資料夾 + 它的標記同時出現在 Contents 與 CommonPrefixes：只留資料夾那一份
+  const mixed = host.shapeListing('dsh', '', {
+    contents: [
+      { key: 'sub/', size: 0 },              // 標記：已由 folders 呈現
+      { key: 'empty.txt', size: 0 },         // 真的 0 位元組檔案：要留著
+      { key: 'a/b.txt', size: 3 },
+    ],
+    commonPrefixes: ['sub/'],
+  })
+  assert.deepEqual(mixed.folders.map((entry) => entry.prefix), ['sub/'])
+  assert.deepEqual(mixed.objects.map((entry) => entry.key), ['empty.txt', 'a/b.txt'])
 })
 
 test('錯誤對映：缺 key 400、不存在的物件 404 且帶 S3 code', async (t) => {

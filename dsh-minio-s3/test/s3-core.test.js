@@ -176,3 +176,71 @@ test('amzStamp：去掉毫秒與標點', () => {
   const stamp = core.amzStamp(new Date('2026-10-16T20:15:22.123Z'))
   assert.deepEqual(stamp, { stamp: '20261016T201522Z', date: '20261016' })
 })
+
+// ---------------------------------------------------------------------------
+// Multipart（大檔上傳／斷點續傳）
+// ---------------------------------------------------------------------------
+
+test('planParts：片數不超 10000、片大小不低於 8MiB', () => {
+  for (const size of [1024, 100 * 1024 * 1024, 1024 ** 3, 100 * 1024 ** 3, 1024 ** 4, 5 * 1024 ** 4]) {
+    const plan = core.planParts(size)
+    assert.ok(plan.partSize >= core.DEFAULT_PART_BYTES, `${size}: partSize 應 >= 8MiB`)
+    assert.ok(plan.partCount <= core.MAX_PARTS, `${size}: 片數不得超過 10000（${plan.partCount}）`)
+    assert.ok(plan.partSize * plan.partCount >= size, `${size}: 所有片加起來要蓋得滿`)
+  }
+  assert.equal(core.planParts(0).partCount, 1)
+  assert.equal(core.planParts(100 * 1024 * 1024).partCount, 13) // 100MiB / 8MiB
+  assert.equal(core.planParts(1024 ** 3).partCount, 128)        // 1GiB  / 8MiB
+})
+
+test('partRange / compositeEtag / buildCompleteMultipartXml', () => {
+  const total = 20 * 1024 * 1024
+  const plan = core.planParts(total) // 20MiB → 8MiB × 3
+  assert.equal(plan.partCount, 3)
+  assert.deepEqual(core.partRange(1, plan.partSize, total), { start: 0, end: 8 * 1024 * 1024 })
+  assert.deepEqual(core.partRange(3, plan.partSize, total), { start: 16 * 1024 * 1024, end: total })
+
+  // 複合 ETag = md5(各片 md5 的二進位串接) + "-片數"
+  const a = 'd41d8cd98f00b204e9800998ecf8427e'
+  const b = '0cc175b9c0f1b6a831c399e269772661'
+  const expected = require('node:crypto').createHash('md5')
+    .update(Buffer.concat([Buffer.from(a, 'hex'), Buffer.from(b, 'hex')])).digest('hex') + '-2'
+  assert.equal(core.compositeEtag([a, b]), expected)
+  assert.equal(core.compositeEtag([]), '')
+
+  const xml = core.buildCompleteMultipartXml([{ partNumber: 2, etag: '"bb"' }, { partNumber: 1, etag: 'aa' }])
+  assert.match(xml, /<PartNumber>1<\/PartNumber><ETag>"aa"<\/ETag>/)
+  assert.ok(xml.indexOf('<PartNumber>1') < xml.indexOf('<PartNumber>2'), '要照片號排序')
+})
+
+test('parseListParts：解 XML 轉義的 ETag（真實 MinIO 形狀）', () => {
+  const xml = '<?xml version="1.0"?><ListPartsResult><Bucket>dsh</Bucket><Key>big.bin</Key>'
+    + '<UploadId>abc</UploadId><NextPartNumberMarker>2</NextPartNumberMarker><IsTruncated>false</IsTruncated>'
+    + '<Part><PartNumber>1</PartNumber><ETag>&#34;713b6329adcd55a46afe97b8f26ae202&#34;</ETag><Size>5243003</Size></Part>'
+    + '<Part><PartNumber>2</PartNumber><ETag>&#34;3310df4c5ca4509740f3ada8d0c946c2&#34;</ETag><Size>1048576</Size></Part>'
+    + '</ListPartsResult>'
+  const parsed = core.parseListParts(xml)
+  assert.deepEqual(parsed.parts, [
+    { partNumber: 1, size: 5243003, etag: '713b6329adcd55a46afe97b8f26ae202' },
+    { partNumber: 2, size: 1048576, etag: '3310df4c5ca4509740f3ada8d0c946c2' },
+  ])
+  assert.equal(parsed.isTruncated, false)
+})
+
+test('parseListMultipartUploads：找回未完成的 upload（key 有 url 編碼）', () => {
+  const xml = '<?xml version="1.0"?><ListMultipartUploadsResult><Bucket>dsh</Bucket>'
+    + '<Upload><Key>big%20file+%E4%B8%AD.bin</Key><UploadId>N2JhN2RjYWIt.YzRkYy0</UploadId>'
+    + '<Initiated>2026-10-16T15:00:00.000Z</Initiated></Upload></ListMultipartUploadsResult>'
+  const uploads = core.parseListMultipartUploads(xml)
+  assert.deepEqual(uploads, [{ key: 'big file 中.bin', uploadId: 'N2JhN2RjYWIt.YzRkYy0', initiated: '2026-10-16T15:00:00.000Z' }])
+})
+
+test('parseCompleteMultipartResult：最終 ETag 帶片數後綴', () => {
+  const xml = '<?xml version="1.0"?><CompleteMultipartUploadResult><Location>http://x/dsh/big.bin</Location>'
+    + '<Bucket>dsh</Bucket><Key>big.bin</Key><ETag>&#34;262b96a79842aabc603b8b6e262d3d6f-2&#34;</ETag>'
+    + '</CompleteMultipartUploadResult>'
+  assert.deepEqual(core.parseCompleteMultipartResult(xml), {
+    etag: '262b96a79842aabc603b8b6e262d3d6f-2',
+    location: 'http://x/dsh/big.bin',
+  })
+})

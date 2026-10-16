@@ -33,6 +33,10 @@ window.__ModuleLoader__.load({
     const IMAGE_PREVIEW_LIMIT = 20 * 1024 * 1024
     /** 一次上傳的檔案大小上限（與宿主 MAX_UPLOAD_BYTES 對齊）。 */
     const UPLOAD_LIMIT = 256 * 1024 * 1024
+    /** 超過這個大小就走 S3 multipart（可續傳、不受記憶體限制）。 */
+    const MULTIPART_THRESHOLD = 32 * 1024 * 1024
+    /** multipart 同時上傳幾片（宿主與瀏覽器的尖峰記憶體 ≈ 這個數 × partSize）。 */
+    const PART_CONCURRENCY = 3
     /** 記住上次選的桶。 */
     const STORAGE_KEY = 'dsh-minio-s3:bucket'
 
@@ -86,6 +90,20 @@ window.__ModuleLoader__.load({
     .ms-note{padding:5px 8px;font-size:11px;color:var(--dsw-alias-label-tertiary,var(--dsw-alias-label-secondary));border-top:1px solid var(--dsw-alias-border-l2)}
     .ms-trunc{padding:4px 8px;font-size:11px;color:var(--dsw-alias-state-warning-primary,var(--dsw-alias-label-secondary))}
     .ms-warn{margin:0 0 8px;padding:6px 9px;border-radius:8px;font-size:11px;color:var(--dsw-alias-label-primary);background:color-mix(in srgb,var(--dsw-alias-state-warning-primary,#d08700) 14%,transparent);border:1px solid color-mix(in srgb,var(--dsw-alias-state-warning-primary,#d08700) 38%,transparent)}
+    .ms-ups{display:flex;flex-direction:column;gap:6px;padding:8px 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:9px;background:var(--dsw-alias-bg-layer-1);font-size:11px;flex:none}
+    .ms-up{display:flex;align-items:center;gap:8px}
+    .ms-up-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--ds-font-family-code,ui-monospace,monospace)}
+    .ms-up-pct{flex:none;width:46px;text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary)}
+    .ms-up-sz{flex:none;width:126px;text-align:right;color:var(--dsw-alias-label-tertiary,var(--dsw-alias-label-secondary));font-variant-numeric:tabular-nums}
+    .ms-up-bar{flex:none;width:150px;height:6px;border-radius:3px;background:color-mix(in srgb,var(--dsw-alias-label-primary) 14%,transparent);overflow:hidden}
+    .ms-up-part{flex:none;width:150px;text-align:right;color:var(--dsw-alias-label-tertiary,var(--dsw-alias-label-secondary));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .ms-mini{font-size:10px;padding:1px 7px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;flex:none}
+    .ms-mini:hover:not(:disabled){color:var(--dsw-alias-label-primary);background:color-mix(in srgb,var(--dsw-alias-label-primary) 10%,transparent)}
+    .ms-mini:disabled{opacity:.5;cursor:default}
+    .ms-mini.danger:hover:not(:disabled){color:var(--dsw-alias-state-error-primary,#c0392b)}
+    .ms-up-fill{height:100%;width:0;border-radius:3px;background:var(--dsw-alias-brand-primary);transition:width .15s linear}
+    .ms-up-fill.done{background:var(--dsw-alias-state-success-primary,var(--dsw-alias-brand-primary))}
+    .ms-up-fill.failed{background:var(--dsw-alias-state-error-primary,#c0392b)}
     .ms-ask{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;width:min(420px,86%);display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:12px;background:var(--dsw-specific-menu,var(--dsw-alias-bg-layer-2));border:1px solid var(--dsw-alias-border-l2);box-shadow:var(--dsw-shadow-lv3,0 10px 30px rgba(0,0,0,.3))}
     .ms-ask h4{margin:0;font-size:13px;font-weight:600}
     .ms-export{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;width:min(560px,92%);display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:12px;background:var(--dsw-specific-menu,var(--dsw-alias-bg-layer-2));border:1px solid var(--dsw-alias-border-l2);box-shadow:var(--dsw-shadow-lv3,0 10px 30px rgba(0,0,0,.3))}
@@ -102,11 +120,21 @@ window.__ModuleLoader__.load({
     .ms-pv-head{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--dsw-alias-border-l2);flex:none}
     .ms-pv-title{font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
     .ms-pv-sub{font-size:12px;color:var(--dsw-alias-label-tertiary,var(--dsw-alias-label-secondary));flex:none;font-variant-numeric:tabular-nums}
-    .ms-pv-body{flex:1;min-height:0;overflow:auto;padding:12px 14px;background:var(--dsw-alias-bg-layer-1)}
-    .ms-pv-body pre{margin:0;font:12px/1.7 var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,monospace);color:var(--dsw-alias-label-primary);white-space:pre-wrap;word-break:break-word;tab-size:2}
+    .ms-pv-body{flex:1;min-height:0;overflow:auto;padding:12px 14px;background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-base)}
+    /* 預覽區刻意**與主題反色**：底色用主題的主要文字色、文字用底色。
+       深色主題 → 淺底深字；淺色主題 → 深底淺字。用 token 對調而不是硬編色碼，
+       所以自訂主題也自動成立，也不必去偵測 dark/light（主題只換 CSS 變數，
+       文件上沒有 data-theme 之類的標記）。 */
+    .ms-pv-body pre{margin:0;font:12px/1.7 var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,monospace);color:inherit;white-space:pre-wrap;word-break:break-word;tab-size:2}
     .ms-pv-body img{max-width:100%;max-height:100%;object-fit:contain;display:block;margin:0 auto}
-    .ms-pv-empty{padding:36px 0;text-align:center;color:var(--dsw-alias-label-tertiary,var(--dsw-alias-label-secondary));font-size:13px}
+    .ms-pv-empty{padding:36px 0;text-align:center;color:color-mix(in srgb,var(--dsw-alias-bg-base) 65%,var(--dsw-alias-label-primary));font-size:13px}
     .ms-pv-foot{display:flex;gap:8px;align-items:center;padding:8px 14px;border-top:1px solid var(--dsw-alias-border-l2);flex:none}
+    /* 對話框一律**不透明**：--dsw-specific-menu 是外殼選單用的「半透明＋背景模糊」色
+       （那邊還配 backdrop-filter），拿它直接當底就會透出後面的對話區。這裡把它疊在一個
+       不透明的表面色上 —— 色調保留、透光歸零。寫在三個 dialog 自己的 background 之後，
+       才會覆蓋掉它們的 shorthand。
+       注意：這段註解在 JS 的 template literal 裡，**不能出現反引號**（會提前結束字串）。 */
+    .ms-pv,.ms-ask,.ms-export{background-color:var(--dsw-alias-bg-layer-2);background-image:linear-gradient(var(--dsw-specific-menu,transparent),var(--dsw-specific-menu,transparent))}
     .ms-root{position:relative}
     `)
 
@@ -373,6 +401,10 @@ window.__ModuleLoader__.load({
       const [preview, setPreview] = React.useState(null)
       const [ask, setAsk] = React.useState(null)
       const [exported, setExported] = React.useState(null) // { text, copied }：按「複製設定」才有
+      const [uploads, setUploads] = React.useState([])     // 上傳中的檔案與進度（[{name,sent,total,state,mode,parts}]）
+      const [orphans, setOrphans] = React.useState([])     // 伺服器上未完成的上傳（中斷過的）
+      /** 進行中的 multipart 控制（暫停／取消）；一次只跑一個檔。 */
+      const uploadControl = React.useRef(null)
       const [tick, setTick] = React.useState(0)
       const fileInput = React.useRef(null)
 
@@ -438,6 +470,7 @@ window.__ModuleLoader__.load({
         if (!bucket) return
         try { window.localStorage.setItem(STORAGE_KEY, bucket) } catch {}
         void loadListing(bucket, prefix)
+        void refreshOrphans(bucket, prefix)
       }, [bucket, prefix, tick])
 
       const reload = () => setTick((value) => value + 1)
@@ -581,37 +614,267 @@ window.__ModuleLoader__.load({
         }
       }
 
+      /**
+       * 單檔上傳（帶進度）。
+       *
+       * 用 `XMLHttpRequest` 而不是 `fetch`：`fetch` 沒有上傳進度事件，而
+       * `xhr.upload.onprogress` 是唯一能拿到「已送出多少位元組」的標準做法。
+       */
+      const putWithProgress = (file, objectKey, onProgress) => new Promise((resolve, reject) => {
+        const params = new URLSearchParams({ bucket, key: objectKey })
+        const xhr = new XMLHttpRequest()
+        xhr.open('PUT', `${API}/object?${params.toString()}`)
+        xhr.setRequestHeader('content-type', file.type || 'application/octet-stream')
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) onProgress(event.loaded, event.total)
+          else onProgress(0, file.size)
+        }
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) { onProgress(file.size, file.size); resolve(); return }
+          let message = `HTTP ${xhr.status}`
+          try {
+            const payload = JSON.parse(xhr.responseText || '{}')
+            if (payload && payload.error) message = payload.error
+          } catch { /* 非 JSON：就用狀態碼 */ }
+          reject(new Error(message))
+        }
+        xhr.onerror = () => reject(new Error('網路錯誤（連線中斷）'))
+        xhr.onabort = () => reject(new Error('已取消'))
+        xhr.send(file)
+      })
+
+      /**
+       * 單一片的 PUT（XHR：只有它給得上傳進度）。
+       *
+       * @returns {Promise<{partNumber: number, etag: string, size: number}>}
+       */
+      const putPart = (params, blob, onProgress, register) => new Promise((resolve, reject) => {
+        const query = new URLSearchParams({
+          bucket,
+          key: params.key,
+          uploadId: params.uploadId,
+          partNumber: String(params.partNumber),
+        })
+        const xhr = new XMLHttpRequest()
+        xhr.open('PUT', `${API}/upload/part?${query.toString()}`)
+        xhr.setRequestHeader('content-type', 'application/octet-stream')
+        xhr.upload.onprogress = (event) => { if (event.lengthComputable) onProgress(event.loaded) }
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            let payload = null
+            try { payload = JSON.parse(xhr.responseText || '{}') } catch {}
+            resolve({ partNumber: params.partNumber, etag: (payload && payload.etag) || '', size: blob.size })
+            return
+          }
+          let message = `HTTP ${xhr.status}`
+          try {
+            const payload = JSON.parse(xhr.responseText || '{}')
+            if (payload && payload.error) message = payload.error
+          } catch { /* 非 JSON */ }
+          const error = new Error(message)
+          error.status = xhr.status
+          reject(error)
+        }
+        xhr.onerror = () => reject(new Error('網路錯誤（連線中斷）'))
+        xhr.onabort = () => reject(new Error('已取消'))
+        if (register) register(xhr)
+        xhr.send(blob)
+      })
+
+      /**
+       * multipart 上傳一個檔案（可續傳、可暫停、可取消）。
+       *
+       * **續傳交給伺服器**：`/upload/init` 會接手同一個 key 上未完成的上傳並回報
+       * 已經收到的片，所以「使用者重新選同一個檔案」就等於續傳 —— 瀏覽器不可能
+       * 自己保存檔案位元組，這也是唯一誠實的做法。
+       */
+      const uploadMultipart = async (file, objectKey, onProgress) => {
+        const init = await api(`${API}/upload/init`, {
+          json: { bucket, key: objectKey, size: file.size, contentType: file.type || undefined },
+        })
+        const { partSize, partCount } = init
+        const etags = new Map((init.parts || []).map((part) => [part.partNumber, part.etag]))
+        const inflight = new Map()
+
+        const partBytes = (partNumber) => Math.min(partSize, file.size - (partNumber - 1) * partSize)
+        const report = () => {
+          let sent = 0
+          for (const partNumber of etags.keys()) sent += partBytes(partNumber)
+          for (const loaded of inflight.values()) sent += loaded
+          onProgress({
+            sent: Math.min(sent, file.size),
+            doneParts: etags.size,
+            partCount,
+            resumed: Boolean(init.resumed) || etags.size > 0,
+          })
+        }
+        report()
+
+        const control = {
+          paused: false,
+          cancelled: false,
+          target: { key: objectKey, uploadId: init.uploadId },
+          aborts: new Set(),
+        }
+        uploadControl.current = control
+
+        const queue = []
+        for (let partNumber = 1; partNumber <= partCount; partNumber += 1) {
+          if (!etags.has(partNumber)) queue.push(partNumber)
+        }
+
+        const runPart = async (partNumber) => {
+          const start = (partNumber - 1) * partSize
+          const blob = file.slice(start, Math.min(start + partSize, file.size))
+          let xhrRef = null
+          try {
+            const part = await putPart(
+              { key: objectKey, uploadId: init.uploadId, partNumber },
+              blob,
+              (loaded) => { inflight.set(partNumber, loaded); report() },
+              (xhr) => { xhrRef = xhr; control.aborts.add(xhr) },
+            )
+            inflight.delete(partNumber)
+            etags.set(partNumber, part.etag)
+            report()
+          } finally {
+            if (xhrRef) control.aborts.delete(xhrRef)
+          }
+        }
+
+        const worker = async () => {
+          for (;;) {
+            if (control.cancelled) throw new Error('已取消')
+            while (control.paused) {
+              if (control.cancelled) throw new Error('已取消')
+              await new Promise((resolve) => setTimeout(resolve, 150))
+            }
+            const partNumber = queue.shift()
+            if (partNumber === undefined) return
+            await runPart(partNumber)
+          }
+        }
+
+        try {
+          const workers = Math.max(1, Math.min(PART_CONCURRENCY, queue.length || 1))
+          await Promise.all(Array.from({ length: workers }, worker))
+          if (control.cancelled) throw new Error('已取消')
+          const parts = [...etags.entries()].map(([partNumber, etag]) => ({ partNumber, etag }))
+          if (parts.length !== partCount) throw new Error(`還缺片（${parts.length}/${partCount}），再選一次同一個檔案會續傳`)
+          const done = await api(`${API}/upload/complete`, { json: { bucket, key: objectKey, uploadId: init.uploadId, parts } })
+          if (typeof done.size === 'number' && done.size !== file.size) {
+            throw new Error(`上傳後大小不符（遠端 ${done.size} / 本地 ${file.size}）`)
+          }
+          return done
+        } catch (error) {
+          // 取消 = 放棄：把伺服器上的片清掉（保留進度的是「暫停」）
+          if (control.cancelled) {
+            try { await api(`${API}/upload/abort`, { json: { bucket, key: objectKey, uploadId: init.uploadId } }) } catch {}
+          }
+          throw error
+        } finally {
+          if (uploadControl.current === control) uploadControl.current = null
+        }
+      }
+
+      const pauseUpload = () => {
+        if (!uploadControl.current) return
+        uploadControl.current.paused = true
+        setUploads((current) => current.map((entry) => (entry.state === 'uploading' ? { ...entry, state: 'paused' } : entry)))
+      }
+
+      const resumeUpload = () => {
+        if (!uploadControl.current) return
+        uploadControl.current.paused = false
+        setUploads((current) => current.map((entry) => (entry.state === 'paused' ? { ...entry, state: 'uploading' } : entry)))
+      }
+
+      const cancelUpload = () => {
+        const control = uploadControl.current
+        if (!control) return
+        control.cancelled = true
+        for (const xhr of [...control.aborts]) {
+          try { xhr.abort() } catch { /* 已經結束 */ }
+        }
+        control.aborts.clear()
+      }
+
+      /** 刷新「未完成的上傳」清單（伺服器是唯一真相；舊宿主沒有這條路由就靜默）。 */
+      const refreshOrphans = async (targetBucket, targetPrefix) => {
+        const useBucket = targetBucket || bucket
+        if (!useBucket) { setOrphans([]); return }
+        try {
+          const payload = await api(`${API}/upload/status?${new URLSearchParams({ bucket: useBucket }).toString()}`)
+          const prefix = targetPrefix === undefined ? currentPrefix : targetPrefix
+          setOrphans((payload.uploads || []).filter((entry) => entry.key.startsWith(prefix)))
+        } catch {
+          setOrphans([])
+        }
+      }
+
+      const abortOrphan = async (entry) => {
+        try {
+          await api(`${API}/upload/abort`, { json: { bucket, key: entry.key, uploadId: entry.uploadId } })
+          say(`已放棄 ${entry.key}`)
+          void refreshOrphans()
+        } catch (error) {
+          setError(`放棄未完成的上傳失敗：${failureText(error)}`)
+        }
+      }
+
       const upload = async (files) => {
         const list = Array.from(files || [])
         if (list.length === 0) return
         setBusy(true)
         setError(null)
+        const entries = list.map((file) => ({
+          name: file.name, sent: 0, total: file.size, state: 'pending', mode: '', parts: '',
+        }))
+        setUploads(entries)
+        const patch = (index, value) => setUploads((current) => current.map((entry, i) => (i === index ? { ...entry, ...value } : entry)))
         let done = 0
         try {
-          for (const file of list) {
-            if (file.size > UPLOAD_LIMIT) throw new Error(`${file.name} 超過上傳上限 ${fmtSize(UPLOAD_LIMIT)}`)
-            const params = new URLSearchParams({ bucket, key: currentPrefix + file.name })
-            const response = await fetch(`${API}/object?${params.toString()}`, {
-              method: 'PUT',
-              headers: { 'content-type': file.type || 'application/octet-stream' },
-              body: file,
-            })
-            const text = await response.text()
-            let payload = null
-            try { payload = text ? JSON.parse(text) : null } catch {}
-            if (!response.ok || (payload && payload.ok === false)) {
-              throw new Error((payload && payload.error) || `HTTP ${response.status}`)
+          for (let index = 0; index < list.length; index += 1) {
+            const file = list[index]
+            const objectKey = currentPrefix + file.name
+            patch(index, { state: 'uploading' })
+            try {
+              if (file.size > MULTIPART_THRESHOLD) {
+                patch(index, { mode: 'multipart' })
+                await uploadMultipart(file, objectKey, ({ sent, doneParts, partCount, resumed }) => {
+                  patch(index, { sent, parts: `${doneParts}/${partCount} 片${resumed ? '（續傳）' : ''}` })
+                })
+              } else {
+                patch(index, { mode: 'single' })
+                await putWithProgress(file, objectKey, (sent, total) => patch(index, { sent, total }))
+              }
+            } catch (error) {
+              // 舊宿主（沒重載）沒有 multipart 路由：小檔退回單次 PUT，大檔明說要重啟
+              const missing = error && (error.status === 405 || error.status === 404)
+              if (missing && file.size <= UPLOAD_LIMIT && error.message !== '已取消') {
+                patch(index, { mode: 'single', parts: '宿主未重載，改用單次 PUT' })
+                await putWithProgress(file, objectKey, (sent, total) => patch(index, { sent, total }))
+              } else if (missing) {
+                throw new Error('宿主外掛還沒重新載入（multipart 路由不存在）→ 請重啟 DSH；或改用 skill 的 `minio.mjs upload`')
+              } else {
+                throw error
+              }
             }
+            patch(index, { sent: file.size, state: 'done' })
             done += 1
           }
           say(`已上傳 ${done} 個檔案`)
           reload()
+          void refreshOrphans()
         } catch (error) {
+          patch(done, { state: 'failed' })
           setError(`上傳失敗${done > 0 ? `（已完成 ${done} 個）` : ''}：${failureText(error)}`)
           if (done > 0) reload()
+          void refreshOrphans()   // 中斷的上傳會出現在「未完成」清單裡，可以續傳或放棄
         } finally {
           setBusy(false)
           if (fileInput.current) fileInput.current.value = ''
+          setTimeout(() => setUploads((current) => (current.every((entry) => entry.state === 'done') ? [] : current)), 4000)
         }
       }
 
@@ -689,7 +952,12 @@ window.__ModuleLoader__.load({
       const q = query.trim().toLowerCase()
       const match = (name) => !q || name.toLowerCase().includes(q)
       const folders = (listing ? listing.folders : []).filter((entry) => match(entry.name))
-      const objects = (listing ? listing.objects : []).filter((entry) => match(entry.name))
+      const objects = (listing ? listing.objects : [])
+        // 空資料夾標記：key 等於「當前前綴」的那一個就是這個資料夾自己（舊版宿主會把它
+        // 當成 0 位元組的檔案列出來，看起來像資料夾裡有個同名空檔）。宿主已修，這裡再擋
+        // 一層，讓還沒重啟 DSH 的人也看不到。
+        .filter((entry) => entry.key !== currentPrefix)
+        .filter((entry) => match(entry.name))
 
       const noteText = hint
         || ((status.buckets || []).length === 0
@@ -765,8 +1033,44 @@ window.__ModuleLoader__.load({
             onClick: () => void exportConfig(),
           }, '❗️ 複製設定'),
         ),
-        sel.size > 0 && h('div', { className: 'ms-selbar' },
-          h('span', null, `已選 ${sel.size} 項`),
+        uploads.length > 0 && h('div', { className: 'ms-ups' },
+          uploads.map((entry, index) => {
+            const ratio = entry.total > 0 ? Math.min(1, entry.sent / entry.total) : 1
+            const label = entry.state === 'done' ? '完成'
+              : entry.state === 'failed' ? '失敗'
+                : entry.state === 'paused' ? '已暫停'
+                  : entry.state === 'pending' ? '排隊中'
+                    : `${Math.round(ratio * 100)}%`
+            const active = entry.state === 'uploading' || entry.state === 'paused'
+            return h('div', { key: 'up:' + index, className: 'ms-up' },
+              h('span', { className: 'ms-up-bar' },
+                h('span', {
+                  className: 'ms-up-fill' + (entry.state === 'done' ? ' done' : entry.state === 'failed' ? ' failed' : ''),
+                  style: { width: (ratio * 100).toFixed(1) + '%' },
+                })),
+              h('span', { className: 'ms-up-pct' }, label),
+              h('span', { className: 'ms-up-nm', title: entry.name },
+                entry.name + (entry.mode === 'multipart' ? ' ⬆︎多片' : '')),
+              h('span', { className: 'ms-up-sz' }, `${fmtSize(entry.sent)} / ${fmtSize(entry.total)}`),
+              h('span', { className: 'ms-up-part' }, entry.parts || ''),
+              active && entry.mode === 'multipart' && (entry.state === 'paused'
+                ? h('button', { className: 'ms-mini', onClick: resumeUpload }, '繼續')
+                : h('button', { className: 'ms-mini', onClick: pauseUpload }, '暫停')),
+              active && entry.mode === 'multipart' && h('button', { className: 'ms-mini danger', onClick: cancelUpload }, '取消'),
+            )
+          }),
+        ),
+        orphans.length > 0 && h('div', { className: 'ms-ups' },
+          h('div', { className: 'ms-up-nm', style: { opacity: 0.75 } },
+            `未完成的上傳 ${orphans.length} 筆 —— 重新選同一個檔案上傳即可續傳，或按「放棄」清掉伺服器上的片`),
+          orphans.slice(0, 6).map((entry) => h('div', { key: 'orphan:' + entry.uploadId, className: 'ms-up' },
+            h('span', { className: 'ms-up-nm', title: entry.key }, entry.key),
+            h('span', { className: 'ms-up-sz' }, `已收到 ${(entry.parts || []).length} 片`),
+            h('span', { className: 'ms-up-part' }, (entry.initiated || '').replace('T', ' ').slice(0, 19)),
+            h('button', { className: 'ms-mini danger', disabled: busy, onClick: () => void abortOrphan(entry) }, '放棄'),
+          )),
+        ),
+        sel.size > 0 && h('div', { className: 'ms-selbar' },      h('span', null, `已選 ${sel.size} 項`),
           h('button', {
             className: 'ms-btn', disabled: busy,
             style: { color: 'var(--dsw-alias-state-error-primary,var(--dsw-alias-label-primary))' },
@@ -781,7 +1085,7 @@ window.__ModuleLoader__.load({
           // 徵兆是 /status 沒有 version：那時批次刪除會被伺服器逐 key 拒絕、簽章
           // 連結也會失敗，所以直接告訴使用者「現在是降級模式、重啟才會恢復」。
           status.ok === true && !status.version && h('div', { className: 'ms-warn' },
-            '⚠️ 宿主外掛還是舊版（改完程式碼後未重啟 DSH）：刪除會改用逐一刪除、簽章連結與「複製設定」會失敗；重啟 DSH 後恢復正常。'),
+            '⚠️ 宿主外掛還是舊版（改完程式碼後未重啟 DSH）：刪除會改用逐一刪除、簽章連結與「複製設定」會失敗、大檔（>32MB）也不能用 multipart 上傳；重啟 DSH 後恢復正常。'),
           !error && (status.buckets || []).length === 0 && h('div', { className: 'ms-empty' }, '這個 MinIO 上沒有可用的桶。'),
           !error && !bucket && (status.buckets || []).length > 0 && h('div', { className: 'ms-empty' }, '請先選一個桶。'),
           !error && loading && !listing && h('div', { className: 'ms-empty' }, '載入物件…'),

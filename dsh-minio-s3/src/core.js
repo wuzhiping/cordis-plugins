@@ -344,6 +344,116 @@ function parseListBuckets(xml) {
   })).filter((entry) => entry.name !== '')
 }
 
+// ---------------------------------------------------------------------------
+// Multipart（大檔上傳／斷點續傳）
+// ---------------------------------------------------------------------------
+
+/** S3 對「非最後一片」的最小值；MinIO 實測會用 `EntityTooSmall` 擋下來。 */
+const MIN_PART_BYTES = 5 * 1024 * 1024
+/** 我們自己用的下限：留餘量，避免剛好卡在邊界。 */
+const DEFAULT_PART_BYTES = 8 * 1024 * 1024
+/** S3 單片上限。 */
+const MAX_PART_BYTES = 5 * 1024 * 1024 * 1024
+/** S3 片數上限。 */
+const MAX_PARTS = 10000
+
+/**
+ * 分片規劃。
+ *
+ * 兩個硬約束：①非最後一片 ≥ 5 MiB（否則 `CompleteMultipartUpload` 回
+ * `EntityTooSmall`，實測）；②片數 ≤ 10000。所以 partSize 取
+ * `max(下限, ceil(size/10000))`，再夾在上限內。
+ *
+ * **partSize 一旦決定就必須固定**：續傳靠「片號 × partSize」推算位移，
+ * 中途改大小會對不上已存的片。
+ *
+ * @param {number} size 物件位元組數
+ * @param {{minPartSize?: number, maxPartSize?: number, maxParts?: number}} [options]
+ * @returns {{partSize: number, partCount: number}}
+ */
+function planParts(size, options) {
+  const opts = options || {}
+  const min = Number(opts.minPartSize || DEFAULT_PART_BYTES)
+  const max = Number(opts.maxPartSize || MAX_PART_BYTES)
+  const maxParts = Number(opts.maxParts || MAX_PARTS)
+  const bytes = Math.max(0, Math.floor(Number(size) || 0))
+  const partSize = Math.max(min, Math.min(max, Math.ceil(bytes / maxParts) || min))
+  const partCount = bytes === 0 ? 1 : Math.ceil(bytes / partSize)
+  return { partSize, partCount }
+}
+
+/** 第 n 片（1-based）在這個規劃下的位元組範圍（含頭不含尾）。 */
+function partRange(partNumber, partSize, totalSize) {
+  const start = (partNumber - 1) * partSize
+  return { start, end: Math.min(start + partSize, totalSize) }
+}
+
+/** `ListParts` 回應 → 伺服器手上已經有的片（續傳的真相來源）。 */
+function parseListParts(xml) {
+  return {
+    parts: xmlBlocks(xml, 'Part').map((block) => ({
+      partNumber: Number(xmlText(block, 'PartNumber') || 0),
+      size: Number(xmlText(block, 'Size') || 0),
+      // 回應裡的 ETag 是 XML 轉義的 `&#34;…&#34;`，xmlText 已解實體，這裡去掉引號
+      etag: (xmlText(block, 'ETag') || '').replace(/"/g, ''),
+    })).filter((entry) => entry.partNumber > 0),
+    isTruncated: xmlBool(xml, 'IsTruncated'),
+    nextPartNumberMarker: Number(xmlText(xml, 'NextPartNumberMarker') || 0),
+  }
+}
+
+/** `ListMultipartUploads` 回應 → 未完成的上傳（客戶端弄丟 uploadId 時用它找回）。 */
+function parseListMultipartUploads(xml) {
+  const decode = (value) => {
+    if (!value) return ''
+    try { return decodeURIComponent(String(value).replace(/\+/g, ' ')) } catch { return String(value) }
+  }
+  return xmlBlocks(xml, 'Upload').map((block) => ({
+    key: decode(xmlText(block, 'Key')),
+    uploadId: xmlText(block, 'UploadId') || '',
+    initiated: xmlText(block, 'Initiated') || '',
+  })).filter((entry) => entry.uploadId !== '')
+}
+
+/**
+ * 組 `CompleteMultipartUpload` 的請求 XML。
+ *
+ * ETag 必須是 `UploadPart` 回傳的原值（**帶引號**）；這裡統一去掉再補上，
+ * 呼叫端給不給引號都能用。
+ */
+function buildCompleteMultipartXml(parts) {
+  const list = (Array.isArray(parts) ? parts : [])
+    .filter((part) => part && Number(part.partNumber) > 0)
+    .sort((a, b) => Number(a.partNumber) - Number(b.partNumber))
+  return '<?xml version="1.0" encoding="UTF-8"?><CompleteMultipartUpload>'
+    + list.map((part) => '<Part><PartNumber>' + Number(part.partNumber) + '</PartNumber>'
+      + '<ETag>"' + String(part.etag || '').replace(/"/g, '') + '"</ETag></Part>').join('')
+    + '</CompleteMultipartUpload>'
+}
+
+/** `CompleteMultipartUpload` 回應 → `{etag, location}`（ETag 是 `…-片數`，不是物件 MD5）。 */
+function parseCompleteMultipartResult(xml) {
+  return {
+    etag: (xmlText(xml, 'ETag') || '').replace(/"/g, ''),
+    location: xmlText(xml, 'Location') || '',
+  }
+}
+
+/**
+ * 由各片 ETag 組出 multipart 物件的複合 ETag：`md5(concat(各片 md5 的二進位)) + "-片數"`。
+ *
+ * 存在的理由：multipart 的最終 ETag **不是**物件 MD5，所以想驗內容就得自己算這個
+ * （各片的 md5 在上傳時本來就算得到）。
+ */
+function compositeEtag(partEtags) {
+  const digests = (Array.isArray(partEtags) ? partEtags : [])
+    .map((etag) => String(etag || '').replace(/"/g, ''))
+    .filter((etag) => /^[0-9a-f]{32}$/i.test(etag))
+    .map((etag) => Buffer.from(etag, 'hex'))
+  if (digests.length === 0) return ''
+  return crypto.createHash('md5').update(Buffer.concat(digests)).digest('hex') + '-' + digests.length
+}
+
 /**
  * `ListObjectsV2` 回應 → 一層目錄的內容。
  *
@@ -495,23 +605,34 @@ function regionHintInText(text) {
 }
 
 module.exports = {
+  DEFAULT_PART_BYTES,
   EMPTY_SHA256,
+  MAX_PARTS,
+  MAX_PART_BYTES,
+  MIN_PART_BYTES,
   UNSIGNED_PAYLOAD,
   amzStamp,
   baseName,
+  buildCompleteMultipartXml,
   canonicalQuery,
   checkTarget,
+  compositeEtag,
   decodeXmlEntities,
   hmacSha256,
   isFolderKey,
   joinKey,
   normalizePrefix,
   parentPrefix,
+  parseCompleteMultipartResult,
   parseDeleteResult,
   parseListBuckets,
+  parseListMultipartUploads,
   parseListObjectsV2,
+  parseListParts,
   parseS3Error,
+  partRange,
   payloadHashOf,
+  planParts,
   presignUrl,
   regionHintInText,
   sha256Hex,
