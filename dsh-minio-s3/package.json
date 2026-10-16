@@ -1,0 +1,45 @@
+{
+  "name": "dsh-minio-s3",
+  "version": "1.0.0",
+  "description": "dsh 插件 · 遠端 MinIO/S3 桶檔案管理：對話區加「MinIO」tab（列桶／逐層瀏覽／預覽／下載／上傳／新建資料夾／改名／批次刪除／簽章連結），並提供 minio_list / minio_read / minio_write / minio_delete / minio_bucket 五個 agent 工具。連線由 BDD storage 記錄 /BDD/API/AI/dsh/storage/s3 以本機遮蔽金鑰換取，憑證只留在宿主。",
+  "private": true,
+  "type": "commonjs",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./client/bundle.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "client",
+    "scripts",
+    "cordis.patch.yml",
+    "README.md"
+  ],  "engines": {
+    "node": ">=20"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "check": "node --check src/core.js && node --check src/s3.js && node --check src/storage.js && node --check src/index.js && node --check client/index.js",
+    "test": "node --test \"test/*.test.js\"",
+    "live": "node scripts/live-check.mjs",
+    "build:client": "node scripts/build-client.mjs"
+  },
+  "keywords": [
+    "dsh",
+    "minio",
+    "s3",
+    "object-storage",
+    "bucket",
+    "file-manager"
+  ],
+  "license": "MIT"
+}

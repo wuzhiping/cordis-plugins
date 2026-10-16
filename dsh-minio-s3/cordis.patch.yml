@@ -1,0 +1,14 @@
+# dsh-minio-s3 bundle patch：把外掛的 Loader 行插進宿主組合。
+#
+# 兩件事都需要宿主行：
+#  (a) 一族同源路由 /plugins/dsh-minio-s3/* —— 瀏覽器半邊靠它列桶、列物件、
+#      上傳、下載、預覽、刪除、改名。S3 簽章與憑證只在宿主行程裡，瀏覽器
+#      拿不到端點或帳密；
+#  (b) 五個宿主工具（minio_list / minio_read / minio_write / minio_delete /
+#      minio_bucket）以及「工作區檔案 ↔ 物件」的搬移路由。
+#
+# dsh patch-loader 語意：裸 `- id:` 只修補「已存在」的 entry；新 entry 必須放進
+# `insert:` 區塊。這裡是宿主組合，不能放進 agent preset。
+- insert:
+    - id: dsh-minio-s3
+      name: 'dsh-minio-s3'

@@ -1,0 +1,19 @@
+# dsh-file-share bundle patch: contributes the plugin row into the
+# host composition when this package is installed via `dsh plugin add`.
+#
+# The plugin needs a HOST row for two reasons:
+#  (a) it serves ONE same-origin read-only route under
+#      /dsh-file-share/api/download-zip — a directory/multi-select zip built
+#      in-process (the host workspaceFiles Remote has no zip, and packing a
+#      4000-entry directory over per-file Remote calls would put every byte
+#      and every round trip in the browser). The route resolves its root from
+#      ctx.sessions.get().header.cwd and is path-bound by share-core;
+#  (b) a Loader row is what makes dsh-client-modules serve the package's
+#      browser bundle for its conversation.view「文件」tab.
+# Everything else — listing, preview, single-file download, path and paging
+# caps — goes through the host ctx.workspaceFiles Remote in client/index.js.
+# It must land in the host composition (this insert), never inside an agent preset.
+
+- insert:
+    - id: dsh-file-share
+      name: 'dsh-file-share'

@@ -1,0 +1,45 @@
+{
+  "name": "dsh-file-share",
+  "version": "0.2.0",
+  "description": "dsh 插件 · 会话工作区文件浏览：在对话区加「文件」tab，只读浏览当前会话工作区的目录树（读走宿主 workspaceFiles Remote），支持预览、单文件下载、整目录/多选打包 zip 下载，并可把文件 @ 进对话框交给 agent。",
+  "main": "src/host.js",
+  "exports": {
+    ".": "./src/host.js",
+    "./client": "./client/bundle.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "client",
+    "scripts",
+    "cordis.patch.yml"
+  ],
+  "engines": {
+    "node": ">=20",
+    "dsh": ">=0.1.7-rc.2"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "check": "node --check src/host.js && node --check src/share-core.js && node --check client/index.js",
+    "test": "node --test \"test/*.test.js\"",
+    "build:client": "node scripts/build-client.mjs"
+  },
+  "keywords": [
+    "dsh",
+    "file",
+    "files",
+    "workspace",
+    "file-manager",
+    "download",
+    "zip",
+    "@file"
+  ],
+  "dependencies": {}
+}
