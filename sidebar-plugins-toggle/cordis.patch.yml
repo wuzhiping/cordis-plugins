@@ -1,0 +1,6 @@
+# Bundle 層：只插一行宿主外掛。
+# 真正的工作在 client.js（瀏覽器半邊）：一條 CSS 隱藏側欄的 plugins 面板列，
+# 以及 設定 → 一般 裡的一個核取方塊。
+- insert:
+    - id: sidebar-plugins-toggle
+      name: sidebar-plugins-toggle

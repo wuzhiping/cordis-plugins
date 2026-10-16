@@ -1,0 +1,19 @@
+{
+  "name": "sidebar-plugins-toggle",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./index.js", "./client": "./client.js" },
+  "meta": {
+    "title": "側欄外掛入口開關",
+    "description": "隱藏側欄的「系统外掛」入口，並在 設定 → 一般 加一個核取方塊控制顯示或隱藏。"
+  },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": ["@deepseek-ai/dsh-client-ui-settings-general"]
+    }
+  }
+}
