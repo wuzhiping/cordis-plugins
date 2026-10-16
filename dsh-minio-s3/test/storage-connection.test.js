@@ -76,15 +76,17 @@ test('readMaskedCredential：依序 fallback 並回報用了哪個 ref', () => {
 })
 
 test('extractStoredConnection：吃 S3_* 與無前綴兩種欄位名', () => {
+  // 測試用的合成值（不要放真憑證：這個檔案會進版控）
+  const SECRET = 'unit-test-secret-not-real'
   const long = connection.extractStoredConnection({
-    S3_URL: 'http://10.17.26.8:7000', S3_UID: 'admin', S3_PWD: '12345678', S3_BUCK: '',
+    S3_URL: 'http://minio.test:7000', S3_UID: 'testuser', S3_PWD: SECRET, S3_BUCK: '',
   })
   assert.deepEqual(long, {
-    ok: true, endpoint: 'http://10.17.26.8:7000', accessKey: 'admin', secretKey: '12345678', defaultBucket: '',
+    ok: true, endpoint: 'http://minio.test:7000', accessKey: 'testuser', secretKey: SECRET, defaultBucket: '',
   })
 
   const short = connection.extractStoredConnection({
-    S3_URL: 'http://10.17.26.8:7000', UID: 'admin', PWD: '12345678', BUCKET: 'dsh',
+    S3_URL: 'http://minio.test:7000', UID: 'testuser', PWD: SECRET, BUCKET: 'dsh',
   })
   assert.equal(short.ok, true)
   assert.equal(short.defaultBucket, 'dsh')
