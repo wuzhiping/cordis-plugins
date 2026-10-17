@@ -215,21 +215,47 @@ plugin_manager action=remove_bundle  target=dsh-minio-s3
 > 那一刻按「❗️ 複製設定」會得到 **HTTP 405**（路由還不存在），面板會直接說
 > 「宿主外掛還沒重新載入，請重啟 DSH 後再試」。
 
+## 目錄結構
+
+```
+src/                 宿主半邊（core.js / s3.js / storage.js / index.js）
+client/              瀏覽器半邊：index.js（原始碼）→ bundle.js（建置產物，要 commit）
+skills/minio-file/   對外分享的 skill 原始碼（SKILL.md + 零依賴 CLI minio.mjs）
+minio-file-skill.zip 由 skills/ 打包出來的分享產物（npm run pack:skill，可重現）
+scripts/             建置、實機檢查、打包
+scripts/verify/      真機驗證腳本（對真 MinIO 跑；npm run verify:live）
+docs/                設計文件（resumable-transfer.md：斷點續傳的完整設計與實測）
+test/                離線測試（node --test，假 MinIO + 假 cordis ctx）
+cordis.patch.yml     bundle 的 insert patch
+```
+
+skill 的「安裝位置」與這裡的原始碼是同一份檔案：工作區的 `.dsh/skills/minio-file`
+是一個 **junction** 指向 `cordis-plugins/dsh-minio-s3/skills/minio-file`，
+所以編輯任一邊都是同一份，不會漂移。
+
 ## 測試與實機驗證
 
 ```powershell
 cd cordis-plugins/dsh-minio-s3
-npm run check        # node --check 五個檔案
-npm test             # 55 個離線測試
-npm run build:client # 由 client/index.js 產生 client/bundle.js
-npm run live         # 對「正在運行的宿主外掛」做一次實機檢查（見下）
+npm run check        # node --check：四支宿主模組 + client + skill CLI
+npm test             # 67 個離線測試
+npm run build:client # 由 client/index.js 產生 client/bundle.js（壞的產物不落地）
+npm run pack:skill   # 由 skills/minio-file 重新打包 minio-file-skill.zip（可重現）
+npm run verify:live  # 對真 MinIO 跑整套驗證（15 項，見下）
+npm run live         # 較輕量的單次實機檢查（不需憑證、只打活動宿主）
 ```
+
+`scripts/verify/` 的腳本**對真 MinIO 跑**，用實際環境驗證過的行為把外掛釘住：
+Range／斷點續傳（206/416/If-Range）、multipart 上傳與續傳、面板實際會打的整串 HTTP、
+空資料夾標記、刪除的錯誤回報、region 自動修正、skill CLI。`run-all.cjs` 會跟
+`ConnectionProvider` 要連線設定、寫進 `%TEMP%` 的暫存檔給 skill 類腳本用、跑完刪除
+（任何腳本都不印金鑰）；其中 `web-shell-check.cjs` 需要 GUI 開著，它會確認
+`__DSH_BOOT__` 有這個外掛、bundle 回 200 且可解析 —— 就是「import failed」那一刻的
+排查工具。細節見 [`scripts/verify/README.md`](scripts/verify/README.md)。
 
 `npm run live`（`scripts/live-check.mjs`）不碰憑證、不經 cordis，只打活動宿主上的
 `/plugins/dsh-minio-s3/*`：列桶 → 上傳 → 列表 → 下載 → presign → 批次刪除 →
-清理。它在桶裡只建立 `_dsh_minio_s3_livecheck/` 底下的臨時物件。**重啟 DSH 之後
-跑它，就能確認 region 修正真的生效**（舊模組會停在 `region us-east-1`，presign
-與批次刪除會 FAIL）。
+清理。它在桶裡只建立 `_dsh_minio_s3_livecheck/` 底下的臨時物件。
 
 `test/host.test.js` 把整個外掛掛在假的 cordis ctx 上，並用**記憶體裡的假 MinIO**
 驅動物件生命週期、桶管理、路徑邊界（含斷掉的 symlink）、信任柵欄、`inline` 白名單、
@@ -249,7 +275,13 @@ npm run live         # 對「正在運行的宿主外掛」做一次實機檢查
 | 路由（新模組） | `npm run live` | **等 DSH 重啟後**才會全綠：目前活動行程載入的是第一次掛載的舊模組（`version: undefined`、`region: us-east-1`），因此 `/presign`、`POST /delete` 與 `POST /export` 仍會失敗 —— 修正已在磁碟上並由新行程驗證通過 |
 | 「複製設定」匯出 | 新行程直接驅動 `POST /export`（真 MinIO）；再用匯出的 JSON 另開 `S3Client` | 全過：`endpoint`/`accessKey`/`secretKey`/`region=us-west-rack-2`/`bucket=dsh`/桶清單，且複製出去的值真的能列桶與列物件 |
 | 傳輸時間預算 | 假 fetch：標頭 30ms 到、body 分 5 段滴完（總時長超過預算）；9MB PUT vs 小 PUT | 慢速 body 完整收完；大 body 不套預算而成功、小 body 仍照預算逾時 |
-| 硬化（見「回應的硬化」） | 離線測試：`inline` 白名單（png 放行、svg 降級）、`x-content-type-options`、斷掉的 symlink、metadata 端點、`/export` 的三道限制、`exec.signal` | 全過（`npm test`，55 個） |
+| 硬化（見「回應的硬化」） | 離線測試：`inline` 白名單（png 放行、svg 降級）、`x-content-type-options`、斷掉的 symlink、metadata 端點、`/export` 的三道限制、`exec.signal` | 全過（`npm test`，67 個） |
+| Range／206／416／If-Range | `scripts/verify/range-live.cjs`（真 MinIO，掛新外掛程式碼） | 全過（8 項） |
+| multipart 上傳＋續傳 | `scripts/verify/upload-live.cjs`（skill）＋ `panel-flow-live.cjs`（面板的 HTTP 序列） | 全過；續傳只補缺片、內容 MD5 一致 |
+| 空資料夾標記 | `scripts/verify/folder-marker-live.cjs` | `docs/` 裡不再出現 0 位元組的同名檔案 |
+| 刪除的錯誤回報 | `scripts/verify/delete-fallback-live.cjs` | 批次刪除對不存在的桶會回報逐 key 錯誤，不是假成功 |
+| 面板真的載入 | `scripts/verify/web-shell-check.cjs` | boot 條目存在、bundle 200、可解析、含新 UI |
+| 以上全部 | `npm run verify:live` | **15/15** |
 
 ## 已知限制
 

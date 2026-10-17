@@ -14,9 +14,12 @@
     "src",
     "client",
     "scripts",
+    "skills",
+    "docs",
     "cordis.patch.yml",
     "README.md"
-  ],  "engines": {
+  ],
+  "engines": {
     "node": ">=20"
   },
   "dsh": {
@@ -28,10 +31,12 @@
     }
   },
   "scripts": {
-    "check": "node --check src/core.js && node --check src/s3.js && node --check src/storage.js && node --check src/index.js && node --check client/index.js",
+    "check": "node --check src/core.js && node --check src/s3.js && node --check src/storage.js && node --check src/index.js && node --check client/index.js && node --check skills/minio-file/minio.mjs",
     "test": "node --test \"test/*.test.js\"",
     "live": "node scripts/live-check.mjs",
-    "build:client": "node scripts/build-client.mjs"
+    "build:client": "node scripts/build-client.mjs",
+    "pack:skill": "node scripts/pack-skill.mjs",
+    "verify:live": "node scripts/verify/run-all.cjs"
   },
   "keywords": [
     "dsh",
