@@ -5,8 +5,8 @@
   "type": "module",
   "exports": { ".": "./index.js", "./client": "./client.js" },
   "meta": {
-    "title": "介面精簡開關",
-    "description": "兩個預設開啟的開關（設定 → 一般）：隱藏側欄的「系统外掛」入口；隱藏底部「更多」選單裡的「意見反饋」與「登入」。"
+    "title": "介面精簡",
+    "description": "隱藏側欄的「系统外掛」入口（設定 → 一般 可開關，預設開）；永久隱藏底部「更多」選單裡的「意見反饋」與「登入」。"
   },
   "dsh": {
     "bundle": { "patch": "./cordis.patch.yml" },

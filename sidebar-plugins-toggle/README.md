@@ -1,15 +1,15 @@
-# sidebar-plugins-toggle —— 介面精簡開關
+# sidebar-plugins-toggle —— 介面精簡
 
 ## 這是什麼
 
-兩個開關，都在 設定 → 一般，**預設都開**（= 都隱藏）：
+兩件事，預設都生效：
 
-1. **側欄「系统外掛」入口**：側欄最上面那一列（官方外掛
-   `@deepseek-ai/dsh-client-ui-plugin-manager` 註冊的 `sidebar.panellist` 條目，
-   id = `plugins`，order 0）隱藏。只有那一列消失：外掛主面板、設定 → 外掛 都照常。
-2. **底部「更多」選單的兩項**：底部帳號選單（官方外掛
-   `@deepseek-ai/dsh-client-ui-settings-account` 的 AccountMenu）裡的
-   「意見反饋」與「登入」隱藏；「設定」那一項照常。
+1. **側欄「系统外掛」入口**（設定 → 一般 **有核取方塊**，預設開）：側欄最上面那一列
+   （官方外掛 `@deepseek-ai/dsh-client-ui-plugin-manager` 註冊的 `sidebar.panellist`
+   條目，id = `plugins`，order 0）隱藏。只有那一列消失：外掛主面板、設定 → 外掛 都照常。
+2. **底部「更多」選單的兩項**（**永久隱藏，沒有開關**）：底部帳號選單（官方外掛
+   `@deepseek-ai/dsh-client-ui-settings-account` 的 AccountMenu）裡的「意見反饋」與
+   「登入」隱藏；「設定」那一項照常。
 
 ## 怎麼運作
 
@@ -34,27 +34,20 @@
    （childList + `aria-label`/`class` 變更）重跑，所以 React 重建節點或別人動過樣式表之後
    仍會再蓋上去。
 
-### B. 底部「更多」的兩項（選單是隨開隨渲染的）
+3. 開關狀態存在 `localStorage` 的 `sidebar-plugins-toggle:hidden`
+   （`"1"` 隱藏（預設）、`"0"` 顯示）。**每個瀏覽器各自一份**。
+
+### B. 底部「更多」的兩項（永久隱藏）
 
 選單項目是 `[role="menuitem"]`，只在選單打開時存在。所以靠同一個 MutationObserver：
 一看到頁面有 menuitem 就**立刻**跑一次（不等 150ms 節流，避免項目先閃出來），把文字
-（去空白）等於這幾個標籤的項目 `display:none` 並標上 `data-spt-more="1"`：
+（去空白）等於這幾個標籤的項目 `display:none` 並標上 `data-spt-more="1"`（外掛卸載時還原）：
 
 - 意見反饋：`意见反馈`（zh）、`意見反饋`（zh-TW）、`Feedback`（en）
 - 登入：`登录`（zh）、`登入`（zh-TW）、`Sign in`（en）
 
 zh-TW 的兩個字串是用 zhtw 外掛自己的 `convertS2T` 算出來核對過的
 （意见反馈→意見反饋、登录→登入；`退出登录`→`退出登入` 不在名單裡，所以登出不受影響）。
-關掉開關或外掛卸載時，標記過的項目會還原。
-
-### 狀態儲存
-
-| 開關 | localStorage key | 預設 |
-|---|---|---|
-| A 側欄那一列 | `sidebar-plugins-toggle:hidden` | `"1"`＝隱藏 |
-| B 「更多」兩項 | `sidebar-plugins-toggle:more-hidden` | `"1"`＝隱藏 |
-
-`"0"` 表示顯示。**每個瀏覽器各自一份**；要跨瀏覽器同步就得改走宿主 Config。
 
 ## 診斷（給 agent 用，畫面上看不到）
 
@@ -65,10 +58,10 @@ zh-TW 的兩個字串是用 zhtw 外掛自己的 `convertS2T` 算出來核對過
 
 ```
 spt-diag:h=1 nav=1 row=6 sel=1 nth=1 m=1 by=label lab=系统外掛 disp=none
-         h2=1 more=0 mt=- loc=http://127.0.0.1:3080
+         more=0 mt=- loc=http://127.0.0.1:3080
 ```
 
-`h`／`h2` 兩個開關目前狀態、`nav`/`row` DOM 裡的側欄容器與列數、`sel` 標籤選擇器命中數、
+`h` 側欄開關狀態、`nav`/`row` DOM 裡的側欄容器與列數、`sel` 標籤選擇器命中數、
 `nth` 算出來的位置、`m`/`by` 最後用哪條路命中、`disp` 命中節點的 computed display、
 `more` 這次隱藏了幾個選單項目、`mt` 選單目前看到的項目文字（選單關著時是 `-`）、
 `loc` 是哪個頁面在回答。

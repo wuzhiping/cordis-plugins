@@ -1,9 +1,11 @@
 // Browser entry for the sidebar-plugins-toggle bundle.
 //
-// 兩個「介面精簡」開關（都在 設定 → 一般，預設都開）：
+// 兩件事：
 //   A. 側欄那一列「系统外掛」（官方 @deepseek-ai/dsh-client-ui-plugin-manager 註冊的
 //      sidebar.panellist 條目，id = plugins）隱藏；「外掛」主面板照常存在。
+//      這一個在 設定 → 一般 有核取方塊控制（預設開）。
 //   B. 底部「更多」帳號選單裡的「意見反饋」與「登入」兩項隱藏；「設定」那項照常。
+//      **永久隱藏，沒有開關**（2026-10-17 使用者要求）。
 //
 // A 的隱藏方式（三層保險）：
 //   1. 一條 CSS 規則命中該列：`nav[class*="_panelList"] > button[class*="_panelRow"]`
@@ -28,7 +30,6 @@ window.__ModuleLoader__.load({
 
     var NS = "sidebarPluginsToggle";
     var STORAGE_KEY = "sidebar-plugins-toggle:hidden";
-    var MORE_STORAGE_KEY = "sidebar-plugins-toggle:more-hidden";
     var PANEL_ID = "plugins";
     var NAV_SEL = 'nav[class*="_panelList"]';
     var ROW_SEL = NAV_SEL + ' > button[class*="_panelRow"]';
@@ -50,15 +51,11 @@ window.__ModuleLoader__.load({
 
     var zh = {
       title: "隱藏側欄的「系统外掛」入口",
-      desc: "取消勾選即恢復顯示。",
-      moreTitle: "隱藏底部「更多」的「意見反饋」與「登入」",
-      moreDesc: "取消勾選即恢復顯示。"
+      desc: "取消勾選即恢復顯示。"
     };
     var en = {
       title: "Hide the “系统外掛” entry in the sidebar",
-      desc: "Clear the box to show it again.",
-      moreTitle: "Hide “Feedback” and “Sign in” in the bottom “More” menu",
-      moreDesc: "Clear the box to show them again."
+      desc: "Clear the box to show it again."
     };
 
     function readFlag(key) {
@@ -186,7 +183,7 @@ window.__ModuleLoader__.load({
           }
         }
 
-        /** 底部「更多」選單：把文字等於那兩項的 menuitem 隱藏（enabled=false 時還原）。 */
+        /** 底部「更多」選單：把文字等於那兩項的 menuitem 永久隱藏（外掛卸載時由 cleanup 還原）。 */
         function applyMenuItems(enabled) {
           var items = toArray('[role="menuitem"]');
           var hiddenCount = 0;
@@ -210,7 +207,6 @@ window.__ModuleLoader__.load({
         /** 讀狀態 → 寫 CSS + inline 標記 → 發診斷。 */
         function pass() {
           var hidden = readFlag(STORAGE_KEY);
-          var moreHidden = readFlag(MORE_STORAGE_KEY);
           var nth = nthRule();
           var hideRules = nth === null ? labelRules : labelRules.concat([nth.selector]);
           var matched = [];
@@ -233,7 +229,7 @@ window.__ModuleLoader__.load({
             for (var j = 0; j < rows.length; j += 1) rows[j].style.display = "";
           }
 
-          var menu = applyMenuItems(moreHidden);
+          var menu = applyMenuItems(true);
 
           var display = "-";
           var label = "-";
@@ -255,7 +251,6 @@ window.__ModuleLoader__.load({
             " by=" + by +
             " lab=" + label +
             " disp=" + display +
-            " h2=" + (moreHidden ? 1 : 0) +
             " more=" + menu.hidden +
             " mt=" + menuText +
             " loc=" + String(window.location.origin)
@@ -282,6 +277,10 @@ window.__ModuleLoader__.load({
         }
 
         ctx.effect(function () {
+          // 舊版把「更多」兩項做成開關時留下的鍵，現在永久隱藏用不到。
+          try {
+            window.localStorage.removeItem("sidebar-plugins-toggle:more-hidden");
+          } catch (e) {}
           document.head.appendChild(rowCss);
           document.head.appendChild(hideCss);
           pass();
@@ -343,16 +342,6 @@ window.__ModuleLoader__.load({
             order: 13,
             locale: NS,
             inject: faceFor(STORAGE_KEY, "title", "desc")
-          }, ToggleRow);
-        });
-
-        ctx.slots.inject("settings.general.item", function () {
-          return ctx.slots.register({
-            name: "settings.general.item",
-            id: "sidebar-plugins-toggle-more",
-            order: 14,
-            locale: NS,
-            inject: faceFor(MORE_STORAGE_KEY, "moreTitle", "moreDesc")
           }, ToggleRow);
         });
       }
