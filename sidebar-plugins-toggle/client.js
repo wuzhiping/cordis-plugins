@@ -1,19 +1,22 @@
 // Browser entry for the sidebar-plugins-toggle bundle.
 //
-// 目的：側欄那一列「系统外掛」（官方 @deepseek-ai/dsh-client-ui-plugin-manager
-// 註冊的 sidebar.panellist 條目，id = plugins）可以隱藏，而且「外掛」主面板
-// 本身照常存在（設定 → 外掛 也照常）。
+// 兩個「介面精簡」開關（都在 設定 → 一般，預設都開）：
+//   A. 側欄那一列「系统外掛」（官方 @deepseek-ai/dsh-client-ui-plugin-manager 註冊的
+//      sidebar.panellist 條目，id = plugins）隱藏；「外掛」主面板照常存在。
+//   B. 底部「更多」帳號選單裡的「意見反饋」與「登入」兩項隱藏；「設定」那項照常。
 //
-// 隱藏方式（三層保險，都不改 React 的資料）：
+// A 的隱藏方式（三層保險）：
 //   1. 一條 CSS 規則命中該列：`nav[class*="_panelList"] > button[class*="_panelRow"]`
-//      再依 (a) aria-label 四種寫法（插件 / 外掛 / 系统外掛 / Plugins，另加 $="外掛"
+//      再依 (a) aria-label 幾種寫法（插件 / 外掛 / 系统外掛 / Plugins，另加 $="外掛"
 //      後綴）或 (b) 由 ctx.slots.entriesOfSlot('sidebar.panellist') 依 order 排序算出的
 //      `:nth-of-type(n)`（與側欄自己 syncPanels 的排序一致，不依賴文案）。
-//   2. 同一組選擇器做一次 inline `style.display` 標記，MutationObserver 節流後重跑，
-//      所以即使樣式表被別人動過、或 React 重建節點，仍然會再蓋上去。
-//   3. 狀態存在 localStorage（預設隱藏），設定 → 一般 的核取方塊控制。
+//   2. 同一組選擇器做一次 inline `style.display` 標記，MutationObserver 重跑。
+// B 的隱藏方式：帳號選單是按需渲染的（role="menuitem"），所以用 MutationObserver
+//   在選單出現時立刻把文字等於那兩個標籤的項目 `display:none`（同一 tick 內完成，
+//   不等 150ms 節流，避免閃一下）。標籤已核對過 zh 與 zh-TW 兩種渲染：
+//   意见反馈→意見反饋、登录→登入（zhtw-traditional-chinese 的 convertS2T）。
 //
-// 診斷：每次套用會把「有沒有命中、用哪一種選擇器、目前 DOM 的列標籤」寫成一個
+// 診斷：每次套用會把「有沒有命中、用哪一種選擇器、選單看到哪些項目」寫成一個
 // keyed slot 佔位鍵（plugins.row.config，該 owner 永遠不會 dispatch 這個 key，
 // 所以不會渲染任何東西），供 cordis_inspect_query 讀取。
 
@@ -25,10 +28,13 @@ window.__ModuleLoader__.load({
 
     var NS = "sidebarPluginsToggle";
     var STORAGE_KEY = "sidebar-plugins-toggle:hidden";
+    var MORE_STORAGE_KEY = "sidebar-plugins-toggle:more-hidden";
     var PANEL_ID = "plugins";
     var NAV_SEL = 'nav[class*="_panelList"]';
     var ROW_SEL = NAV_SEL + ' > button[class*="_panelRow"]';
     var PANEL_LABELS = ["系统外掛", "外掛", "插件", "Plugins"];
+    // 底部「更多」選單要隱藏的兩項（zh / zh-TW / en 三種渲染都列）。
+    var MORE_LABELS = ["意见反馈", "意見反饋", "Feedback", "登录", "登入", "Sign in"];
     var DIAG_SLOT = "plugins.row.config";
     var DIAG_PREFIX = "spt-diag:";
 
@@ -44,49 +50,51 @@ window.__ModuleLoader__.load({
 
     var zh = {
       title: "隱藏側欄的「系统外掛」入口",
-      desc: "取消勾選即恢復顯示。"
+      desc: "取消勾選即恢復顯示。",
+      moreTitle: "隱藏底部「更多」的「意見反饋」與「登入」",
+      moreDesc: "取消勾選即恢復顯示。"
     };
     var en = {
       title: "Hide the “系统外掛” entry in the sidebar",
-      desc: "Clear the box to show it again."
+      desc: "Clear the box to show it again.",
+      moreTitle: "Hide “Feedback” and “Sign in” in the bottom “More” menu",
+      moreDesc: "Clear the box to show them again."
     };
 
-    function readHidden() {
+    function readFlag(key) {
       try {
-        return window.localStorage.getItem(STORAGE_KEY) !== "0";
+        return window.localStorage.getItem(key) !== "0";
       } catch (e) {
         return true;
       }
     }
 
-    function writeHidden(hidden) {
+    function writeFlag(key, hidden) {
       try {
-        window.localStorage.setItem(STORAGE_KEY, hidden ? "1" : "0");
+        window.localStorage.setItem(key, hidden ? "1" : "0");
       } catch (e) {}
     }
 
-    /** 設定 → 一般 裡的那一列：標題 + 說明 + 核取方塊。 */
+    /** 設定 → 一般 的一列：標題 + 說明 + 核取方塊。文案與讀寫由 inject face 給。 */
     function ToggleRow(props) {
       var t = props.t;
-      var setHidden = props.setHidden;
-      var state = React.useState(readHidden);
+      var state = React.useState(props.read);
       var hidden = state[0];
       var setState = state[1];
       var change = function (next) {
         setState(next);
-        writeHidden(next);
-        setHidden(next);
+        props.write(next);
       };
       return h("div", { className: "spt-row" },
         h("div", { className: "spt-rowText" },
-          h("div", { className: "spt-title" }, t("title")),
-          h("div", { className: "spt-desc" }, t("desc"))),
+          h("div", { className: "spt-title" }, t(props.titleKey)),
+          h("div", { className: "spt-desc" }, t(props.descKey))),
         h("div", { className: "spt-control" },
           h("input", {
             type: "checkbox",
             className: "spt-check",
             checked: hidden,
-            "aria-label": t("title"),
+            "aria-label": t(props.titleKey),
             onChange: function (event) {
               change(event.target.checked);
             }
@@ -178,9 +186,31 @@ window.__ModuleLoader__.load({
           }
         }
 
+        /** 底部「更多」選單：把文字等於那兩項的 menuitem 隱藏（enabled=false 時還原）。 */
+        function applyMenuItems(enabled) {
+          var items = toArray('[role="menuitem"]');
+          var hiddenCount = 0;
+          var seen = [];
+          for (var k = 0; k < items.length; k += 1) {
+            var item = items[k];
+            var text = String(item.textContent || "").replace(/\s+/g, "");
+            if (text.length > 0 && seen.length < 4 && seen.indexOf(text) === -1) seen.push(text);
+            if (enabled && MORE_LABELS.indexOf(text) !== -1) {
+              item.style.display = "none";
+              item.setAttribute("data-spt-more", "1");
+              hiddenCount += 1;
+            } else if (item.getAttribute("data-spt-more") === "1") {
+              item.style.display = "";
+              item.removeAttribute("data-spt-more");
+            }
+          }
+          return { hidden: hiddenCount, seen: seen };
+        }
+
         /** 讀狀態 → 寫 CSS + inline 標記 → 發診斷。 */
         function pass() {
-          var hidden = readHidden();
+          var hidden = readFlag(STORAGE_KEY);
+          var moreHidden = readFlag(MORE_STORAGE_KEY);
           var nth = nthRule();
           var hideRules = nth === null ? labelRules : labelRules.concat([nth.selector]);
           var matched = [];
@@ -203,6 +233,8 @@ window.__ModuleLoader__.load({
             for (var j = 0; j < rows.length; j += 1) rows[j].style.display = "";
           }
 
+          var menu = applyMenuItems(moreHidden);
+
           var display = "-";
           var label = "-";
           if (matched.length > 0) {
@@ -211,6 +243,8 @@ window.__ModuleLoader__.load({
               display = window.getComputedStyle(matched[0]).display;
             } catch (e) {}
           }
+          var menuText = menu.seen.length === 0 ? "-" : menu.seen.join("|");
+          if (menuText.length > 60) menuText = menuText.slice(0, 60);
           publishDiag(
             "h=" + (hidden ? 1 : 0) +
             " nav=" + countAll(NAV_SEL) +
@@ -221,9 +255,10 @@ window.__ModuleLoader__.load({
             " by=" + by +
             " lab=" + label +
             " disp=" + display +
-            " css=" + hideCss.textContent.length +
-            " loc=" + String(window.location.origin) +
-            " vis=" + String(document.visibilityState)
+            " h2=" + (moreHidden ? 1 : 0) +
+            " more=" + menu.hidden +
+            " mt=" + menuText +
+            " loc=" + String(window.location.origin)
           );
         }
 
@@ -237,13 +272,22 @@ window.__ModuleLoader__.load({
           }, 150);
         }
 
+        /** 選單一出現就立刻套用（不等節流，避免項目先閃出來）。 */
+        function onMutations() {
+          if (countAll('[role="menuitem"]') > 0) {
+            pass();
+            return;
+          }
+          schedule();
+        }
+
         ctx.effect(function () {
           document.head.appendChild(rowCss);
           document.head.appendChild(hideCss);
           pass();
           var observer = null;
           if (typeof MutationObserver === "function") {
-            observer = new MutationObserver(schedule);
+            observer = new MutationObserver(onMutations);
             observer.observe(document.body, {
               childList: true,
               subtree: true,
@@ -259,6 +303,11 @@ window.__ModuleLoader__.load({
             if (observer !== null) observer.disconnect();
             var rows = toArray(ROW_SEL);
             for (var k = 0; k < rows.length; k += 1) rows[k].style.display = "";
+            var marked = toArray('[data-spt-more="1"]');
+            for (var j = 0; j < marked.length; j += 1) {
+              marked[j].style.display = "";
+              marked[j].removeAttribute("data-spt-more");
+            }
             if (rowCss.parentNode !== null) rowCss.parentNode.removeChild(rowCss);
             if (hideCss.parentNode !== null) hideCss.parentNode.removeChild(hideCss);
             if (diagDispose !== null) {
@@ -269,7 +318,23 @@ window.__ModuleLoader__.load({
             }
             lastDiag = null;
           };
-        }, "sidebar-plugins-toggle: sidebar row");
+        }, "sidebar-plugins-toggle: sidebar row and menu items");
+
+        function faceFor(storageKey, titleKey, descKey) {
+          return function () {
+            return {
+              read: function () {
+                return readFlag(storageKey);
+              },
+              write: function (hidden) {
+                writeFlag(storageKey, hidden);
+                pass();
+              },
+              titleKey: titleKey,
+              descKey: descKey
+            };
+          };
+        }
 
         ctx.slots.inject("settings.general.item", function () {
           return ctx.slots.register({
@@ -277,14 +342,17 @@ window.__ModuleLoader__.load({
             id: "sidebar-plugins-toggle",
             order: 13,
             locale: NS,
-            inject: function () {
-              return {
-                setHidden: function (hidden) {
-                  writeHidden(hidden);
-                  pass();
-                }
-              };
-            }
+            inject: faceFor(STORAGE_KEY, "title", "desc")
+          }, ToggleRow);
+        });
+
+        ctx.slots.inject("settings.general.item", function () {
+          return ctx.slots.register({
+            name: "settings.general.item",
+            id: "sidebar-plugins-toggle-more",
+            order: 14,
+            locale: NS,
+            inject: faceFor(MORE_STORAGE_KEY, "moreTitle", "moreDesc")
           }, ToggleRow);
         });
       }
