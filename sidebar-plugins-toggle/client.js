@@ -13,10 +13,12 @@
 //      後綴）或 (b) 由 ctx.slots.entriesOfSlot('sidebar.panellist') 依 order 排序算出的
 //      `:nth-of-type(n)`（與側欄自己 syncPanels 的排序一致，不依賴文案）。
 //   2. 同一組選擇器做一次 inline `style.display` 標記，MutationObserver 重跑。
-// B 的隱藏方式：帳號選單是按需渲染的（role="menuitem"），所以用 MutationObserver
-//   在選單出現時立刻把文字等於那兩個標籤的項目 `display:none`（同一 tick 內完成，
-//   不等 150ms 節流，避免閃一下）。標籤已核對過 zh 與 zh-TW 兩種渲染：
-//   意见反馈→意見反饋、登录→登入（zhtw-traditional-chinese 的 convertS2T）。
+// B 的隱藏方式：帳號選單是按需渲染的（role="menuitem"），用 MutationObserver 在選單
+//   出現時立刻動手（同一 tick 內完成，不等 150ms 節流，避免閃一下）。認的是**位置**：
+//   帳號選單固定是 設定 / 意見反饋 / 登入（未登入）或 退出登入（已登入），所以隱藏第 2 項，
+//   未登入時再隱藏第 3 項 —— 不看文字，換任何語系（vi-VN…）都成立；只有選單形狀不是 3 項
+//   時才退回比對 MORE_LABELS（zh / zh-TW / en / vi）。只在帳號選單真的打開時（trigger 的
+//   aria-expanded=true）才動手，不會誤傷別的選單。
 //
 // 診斷：每次套用會把「有沒有命中、用哪一種選擇器、選單看到哪些項目」寫成一個
 // keyed slot 佔位鍵（plugins.row.config，該 owner 永遠不會 dispatch 這個 key，
@@ -34,8 +36,11 @@ window.__ModuleLoader__.load({
     var NAV_SEL = 'nav[class*="_panelList"]';
     var ROW_SEL = NAV_SEL + ' > button[class*="_panelRow"]';
     var PANEL_LABELS = ["系统外掛", "外掛", "插件", "Plugins"];
-    // 底部「更多」選單要隱藏的兩項（zh / zh-TW / en 三種渲染都列）。
-    var MORE_LABELS = ["意见反馈", "意見反饋", "Feedback", "登录", "登入", "Sign in"];
+    // 底部「更多」選單兩項的各種語系寫法（只當「選單形狀不是 3 項」時的後備；主要靠位置）。
+    var MORE_LABELS = [
+      "意见反馈", "意見反饋", "Feedback", "Phản hồi",
+      "登录", "登入", "Sign in", "Đăng nhập"
+    ];
     var DIAG_SLOT = "plugins.row.config";
     var DIAG_PREFIX = "spt-diag:";
 
@@ -183,25 +188,57 @@ window.__ModuleLoader__.load({
           }
         }
 
-        /** 底部「更多」選單：把文字等於那兩項的 menuitem 永久隱藏（外掛卸載時由 cleanup 還原）。 */
-        function applyMenuItems(enabled) {
-          var items = toArray('[role="menuitem"]');
-          var hiddenCount = 0;
+        /**
+         * 底部「更多」帳號選單：永久隱藏「意見反饋」（第 2 項）與「登入」（第 3 項，僅未登入時）。
+         *
+         * 用**位置**而不是文字 —— 換任何語系都成立（越南語就是這樣漏掉的）。
+         * 只在帳號選單真的打開時動手（trigger 的 aria-expanded=true），所以不會誤傷別的選單；
+         * 選單形狀不是 3 項時才退回用 MORE_LABELS 文字比對。
+         */
+        function applyMenuItems() {
+          var markers = toArray('[data-spt-more="1"]');
+          var triggers = toArray('button[aria-haspopup="menu"][data-signed-out]');
+          var open = false;
+          var signedOut = false;
+          for (var t = 0; t < triggers.length; t += 1) {
+            if (triggers[t].getAttribute("aria-expanded") === "true") {
+              open = true;
+              signedOut = triggers[t].getAttribute("data-signed-out") === "true";
+            }
+          }
+          var items = open ? toArray('[role="menuitem"]') : [];
+          var knownShape = items.length === 3;
+          var keep = [];
           var seen = [];
           for (var k = 0; k < items.length; k += 1) {
             var item = items[k];
             var text = String(item.textContent || "").replace(/\s+/g, "");
             if (text.length > 0 && seen.length < 4 && seen.indexOf(text) === -1) seen.push(text);
-            if (enabled && MORE_LABELS.indexOf(text) !== -1) {
+            var target = MORE_LABELS.indexOf(text) !== -1;
+            if (!target && knownShape) {
+              if (k === 1) target = true;
+              else if (k === 2 && signedOut) target = true;
+            }
+            if (target) {
               item.style.display = "none";
               item.setAttribute("data-spt-more", "1");
-              hiddenCount += 1;
-            } else if (item.getAttribute("data-spt-more") === "1") {
-              item.style.display = "";
-              item.removeAttribute("data-spt-more");
+              keep.push(item);
             }
           }
-          return { hidden: hiddenCount, seen: seen };
+          for (var m = 0; m < markers.length; m += 1) {
+            if (keep.indexOf(markers[m]) === -1) {
+              markers[m].style.display = "";
+              markers[m].removeAttribute("data-spt-more");
+            }
+          }
+          return {
+            hidden: keep.length,
+            seen: seen,
+            open: open,
+            signedOut: signedOut,
+            count: items.length,
+            triggers: triggers.length
+          };
         }
 
         /** 讀狀態 → 寫 CSS + inline 標記 → 發診斷。 */
@@ -229,7 +266,7 @@ window.__ModuleLoader__.load({
             for (var j = 0; j < rows.length; j += 1) rows[j].style.display = "";
           }
 
-          var menu = applyMenuItems(true);
+          var menu = applyMenuItems();
 
           var display = "-";
           var label = "-";
@@ -251,6 +288,10 @@ window.__ModuleLoader__.load({
             " by=" + by +
             " lab=" + label +
             " disp=" + display +
+            " trg=" + menu.triggers +
+            " ag=" + (menu.open ? 1 : 0) +
+            " sgn=" + (menu.signedOut ? 1 : 0) +
+            " mi=" + menu.count +
             " more=" + menu.hidden +
             " mt=" + menuText +
             " loc=" + String(window.location.origin)

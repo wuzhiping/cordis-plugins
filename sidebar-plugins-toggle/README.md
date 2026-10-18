@@ -40,14 +40,16 @@
 ### B. 底部「更多」的兩項（永久隱藏）
 
 選單項目是 `[role="menuitem"]`，只在選單打開時存在。所以靠同一個 MutationObserver：
-一看到頁面有 menuitem 就**立刻**跑一次（不等 150ms 節流，避免項目先閃出來），把文字
-（去空白）等於這幾個標籤的項目 `display:none` 並標上 `data-spt-more="1"`（外掛卸載時還原）：
+一看到頁面有 menuitem 就**立刻**跑一次（不等 150ms 節流，避免項目先閃出來）。
 
-- 意見反饋：`意见反馈`（zh）、`意見反饋`（zh-TW）、`Feedback`（en）
-- 登入：`登录`（zh）、`登入`（zh-TW）、`Sign in`（en）
+**認位置，不認文字**：帳號選單固定是 設定 / 意見反饋 / 登入（未登入）或 退出登入（已登入），
+所以隱藏第 2 項、未登入時再隱藏第 3 項 → **任何語系（vi-VN…）都成立**，不需要翻譯表。
+只在 trigger（`button[aria-haspopup="menu"][data-signed-out]`）的 `aria-expanded=true` 時動手，
+所以不會誤傷別的選單（選單是 portal 到 body 的，不能靠祖先節點歸屬）。
 
-zh-TW 的兩個字串是用 zhtw 外掛自己的 `convertS2T` 算出來核對過的
-（意见反馈→意見反饋、登录→登入；`退出登录`→`退出登入` 不在名單裡，所以登出不受影響）。
+萬一帳號選單形狀不是 3 項，才退回比對 `MORE_LABELS` 的文案（zh / zh-TW / en / vi 的
+「意見反饋」「登入」寫法；zh-TW 的字串是用 zhtw 的 `convertS2T` 算出來核對的）。
+被隱藏的項目標上 `data-spt-more="1"`，外掛卸載或狀態不符時還原。
 
 ## 診斷（給 agent 用，畫面上看不到）
 
@@ -57,21 +59,26 @@ zh-TW 的兩個字串是用 zhtw 外掛自己的 `convertS2T` 算出來核對過
 `listSubTree` root = `plugins.row.config`）讀，例如：
 
 ```
-spt-diag:h=1 nav=1 row=6 sel=1 nth=1 m=1 by=label lab=系统外掛 disp=none
-         more=0 mt=- loc=http://127.0.0.1:3080
+spt-diag:h=1 nav=1 row=6 sel=1 nth=1 m=1 by=label lab=插件 disp=none
+         trg=1 ag=0 sgn=0 mi=0 more=0 mt=- loc=http://127.0.0.1:3080
 ```
 
 `h` 側欄開關狀態、`nav`/`row` DOM 裡的側欄容器與列數、`sel` 標籤選擇器命中數、
 `nth` 算出來的位置、`m`/`by` 最後用哪條路命中、`disp` 命中節點的 computed display、
-`more` 這次隱藏了幾個選單項目、`mt` 選單目前看到的項目文字（選單關著時是 `-`）、
+`trg` 找到幾個帳號選單 trigger、`ag` 選單是否開著、`sgn` 是否未登入、`mi` 選單有幾項、
+`more` 這次隱藏了幾項、`mt` 選單目前看到的項目文字（選單關著時是 `-`）、
 `loc` 是哪個頁面在回答。
 
 ## 已知脆弱點
 
 - `_panelList` / `_panelRow` 是 CSS Module 的雜湊後綴（DSH 前端重建時前綴會變、後綴通常不變）。
   若哪天側欄改了類名，診斷會顯示 `nav=0 row=0`。
-- 「更多」兩項是按**文字**比對，DSH 改文案或換語系時要同步更新 `MORE_LABELS`；
-  診斷的 `mt=` 會顯示選單實際上的文字，直接照著補即可。
+- 「更多」兩項靠**位置**（第 2、3 項）。DSH 若要動帳號選單的項目順序／數量，診斷的 `mi=` 會先
+  顯示出來（`mi≠3` 時退回文字比對，`mt=` 會顯示選單實際文字）。
+- **部署路徑**：這個 bundle 在 profile 裡目前是 `github:` spec 安裝的**實體複本**
+  （`profiles/web/node_modules/sidebar-plugins-toggle/`），不是 `link:`。
+  所以工作區改完要嘛同步複本、要嘛 push 後重裝（或 `install_bundle` 指到工作區，改回 `link:`）——
+  否則線上跑的是舊 commit，會出現「改了沒生效」的假象。
 - 若整條規則都不見了，先重新整理頁面（用戶端外掛的模組世代在 HMR／重啟後可能沒被重新套用）。
 
 ## 安裝 / 移除
