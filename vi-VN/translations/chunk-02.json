@@ -1,0 +1,3110 @@
+{
+ "chunk": "02",
+ "count": 429,
+ "namespaces": [
+  "agent-team",
+  "cordis",
+  "open-in-app",
+  "pluginManager",
+  "question",
+  "schedule.catalog",
+  "settings.plugins",
+  "settings.webSearch",
+  "sidebarFiles",
+  "sidebarPluginsToggle",
+  "slash.menu",
+  "workflowRun"
+ ],
+ "entries": [
+  {
+   "en": " in {months}",
+   "zh": "（{months}）",
+   "keys": [
+    "schedule.catalog:cron.months",
+    "schedule.manager:cron.months"
+   ]
+  },
+  {
+   "en": "(no purpose given)",
+   "zh": "(未填写用途)",
+   "keys": [
+    "cordis:purpose.missing"
+   ]
+  },
+  {
+   "en": "{app} (default)",
+   "zh": "{app}（默认）",
+   "keys": [
+    "open-in-app:path.appDefault"
+   ]
+  },
+  {
+   "en": "{count} failed",
+   "zh": "{count} 异常",
+   "keys": [
+    "pluginManager:partsCountFailed"
+   ]
+  },
+  {
+   "en": "{count} member",
+   "zh": "{count} 个成员",
+   "keys": [
+    "workflowRun:run.members.one"
+   ]
+  },
+  {
+   "en": "{count} members",
+   "zh": "{count} 个成员",
+   "keys": [
+    "workflowRun:run.members.other"
+   ]
+  },
+  {
+   "en": "{count} more",
+   "zh": "另有 {count} 个任务",
+   "keys": [
+    "schedule.catalog:hover.more"
+   ]
+  },
+  {
+   "en": "{count} off",
+   "zh": "{count} 已停用",
+   "keys": [
+    "pluginManager:partsCountOff"
+   ]
+  },
+  {
+   "en": "{count} reminder",
+   "zh": "{count} 个提醒",
+   "keys": [
+    "schedule.catalog:trigger.one"
+   ]
+  },
+  {
+   "en": "{count} running",
+   "zh": "{count} running",
+   "keys": [
+    "cordis:panel.runningCount",
+    "pluginManager:partsCountRunning"
+   ]
+  },
+  {
+   "en": "{count} scheduled tasks",
+   "zh": "{count} 个自动化任务",
+   "keys": [
+    "schedule.catalog:mark.aria"
+   ]
+  },
+  {
+   "en": "{count} total",
+   "zh": "共 {count} 个",
+   "keys": [
+    "pluginManager:partsCountTotal"
+   ]
+  },
+  {
+   "en": "{from}–{to}",
+   "zh": "{from}至{to}",
+   "keys": [
+    "schedule.catalog:cron.weekday.range",
+    "schedule.catalog:cron.hours.range"
+   ]
+  },
+  {
+   "en": "{host} could not be reached. A GitHub address or a .tgz link is not fetched through the registry: this machine must reach it directly or through a proxy. If the plugin is also published to npm, enter its package name instead.",
+   "zh": "无法连接 {host}。GitHub 地址和 .tgz 直链不经过安装源，需要本机能直接访问它或配置代理；如果这个插件也发布到了 npm，请改填包名。",
+   "keys": [
+    "pluginManager:installFailureNetworkHost"
+   ]
+  },
+  {
+   "en": "{hours}",
+   "zh": "{hours}",
+   "keys": [
+    "schedule.catalog:cron.hours.list",
+    "schedule.manager:cron.hours.list"
+   ]
+  },
+  {
+   "en": "{name}",
+   "zh": "{name}",
+   "keys": [
+    "workflowRun:run.title"
+   ]
+  },
+  {
+   "en": "{name} feature preview",
+   "zh": "{name}功能预览",
+   "keys": [
+    "pluginManager:previewAlt"
+   ]
+  },
+  {
+   "en": "{name} was saved, but a higher-priority configuration overrides it, so it is not in effect",
+   "zh": "{name} 已保存，但被更高优先级的配置覆盖，当前未生效",
+   "keys": [
+    "pluginManager:overriddenNotice"
+   ]
+  },
+  {
+   "en": "{plugin} is incompatible with DSH {runtime} (requires {requirements}); running it may cause crashes or data loss.",
+   "zh": "{plugin} 与 DSH {runtime} 不兼容（要求 {requirements}），运行它可能导致崩溃或数据丢失。",
+   "keys": [
+    "pluginManager:reasonIncompatibleVersion"
+   ]
+  },
+  {
+   "en": "{previous} could not serve the package; retrying through {registry} (registry {index} of {total})",
+   "zh": "{previous} 不可用，正在改用 {registry} 重试（第 {index} 个源，共 {total} 个）",
+   "keys": [
+    "pluginManager:installAttempt"
+   ]
+  },
+  {
+   "en": "{rule} ({timeZone})",
+   "zh": "{rule}（{timeZone}）",
+   "keys": [
+    "schedule.catalog:frequency.cronRule",
+    "schedule.manager:frequency.cronRule"
+   ]
+  },
+  {
+   "en": "{value} {unit} overdue",
+   "zh": "已逾期 {value}{unit}",
+   "keys": [
+    "schedule.catalog:relative.overdue",
+    "schedule.manager:relative.overdue"
+   ]
+  },
+  {
+   "en": "{weekday}",
+   "zh": "周{weekday}",
+   "keys": [
+    "schedule.catalog:cron.weekday.name",
+    "schedule.manager:cron.weekday.name"
+   ]
+  },
+  {
+   "en": "{weekdays}{months}",
+   "zh": "{weekdays}{months}",
+   "keys": [
+    "schedule.catalog:cron.day.weekdays",
+    "schedule.manager:cron.day.weekdays"
+   ]
+  },
+  {
+   "en": "A dependency's install scripts need your permission before the install can continue",
+   "zh": "有依赖的安装脚本需要你允许后才能继续",
+   "keys": [
+    "pluginManager:installFailureBuildBlocked"
+   ]
+  },
+  {
+   "en": "A key is configured.",
+   "zh": "已配置密钥。",
+   "keys": [
+    "settings.webSearch:apiKeySet"
+   ]
+  },
+  {
+   "en": "A newer run card is available below",
+   "zh": "已有更新的运行卡片，请查看下方",
+   "keys": [
+    "cordis:run.superseded"
+   ]
+  },
+  {
+   "en": "About plugins",
+   "zh": "插件说明",
+   "keys": [
+    "pluginManager:infoLabel"
+   ]
+  },
+  {
+   "en": "Active reminders",
+   "zh": "活动提醒",
+   "keys": [
+    "schedule.catalog:list.aria"
+   ]
+  },
+  {
+   "en": "Add plugin",
+   "zh": "添加插件",
+   "keys": [
+    "pluginManager:addPlugin",
+    "pluginManager:installTitle"
+   ]
+  },
+  {
+   "en": "Agent Team",
+   "zh": "智能体团队",
+   "keys": [
+    "agent-team:trigger"
+   ]
+  },
+  {
+   "en": "Allow",
+   "zh": "允许",
+   "keys": [
+    "cordis:action.approve"
+   ]
+  },
+  {
+   "en": "Allow future versions of this plugin",
+   "zh": "允许此插件的后续版本",
+   "keys": [
+    "cordis:action.approvePlugin"
+   ]
+  },
+  {
+   "en": "Allow only packages you trust.",
+   "zh": "只在信任这些包时允许。",
+   "keys": [
+    "pluginManager:installApprovalCaution"
+   ]
+  },
+  {
+   "en": "Allow these scripts and retry",
+   "zh": "允许这些脚本并重试",
+   "keys": [
+    "pluginManager:installApproveAndRetry"
+   ]
+  },
+  {
+   "en": "Allow this version only",
+   "zh": "仅允许此版本",
+   "keys": [
+    "cordis:action.approveOnce"
+   ]
+  },
+  {
+   "en": "An installed package now resolves to another directory, or the change replaces a package the DSH installation provides. Uninstall a package before installing it from another location.",
+   "zh": "已安装的插件包解析到了另一个目录，或者更改替换了 DSH 安装自带的包。从其他位置安装前请先卸载。",
+   "keys": [
+    "pluginManager:restartReasonPackageMoved"
+   ]
+  },
+  {
+   "en": "Android Studio",
+   "zh": "Android Studio",
+   "keys": [
+    "open-in-app:app.androidstudio"
+   ]
+  },
+  {
+   "en": "Answer: ",
+   "zh": "回答：",
+   "keys": [
+    "question:reply.answerLabel"
+   ]
+  },
+  {
+   "en": "Answered",
+   "zh": "已回答",
+   "keys": [
+    "question:review.status"
+   ]
+  },
+  {
+   "en": "Applying configuration, please wait…",
+   "zh": "正在应用配置，请稍候…",
+   "keys": [
+    "pluginManager:installApplying"
+   ]
+  },
+  {
+   "en": "Approve",
+   "zh": "同意执行",
+   "keys": [
+    "question:plan.approve"
+   ]
+  },
+  {
+   "en": "at {times}",
+   "zh": "{times}",
+   "keys": [
+    "schedule.catalog:cron.time.at",
+    "schedule.manager:cron.time.at"
+   ]
+  },
+  {
+   "en": "at minute {minutes} of hours {hours}",
+   "zh": "{hours} 点的第 {minutes} 分钟",
+   "keys": [
+    "schedule.catalog:cron.time.hoursAt",
+    "schedule.manager:cron.time.hoursAt"
+   ]
+  },
+  {
+   "en": "Attempt {index} · {registry}",
+   "zh": "第 {index} 次 · {registry}",
+   "keys": [
+    "pluginManager:installAttemptBadge"
+   ]
+  },
+  {
+   "en": "Awaiting approval",
+   "zh": "待审批",
+   "keys": [
+    "cordis:status.awaitingApproval"
+   ]
+  },
+  {
+   "en": "Back to {name}",
+   "zh": "返回 {name}",
+   "keys": [
+    "pluginManager:backToPackage"
+   ]
+  },
+  {
+   "en": "Back to editing",
+   "zh": "返回编辑",
+   "keys": [
+    "pluginManager:installEditAria"
+   ]
+  },
+  {
+   "en": "Back to plugins",
+   "zh": "返回插件",
+   "keys": [
+    "pluginManager:backToList"
+   ]
+  },
+  {
+   "en": "Blocked by",
+   "zh": "依赖",
+   "keys": [
+    "agent-team:blockedBy"
+   ]
+  },
+  {
+   "en": "Blocked by dependencies",
+   "zh": "被依赖阻塞",
+   "keys": [
+    "agent-team:blocked"
+   ]
+  },
+  {
+   "en": "Browse files in this session's workspace",
+   "zh": "浏览会话工作区的文件",
+   "keys": [
+    "sidebarFiles:guide.description"
+   ]
+  },
+  {
+   "en": "Browse folder",
+   "zh": "进入目录",
+   "keys": [
+    "slash.menu:drill.aria",
+    "slash.menu:drill.hint"
+   ]
+  },
+  {
+   "en": "Built in",
+   "zh": "内置",
+   "keys": [
+    "pluginManager:sourceBuiltIn"
+   ]
+  },
+  {
+   "en": "Built-in plugin settings",
+   "zh": "内置插件配置",
+   "keys": [
+    "pluginManager:basicTitle"
+   ]
+  },
+  {
+   "en": "Built-in plugins",
+   "zh": "内置插件",
+   "keys": [
+    "settings.plugins:nav",
+    "settings.plugins:title"
+   ]
+  },
+  {
+   "en": "Cancel install",
+   "zh": "取消安装",
+   "keys": [
+    "pluginManager:installCancel"
+   ]
+  },
+  {
+   "en": "Cancel install and close",
+   "zh": "取消安装并关闭",
+   "keys": [
+    "pluginManager:installCloseCancels"
+   ]
+  },
+  {
+   "en": "Cancel installation and return to editing",
+   "zh": "取消安装并返回编辑",
+   "keys": [
+    "pluginManager:installCancelAndEdit"
+   ]
+  },
+  {
+   "en": "Cancellation was not confirmed. Installation is being applied; wait for its result. {reason}",
+   "zh": "取消请求未得到确认；安装已进入收尾阶段，请等待结果。{reason}",
+   "keys": [
+    "pluginManager:installApplyingCancellationError"
+   ]
+  },
+  {
+   "en": "Cancelled {count}",
+   "zh": "已取消 {count}",
+   "keys": [
+    "workflowRun:statusCount.cancelled"
+   ]
+  },
+  {
+   "en": "Cannot access GitHub",
+   "zh": "无法访问 GitHub",
+   "keys": [
+    "pluginManager:installGithubFailedTitle"
+   ]
+  },
+  {
+   "en": "Cannot submit right now; try again in a moment.",
+   "zh": "当前无法提交，请稍候再试。",
+   "keys": [
+    "question:error.unavailable"
+   ]
+  },
+  {
+   "en": "Change registry",
+   "zh": "更换安装源",
+   "keys": [
+    "pluginManager:installChangeRegistry"
+   ]
+  },
+  {
+   "en": "Check installation status",
+   "zh": "核对安装状态",
+   "keys": [
+    "pluginManager:installReconcile"
+   ]
+  },
+  {
+   "en": "Checking…",
+   "zh": "正在检查…",
+   "keys": [
+    "pluginManager:installChecking"
+   ]
+  },
+  {
+   "en": "Choose how to add a plugin",
+   "zh": "选择添加插件方式",
+   "keys": [
+    "pluginManager:chooseAddMethod"
+   ]
+  },
+  {
+   "en": "Clear the box to show it again.",
+   "zh": "取消勾選即恢復顯示。",
+   "keys": [
+    "sidebarPluginsToggle:desc"
+   ]
+  },
+  {
+   "en": "Client",
+   "zh": "Client",
+   "keys": [
+    "cordis:body.clientCode"
+   ]
+  },
+  {
+   "en": "Client ready to activate",
+   "zh": "Client 待激活",
+   "keys": [
+    "cordis:status.clientPending"
+   ]
+  },
+  {
+   "en": "Close question details",
+   "zh": "收起问题详情",
+   "keys": [
+    "question:reply.close"
+   ]
+  },
+  {
+   "en": "Close the panel — reopen it from the tool call",
+   "zh": "收起问题面板，可从工具调用重新打开",
+   "keys": [
+    "question:nav.close"
+   ]
+  },
+  {
+   "en": "Code source",
+   "zh": "代码来源",
+   "keys": [
+    "pluginManager:sourceSpec"
+   ]
+  },
+  {
+   "en": "Collapse the question card",
+   "zh": "收起问题卡片",
+   "keys": [
+    "question:nav.minimize"
+   ]
+  },
+  {
+   "en": "Completed",
+   "zh": "已完成",
+   "keys": [
+    "agent-team:status.completed",
+    "chat:message.turnProcess.worked"
+   ]
+  },
+  {
+   "en": "Completed {count}",
+   "zh": "已完成 {count}",
+   "keys": [
+    "workflowRun:statusCount.completed"
+   ]
+  },
+  {
+   "en": "Components",
+   "zh": "包含的组件",
+   "keys": [
+    "pluginManager:partsLabel"
+   ]
+  },
+  {
+   "en": "Configure {name}",
+   "zh": "配置 {name}",
+   "keys": [
+    "pluginManager:configureRow"
+   ]
+  },
+  {
+   "en": "Configure official plugins and install or manage other plugins here. View the built-in plugin list and runtime status in Settings → Built-in plugins.",
+   "zh": "在这里配置官方插件，安装和管理其他插件。内置插件列表及运行状态可在「设置 → 内置插件」中查看",
+   "keys": [
+    "pluginManager:infoDescription"
+   ]
+  },
+  {
+   "en": "Continuing in {seconds}s",
+   "zh": "{seconds} 秒后继续工作",
+   "keys": [
+    "question:wait.countdown"
+   ]
+  },
+  {
+   "en": "Cordis approvals",
+   "zh": "Cordis 审批",
+   "keys": [
+    "cordis:panel.approvals.aria"
+   ]
+  },
+  {
+   "en": "Cordis Plugin",
+   "zh": "Cordis Plugin",
+   "keys": [
+    "cordis:panel.trigger"
+   ]
+  },
+  {
+   "en": "Cordis plugins",
+   "zh": "Cordis 插件",
+   "keys": [
+    "cordis:panel.plugins.aria",
+    "cordis:panel.title"
+   ]
+  },
+  {
+   "en": "Could not disable the component: {reason}",
+   "zh": "组件停用失败：{reason}",
+   "keys": [
+    "pluginManager:failedRowDisable"
+   ]
+  },
+  {
+   "en": "Could not disable: {reason}",
+   "zh": "停用失败：{reason}",
+   "keys": [
+    "pluginManager:failedDisable"
+   ]
+  },
+  {
+   "en": "Could not display feature preview",
+   "zh": "无法显示功能配图",
+   "keys": [
+    "pluginManager:previewUnavailable"
+   ]
+  },
+  {
+   "en": "Could not enable the component: {reason}",
+   "zh": "组件启用失败：{reason}",
+   "keys": [
+    "pluginManager:failedRowEnable"
+   ]
+  },
+  {
+   "en": "Could not enable: {reason}",
+   "zh": "启用失败：{reason}",
+   "keys": [
+    "pluginManager:failedEnable"
+   ]
+  },
+  {
+   "en": "Could not load applications",
+   "zh": "无法获取应用列表",
+   "keys": [
+    "open-in-app:path.appsError"
+   ]
+  },
+  {
+   "en": "Could not load reminders.",
+   "zh": "无法加载提醒。",
+   "keys": [
+    "schedule.catalog:list.error"
+   ]
+  },
+  {
+   "en": "Could not open. Try again.",
+   "zh": "打开失败，请重试",
+   "keys": [
+    "open-in-app:path.openError"
+   ]
+  },
+  {
+   "en": "Could not read all plugins, possibly due to a network problem",
+   "zh": "可能由于网络问题，无法读取全部插件",
+   "keys": [
+    "pluginManager:error"
+   ]
+  },
+  {
+   "en": "Could not show the file location. Try again.",
+   "zh": "无法显示文件位置，请重试",
+   "keys": [
+    "open-in-app:path.revealError"
+   ]
+  },
+  {
+   "en": "Could not uninstall: {reason}",
+   "zh": "卸载失败：{reason}",
+   "keys": [
+    "pluginManager:failedUninstall"
+   ]
+  },
+  {
+   "en": "Cron {expression}",
+   "zh": "Cron {expression}",
+   "keys": [
+    "schedule.catalog:frequency.cronLocal",
+    "schedule.manager:frequency.cronLocal"
+   ]
+  },
+  {
+   "en": "Cron {expression} ({timeZone})",
+   "zh": "Cron {expression}（{timeZone}）",
+   "keys": [
+    "schedule.catalog:frequency.cron",
+    "schedule.manager:frequency.cron"
+   ]
+  },
+  {
+   "en": "Current chat",
+   "zh": "当前会话",
+   "keys": [
+    "agent-team:current"
+   ]
+  },
+  {
+   "en": "Current version",
+   "zh": "当前版本",
+   "keys": [
+    "pluginManager:sourceVersion"
+   ]
+  },
+  {
+   "en": "Current workspace or local application unavailable",
+   "zh": "当前工作区或本地应用不可用",
+   "keys": [
+    "open-in-app:shortcut.unavailable"
+   ]
+  },
+  {
+   "en": "Current: {packageId}",
+   "zh": "当前：{packageId}",
+   "keys": [
+    "cordis:panel.current"
+   ]
+  },
+  {
+   "en": "Cursor",
+   "zh": "Cursor",
+   "keys": [
+    "open-in-app:app.cursor"
+   ]
+  },
+  {
+   "en": "Custom address",
+   "zh": "自定义地址",
+   "keys": [
+    "pluginManager:registryCustom"
+   ]
+  },
+  {
+   "en": "Daily at {time}",
+   "zh": "每天 {time}",
+   "keys": [
+    "schedule.catalog:frequency.dailyLocal",
+    "schedule.manager:frequency.dailyLocal"
+   ]
+  },
+  {
+   "en": "Daily at {time} ({timeZone})",
+   "zh": "每天 {time}（{timeZone}）",
+   "keys": [
+    "schedule.catalog:frequency.daily",
+    "schedule.manager:frequency.daily"
+   ]
+  },
+  {
+   "en": "day",
+   "zh": "天",
+   "keys": [
+    "schedule.catalog:unit.day.one",
+    "schedule.manager:unit.day.one"
+   ]
+  },
+  {
+   "en": "Day {days} of every month and {weekdays}{months}",
+   "zh": "每月 {days} 日且{weekdays}{months}",
+   "keys": [
+    "schedule.catalog:cron.day.bothStarred",
+    "schedule.manager:cron.day.bothStarred"
+   ]
+  },
+  {
+   "en": "Day {days} of every month or {weekdays}{months}",
+   "zh": "每月 {days} 日或{weekdays}{months}",
+   "keys": [
+    "schedule.catalog:cron.day.both",
+    "schedule.manager:cron.day.both"
+   ]
+  },
+  {
+   "en": "Day {days} of every month{months}",
+   "zh": "每月 {days} 日{months}",
+   "keys": [
+    "schedule.catalog:cron.day.monthDays",
+    "schedule.manager:cron.day.monthDays"
+   ]
+  },
+  {
+   "en": "days",
+   "zh": "天",
+   "keys": [
+    "schedule.catalog:unit.day.other",
+    "schedule.manager:unit.day.other"
+   ]
+  },
+  {
+   "en": "Decline",
+   "zh": "拒绝",
+   "keys": [
+    "cordis:action.decline"
+   ]
+  },
+  {
+   "en": "Default registry",
+   "zh": "默认安装源",
+   "keys": [
+    "pluginManager:registryDefault"
+   ]
+  },
+  {
+   "en": "Defining the plugin",
+   "zh": "正在定义插件",
+   "keys": [
+    "cordis:a11y.defining"
+   ]
+  },
+  {
+   "en": "Definition failed",
+   "zh": "定义失败",
+   "keys": [
+    "cordis:a11y.failed"
+   ]
+  },
+  {
+   "en": "Definition interrupted",
+   "zh": "定义已中断",
+   "keys": [
+    "cordis:a11y.stopped"
+   ]
+  },
+  {
+   "en": "Delete reminder: {title}",
+   "zh": "删除提醒：{title}",
+   "keys": [
+    "schedule.catalog:delete.label"
+   ]
+  },
+  {
+   "en": "Deleting…",
+   "zh": "正在删除…",
+   "keys": [
+    "schedule.catalog:delete.pending",
+    "schedule.manager:delete.pending"
+   ]
+  },
+  {
+   "en": "Dismiss all questions",
+   "zh": "放弃整组问题",
+   "keys": [
+    "question:nav.cancel"
+   ]
+  },
+  {
+   "en": "DSH could not compare the loaded plugins with their files.",
+   "zh": "DSH 无法将已加载的插件与磁盘上的文件进行比较。",
+   "keys": [
+    "pluginManager:restartReasonModuleComparison"
+   ]
+  },
+  {
+   "en": "dsh-plugin-whale-pet",
+   "zh": "dsh-plugin-whale-pet",
+   "keys": [
+    "pluginManager:installGuideIdExample"
+   ]
+  },
+  {
+   "en": "Due now",
+   "zh": "现在到期",
+   "keys": [
+    "schedule.catalog:relative.now",
+    "schedule.manager:relative.now"
+   ]
+  },
+  {
+   "en": "Empty directory",
+   "zh": "空目录",
+   "keys": [
+    "sidebarFiles:empty"
+   ]
+  },
+  {
+   "en": "Empty member name",
+   "zh": "空成员名",
+   "keys": [
+    "workflowRun:member.empty"
+   ]
+  },
+  {
+   "en": "Empty phase name",
+   "zh": "空阶段名",
+   "keys": [
+    "workflowRun:phase.empty"
+   ]
+  },
+  {
+   "en": "en",
+   "zh": "zh-CN",
+   "keys": [
+    "schedule.catalog:time.locale",
+    "schedule.manager:time.locale"
+   ]
+  },
+  {
+   "en": "Enable {name}",
+   "zh": "启用 {name}",
+   "keys": [
+    "pluginManager:enableToggle"
+   ]
+  },
+  {
+   "en": "Enable component {name}",
+   "zh": "启用组件 {name}",
+   "keys": [
+    "pluginManager:partToggle"
+   ]
+  },
+  {
+   "en": "Enable now",
+   "zh": "立即启用",
+   "keys": [
+    "pluginManager:installEnableNow"
+   ]
+  },
+  {
+   "en": "Enter a valid package name or address.",
+   "zh": "请输入有效的包名或地址",
+   "keys": [
+    "pluginManager:reasonInvalidSpec"
+   ]
+  },
+  {
+   "en": "Enter an address starting with http:// or https://",
+   "zh": "请输入以 http:// 或 https:// 开头的地址",
+   "keys": [
+    "pluginManager:registryCustomInvalid"
+   ]
+  },
+  {
+   "en": "Enter an integer from 1 to 50, or leave blank to use the default.",
+   "zh": "请填 1–50 的整数；留空表示使用默认值。",
+   "keys": [
+    "settings.webSearch:invalidCount"
+   ]
+  },
+  {
+   "en": "Enter an internal or private npm registry address starting with http:// or https://. If it requires a login, store the credentials in ~/.npmrc on this machine.",
+   "zh": "填写内网或私有 npm 源地址，以 http:// 或 https:// 开头。若为需要登录的源，请把凭据放在本机的 ~/.npmrc 里。",
+   "keys": [
+    "pluginManager:registryCustomHint"
+   ]
+  },
+  {
+   "en": "Enter the plugin's npm package name",
+   "zh": "填入插件 npm 包名",
+   "keys": [
+    "pluginManager:installGuideIdTitle"
+   ]
+  },
+  {
+   "en": "Enter the plugin's package name, GitHub repository address, or local directory path.",
+   "zh": "输入插件的包名、GitHub 仓库地址或本地目录路径。",
+   "keys": [
+    "pluginManager:installDescription"
+   ]
+  },
+  {
+   "en": "every {count} hours",
+   "zh": "每 {count} 小时",
+   "keys": [
+    "schedule.catalog:cron.time.joinedEveryNHours",
+    "schedule.manager:cron.time.joinedEveryNHours"
+   ]
+  },
+  {
+   "en": "Every {count} hours",
+   "zh": "每 {count} 小时",
+   "keys": [
+    "schedule.catalog:cron.time.everyNHours",
+    "schedule.manager:cron.time.everyNHours"
+   ]
+  },
+  {
+   "en": "every {step} minutes",
+   "zh": "每 {step} 分钟",
+   "keys": [
+    "schedule.catalog:cron.time.joinedEveryMinutes",
+    "schedule.manager:cron.time.joinedEveryMinutes"
+   ]
+  },
+  {
+   "en": "Every {step} minutes",
+   "zh": "每 {step} 分钟",
+   "keys": [
+    "schedule.catalog:cron.time.everyMinutes",
+    "schedule.manager:cron.time.everyMinutes"
+   ]
+  },
+  {
+   "en": "every {step} minutes during hours {hours}",
+   "zh": "{hours} 点内每 {step} 分钟",
+   "keys": [
+    "schedule.catalog:cron.time.hoursEveryMinutes",
+    "schedule.manager:cron.time.hoursEveryMinutes"
+   ]
+  },
+  {
+   "en": "Every {value} {unit}",
+   "zh": "{value}{unit}一次",
+   "keys": [
+    "schedule.catalog:frequency.every",
+    "schedule.manager:frequency.every"
+   ]
+  },
+  {
+   "en": "Every day{months}",
+   "zh": "每天{months}",
+   "keys": [
+    "schedule.catalog:cron.day.every",
+    "schedule.manager:cron.day.every"
+   ]
+  },
+  {
+   "en": "every hour",
+   "zh": "每小时",
+   "keys": [
+    "schedule.catalog:cron.time.joinedEveryHour",
+    "schedule.manager:cron.time.joinedEveryHour"
+   ]
+  },
+  {
+   "en": "Every hour",
+   "zh": "每小时",
+   "keys": [
+    "schedule.catalog:cron.time.everyHour",
+    "schedule.manager:cron.time.everyHour"
+   ]
+  },
+  {
+   "en": "every hour at minute {minutes}",
+   "zh": "每小时的第 {minutes} 分钟",
+   "keys": [
+    "schedule.catalog:cron.time.joinedHourlyAt",
+    "schedule.manager:cron.time.joinedHourlyAt"
+   ]
+  },
+  {
+   "en": "Every hour at minute {minutes}",
+   "zh": "每小时的第 {minutes} 分钟",
+   "keys": [
+    "schedule.catalog:cron.time.hourlyAt",
+    "schedule.manager:cron.time.hourlyAt"
+   ]
+  },
+  {
+   "en": "every minute",
+   "zh": "每分钟",
+   "keys": [
+    "schedule.catalog:cron.time.joinedEveryMinute",
+    "schedule.manager:cron.time.joinedEveryMinute"
+   ]
+  },
+  {
+   "en": "Every minute",
+   "zh": "每分钟",
+   "keys": [
+    "schedule.catalog:cron.time.everyMinute",
+    "schedule.manager:cron.time.everyMinute"
+   ]
+  },
+  {
+   "en": "every minute during hours {hours}",
+   "zh": "{hours} 点的每分钟",
+   "keys": [
+    "schedule.catalog:cron.time.hoursEveryMinute",
+    "schedule.manager:cron.time.hoursEveryMinute"
+   ]
+  },
+  {
+   "en": "Example: ",
+   "zh": "示例：",
+   "keys": [
+    "pluginManager:installGuideExampleLabel"
+   ]
+  },
+  {
+   "en": "Expand the question card",
+   "zh": "展开问题卡片",
+   "keys": [
+    "question:nav.maximize"
+   ]
+  },
+  {
+   "en": "Experimental",
+   "zh": "实验性",
+   "keys": [
+    "pluginManager:statusBeta"
+   ]
+  },
+  {
+   "en": "Experimental plugins",
+   "zh": "实验性插件",
+   "keys": [
+    "pluginManager:extensionsTitle",
+    "pluginManager:moreTitle"
+   ]
+  },
+  {
+   "en": "Failed",
+   "zh": "失败",
+   "keys": [
+    "agent-team:memberStatus.failed",
+    "chat:message.turnProcess.failed"
+   ]
+  },
+  {
+   "en": "Failed {count}",
+   "zh": "失败 {count}",
+   "keys": [
+    "workflowRun:statusCount.failed"
+   ]
+  },
+  {
+   "en": "File Explorer",
+   "zh": "文件资源管理器",
+   "keys": [
+    "open-in-app:app.explorer"
+   ]
+  },
+  {
+   "en": "Files",
+   "zh": "文件管理器",
+   "keys": [
+    "open-in-app:app.filemanager",
+    "sidebarFiles:type.label"
+   ]
+  },
+  {
+   "en": "Filter components",
+   "zh": "筛选组件",
+   "keys": [
+    "pluginManager:partsFilter"
+   ]
+  },
+  {
+   "en": "Finder",
+   "zh": "访达",
+   "keys": [
+    "open-in-app:app.finder"
+   ]
+  },
+  {
+   "en": "Folder navigation",
+   "zh": "目录导航",
+   "keys": [
+    "slash.menu:crumbs.aria"
+   ]
+  },
+  {
+   "en": "for example dsh-plugin-whale-pet",
+   "zh": "例如 dsh-plugin-whale-pet",
+   "keys": [
+    "pluginManager:installSpecPlaceholder"
+   ]
+  },
+  {
+   "en": "Fork",
+   "zh": "Fork",
+   "keys": [
+    "open-in-app:app.fork"
+   ]
+  },
+  {
+   "en": "Ghostty",
+   "zh": "Ghostty",
+   "keys": [
+    "open-in-app:app.ghostty"
+   ]
+  },
+  {
+   "en": "Git Bash",
+   "zh": "Git Bash",
+   "keys": [
+    "open-in-app:app.gitbash"
+   ]
+  },
+  {
+   "en": "Git repository",
+   "zh": "Git 仓库",
+   "keys": [
+    "pluginManager:installSubjectGit"
+   ]
+  },
+  {
+   "en": "GitHub connection timed out",
+   "zh": "连接 GitHub 超时",
+   "keys": [
+    "pluginManager:installGithubTimeoutTitle"
+   ]
+  },
+  {
+   "en": "GitHub Desktop",
+   "zh": "GitHub Desktop",
+   "keys": [
+    "open-in-app:app.github"
+   ]
+  },
+  {
+   "en": "GitKraken",
+   "zh": "GitKraken",
+   "keys": [
+    "open-in-app:app.gitkraken"
+   ]
+  },
+  {
+   "en": "GNOME Terminal",
+   "zh": "GNOME Terminal",
+   "keys": [
+    "open-in-app:app.gnometerminal"
+   ]
+  },
+  {
+   "en": "GoLand",
+   "zh": "GoLand",
+   "keys": [
+    "open-in-app:app.goland"
+   ]
+  },
+  {
+   "en": "Hide install details",
+   "zh": "收起安装详情",
+   "keys": [
+    "pluginManager:installDetailsHide"
+   ]
+  },
+  {
+   "en": "Hide the “系统外掛” entry in the sidebar",
+   "zh": "隱藏側欄的「系统外掛」入口",
+   "keys": [
+    "sidebarPluginsToggle:title"
+   ]
+  },
+  {
+   "en": "Hide the guide",
+   "zh": "收起引导",
+   "keys": [
+    "pluginManager:installGuideHide"
+   ]
+  },
+  {
+   "en": "Host",
+   "zh": "Host",
+   "keys": [
+    "cordis:body.hostCode"
+   ]
+  },
+  {
+   "en": "hour",
+   "zh": "小时",
+   "keys": [
+    "schedule.catalog:unit.hour.one",
+    "schedule.manager:unit.hour.one"
+   ]
+  },
+  {
+   "en": "hours",
+   "zh": "小时",
+   "keys": [
+    "schedule.catalog:unit.hour.other",
+    "schedule.manager:unit.hour.other"
+   ]
+  },
+  {
+   "en": "How many searches the auxiliary model may run within one Messages request. Applies only to the Messages API.",
+   "zh": "辅助模型在一次 Messages 请求内最多可执行的搜索次数，仅适用于 Messages API。",
+   "keys": [
+    "settings.webSearch:maxUsesHint"
+   ]
+  },
+  {
+   "en": "https://api-docs.deepseek.com/guides/search",
+   "zh": "https://api-docs.deepseek.com/zh-cn/guides/search",
+   "keys": [
+    "settings.webSearch:searchGuideUrl"
+   ]
+  },
+  {
+   "en": "https://npm.example.com/",
+   "zh": "https://npm.example.com/",
+   "keys": [
+    "pluginManager:registryCustomPlaceholder"
+   ]
+  },
+  {
+   "en": "in {value} {unit}",
+   "zh": "{value}{unit}后",
+   "keys": [
+    "schedule.catalog:relative.future",
+    "schedule.manager:relative.future"
+   ]
+  },
+  {
+   "en": "In progress",
+   "zh": "进行中",
+   "keys": [
+    "agent-team:status.in_progress",
+    "conversation:todo.status.inProgress"
+   ]
+  },
+  {
+   "en": "Inactive",
+   "zh": "未运行",
+   "keys": [
+    "agent-team:memberStatus.inactive",
+    "conversation:detail.status.inactive"
+   ]
+  },
+  {
+   "en": "Include the API prefix, such as https://api.deepseek.com/anthropic/v1. The provider appends /messages. Leave blank to restore the default.",
+   "zh": "填写含 API 前缀的地址，例如 https://api.deepseek.com/anthropic/v1；程序追加 /messages，留空恢复默认。",
+   "keys": [
+    "settings.webSearch:baseUrlHint"
+   ]
+  },
+  {
+   "en": "Include the API prefix, such as https://api.deepseek.com/v1/tools. The provider appends /search or /fetch. Leave blank to restore the default.",
+   "zh": "填写含 API 前缀的地址，例如 https://api.deepseek.com/v1/tools；程序追加 /search 或 /fetch，留空恢复默认。",
+   "keys": [
+    "settings.webSearch:searchApiBaseUrlHint"
+   ]
+  },
+  {
+   "en": "Inspect the plugins this deployment ships.",
+   "zh": "查看内置部署的插件列表",
+   "keys": [
+    "settings.plugins:intro"
+   ]
+  },
+  {
+   "en": "Install",
+   "zh": "安装",
+   "keys": [
+    "pluginManager:installRun"
+   ]
+  },
+  {
+   "en": "Install a plugin version compatible with this DSH.",
+   "zh": "请安装与当前 DSH 兼容的插件版本。",
+   "keys": [
+    "pluginManager:reasonIncompatibleInstall"
+   ]
+  },
+  {
+   "en": "Install a third-party plugin",
+   "zh": "安装第三方插件",
+   "keys": [
+    "pluginManager:installExisting"
+   ]
+  },
+  {
+   "en": "Install finished with no new dependency.",
+   "zh": "安装完成，没有新增依赖。",
+   "keys": [
+    "pluginManager:installDoneNothing"
+   ]
+  },
+  {
+   "en": "Install guide and examples",
+   "zh": "插件安装引导和示例",
+   "keys": [
+    "pluginManager:installGuideToggle"
+   ]
+  },
+  {
+   "en": "Install only plugins you trust: they run with your permissions and can damage DeepSeek Harness or leak your data.",
+   "zh": "请确认插件来源可信。插件在本机以你的权限运行，来源不明的插件可能损坏 DeepSeek Harness，或读取和泄露你的数据。",
+   "keys": [
+    "pluginManager:installGuideSafety"
+   ]
+  },
+  {
+   "en": "Install plugin",
+   "zh": "安装插件",
+   "keys": [
+    "pluginManager:installConfirmedTitle"
+   ]
+  },
+  {
+   "en": "Install scripts allowed for {names}",
+   "zh": "已允许运行安装脚本：{names}",
+   "keys": [
+    "pluginManager:installDoneApproved"
+   ]
+  },
+  {
+   "en": "Install scripts need permission",
+   "zh": "需要允许安装脚本",
+   "keys": [
+    "pluginManager:installApprovalTitle"
+   ]
+  },
+  {
+   "en": "Install, enable, and configure plugins",
+   "zh": "安装、启用和配置插件",
+   "keys": [
+    "pluginManager:intro"
+   ]
+  },
+  {
+   "en": "Installation cancelled; the plugin is not enabled, and downloaded files may remain",
+   "zh": "已取消安装，插件未启用，下载的文件可能保留",
+   "keys": [
+    "pluginManager:installCancelled"
+   ]
+  },
+  {
+   "en": "Installation failed. View installation details.",
+   "zh": "插件安装失败，可查看安装详情。",
+   "keys": [
+    "pluginManager:installBackgroundFailed"
+   ]
+  },
+  {
+   "en": "Installation finished. View installation details.",
+   "zh": "插件安装已完成，可查看安装结果。",
+   "keys": [
+    "pluginManager:installBackgroundDone"
+   ]
+  },
+  {
+   "en": "Installation has not been confirmed stopped. Retry cancellation or wait for the installation result. {reason}",
+   "zh": "尚未确认安装已停止，请重试取消或等待安装结果。{reason}",
+   "keys": [
+    "pluginManager:installCancelUnconfirmed"
+   ]
+  },
+  {
+   "en": "Installation is being applied and cannot be cancelled. View installation progress.",
+   "zh": "安装已进入收尾阶段，无法取消，可查看安装进度。",
+   "keys": [
+    "pluginManager:installBackgroundApplying"
+   ]
+  },
+  {
+   "en": "Installation result unavailable",
+   "zh": "未能获取安装结果",
+   "keys": [
+    "pluginManager:installUnknownTitle"
+   ]
+  },
+  {
+   "en": "Installation result unavailable. Check the plugin list.",
+   "zh": "未能获取安装结果，请检查插件列表。",
+   "keys": [
+    "pluginManager:installBackgroundUnknown"
+   ]
+  },
+  {
+   "en": "Installation status is unconfirmed. View the installation for details.",
+   "zh": "安装状态暂未确认，请查看安装任务了解详情。",
+   "keys": [
+    "pluginManager:installBackgroundUnconfirmed"
+   ]
+  },
+  {
+   "en": "Installation status unconfirmed",
+   "zh": "安装状态尚未确认",
+   "keys": [
+    "pluginManager:installUnconfirmedTitle"
+   ]
+  },
+  {
+   "en": "Installed",
+   "zh": "已安装",
+   "keys": [
+    "pluginManager:installedTab",
+    "pluginManager:installedTitle"
+   ]
+  },
+  {
+   "en": "Installed plugins",
+   "zh": "已安装插件",
+   "keys": [
+    "pluginManager:bundlesTitle"
+   ]
+  },
+  {
+   "en": "Installed; restart DSH to load it. {reason}",
+   "zh": "已安装，请重启 DSH 加载它。{reason}",
+   "keys": [
+    "pluginManager:installDoneRestart"
+   ]
+  },
+  {
+   "en": "Installing the plugin…",
+   "zh": "插件安装中…",
+   "keys": [
+    "pluginManager:installingTitle"
+   ]
+  },
+  {
+   "en": "Installs into {dir}",
+   "zh": "安装位置：{dir}",
+   "keys": [
+    "pluginManager:installLocation"
+   ]
+  },
+  {
+   "en": "IntelliJ IDEA",
+   "zh": "IntelliJ IDEA",
+   "keys": [
+    "open-in-app:app.intellij"
+   ]
+  },
+  {
+   "en": "Interrupted {count}",
+   "zh": "已中断 {count}",
+   "keys": [
+    "workflowRun:statusCount.interrupted"
+   ]
+  },
+  {
+   "en": "Invalid persisted Team record: {message}",
+   "zh": "团队持久记录无效：{message}",
+   "keys": [
+    "agent-team:failure"
+   ]
+  },
+  {
+   "en": "iTerm2",
+   "zh": "iTerm2",
+   "keys": [
+    "open-in-app:app.iterm"
+   ]
+  },
+  {
+   "en": "kitty",
+   "zh": "kitty",
+   "keys": [
+    "open-in-app:app.kitty"
+   ]
+  },
+  {
+   "en": "Konsole",
+   "zh": "Konsole",
+   "keys": [
+    "open-in-app:app.konsole"
+   ]
+  },
+  {
+   "en": "Loading",
+   "zh": "加载中",
+   "keys": [
+    "pluginManager:rowPhaseLoading",
+    "settings.permission:loading"
+   ]
+  },
+  {
+   "en": "Loading reminders…",
+   "zh": "正在加载提醒…",
+   "keys": [
+    "schedule.catalog:list.loading"
+   ]
+  },
+  {
+   "en": "Loading Team…",
+   "zh": "正在加载团队…",
+   "keys": [
+    "agent-team:loading"
+   ]
+  },
+  {
+   "en": "Local directory",
+   "zh": "本地目录",
+   "keys": [
+    "pluginManager:installSubjectPath"
+   ]
+  },
+  {
+   "en": "Mainland China mirror",
+   "zh": "中国大陆镜像源",
+   "keys": [
+    "pluginManager:registryNpmmirror"
+   ]
+  },
+  {
+   "en": "Max searches per request",
+   "zh": "单次请求最多搜索次数",
+   "keys": [
+    "settings.webSearch:maxUses"
+   ]
+  },
+  {
+   "en": "Members",
+   "zh": "成员",
+   "keys": [
+    "agent-team:roster"
+   ]
+  },
+  {
+   "en": "Messages API base URL",
+   "zh": "Messages API 基础地址",
+   "keys": [
+    "settings.webSearch:baseUrl"
+   ]
+  },
+  {
+   "en": "minute",
+   "zh": "分钟",
+   "keys": [
+    "schedule.catalog:unit.minute.one",
+    "schedule.manager:unit.minute.one"
+   ]
+  },
+  {
+   "en": "minutes",
+   "zh": "分钟",
+   "keys": [
+    "schedule.catalog:unit.minute.other",
+    "schedule.manager:unit.minute.other"
+   ]
+  },
+  {
+   "en": "Model",
+   "zh": "模型",
+   "keys": [
+    "agent-team:model",
+    "conversation:detail.field.model"
+   ]
+  },
+  {
+   "en": "More ways to open",
+   "zh": "更多打开方式",
+   "keys": [
+    "open-in-app:path.more"
+   ]
+  },
+  {
+   "en": "Newer run available",
+   "zh": "已有更新",
+   "keys": [
+    "cordis:status.superseded"
+   ]
+  },
+  {
+   "en": "Next question",
+   "zh": "下一题",
+   "keys": [
+    "question:nav.next"
+   ]
+  },
+  {
+   "en": "Next run",
+   "zh": "下次运行",
+   "keys": [
+    "schedule.catalog:list.nextRun",
+    "schedule.manager:detail.nextRun"
+   ]
+  },
+  {
+   "en": "Next: {packageId}",
+   "zh": "待切换：{packageId}",
+   "keys": [
+    "cordis:panel.next"
+   ]
+  },
+  {
+   "en": "No component matches.",
+   "zh": "没有匹配的组件。",
+   "keys": [
+    "pluginManager:partsFilterEmpty"
+   ]
+  },
+  {
+   "en": "No key is configured; only conversations using a DeepSeek Account model can search, through the default endpoint.",
+   "zh": "未配置密钥；仅使用 DeepSeek 账号模型的对话可以通过默认接口地址搜索。",
+   "keys": [
+    "settings.webSearch:apiKeyUnset"
+   ]
+  },
+  {
+   "en": "No members started",
+   "zh": "没有启动成员",
+   "keys": [
+    "workflowRun:run.empty"
+   ]
+  },
+  {
+   "en": "No plugins are installed yet.",
+   "zh": "还没有安装任何插件。",
+   "keys": [
+    "pluginManager:empty"
+   ]
+  },
+  {
+   "en": "No plugins defined yet",
+   "zh": "还没有定义任何插件",
+   "keys": [
+    "cordis:panel.empty"
+   ]
+  },
+  {
+   "en": "No registry could be reached (tried: {registries}); check the network or proxy settings, or change the registry",
+   "zh": "所有安装源都无法连接（已尝试：{registries}），请检查网络或代理设置，或更换安装源",
+   "keys": [
+    "pluginManager:installProblemNetworkAll"
+   ]
+  },
+  {
+   "en": "No registry could be reached (tried: {registries}). Check the network or proxy settings, or change the registry and retry.",
+   "zh": "所有安装源都无法连接（已尝试：{registries}）。请检查网络或代理设置，或更换安装源后重试。",
+   "keys": [
+    "pluginManager:installFailureNetworkAll"
+   ]
+  },
+  {
+   "en": "No shared tasks yet. Create them through the conversation.",
+   "zh": "暂无共享任务，可以通过对话创建",
+   "keys": [
+    "agent-team:empty"
+   ]
+  },
+  {
+   "en": "No such plugin was found",
+   "zh": "未找到相关插件",
+   "keys": [
+    "pluginManager:installProblemNotFound",
+    "pluginManager:installFailureNotFound"
+   ]
+  },
+  {
+   "en": "No such plugin.",
+   "zh": "找不到该插件",
+   "keys": [
+    "pluginManager:reasonUnknownPlugin"
+   ]
+  },
+  {
+   "en": "No version matches the request",
+   "zh": "没有匹配的版本",
+   "keys": [
+    "pluginManager:installFailureNoMatchingVersion"
+   ]
+  },
+  {
+   "en": "No write permission; the plugin cannot be installed",
+   "zh": "没有写入权限，无法安装",
+   "keys": [
+    "pluginManager:installFailurePermission"
+   ]
+  },
+  {
+   "en": "Not a file or a directory, so it cannot be opened.",
+   "zh": "这不是文件或目录，没法打开。",
+   "keys": [
+    "sidebarFiles:entry.other"
+   ]
+  },
+  {
+   "en": "Not installed",
+   "zh": "未安装",
+   "keys": [
+    "pluginManager:statusNotInstalled",
+    "pluginManager:sourceNotInstalled"
+   ]
+  },
+  {
+   "en": "Not running",
+   "zh": "未运行",
+   "keys": [
+    "pluginManager:rowStateIdle",
+    "settings.pluginInventory:unobserved"
+   ]
+  },
+  {
+   "en": "Off",
+   "zh": "已关闭",
+   "keys": [
+    "pluginManager:partOff"
+   ]
+  },
+  {
+   "en": "Off by default: search runs through DeepSeek Messages. For the new Web Search API's features and pricing, see the ",
+   "zh": "默认关闭，搜索通过 DeepSeek Messages 完成。新版 Web 搜索 API 功能与计费详见",
+   "keys": [
+    "settings.webSearch:useSearchApiHint"
+   ]
+  },
+  {
+   "en": "Official npm registry",
+   "zh": "npm 官方源",
+   "keys": [
+    "pluginManager:registryOfficial"
+   ]
+  },
+  {
+   "en": "On-demand Official plugins offer Update when their version differs from DSH. To update other plugins, uninstall and reinstall them.",
+   "zh": "按需安装的官方插件会在版本与 DSH 不同时提供“更新”。其他插件请先卸载再安装新版。",
+   "keys": [
+    "pluginManager:installUpgradeNotice"
+   ]
+  },
+  {
+   "en": "Once allowed, the scripts run here with your permissions, and the permission is saved in this profile.",
+   "zh": "允许后，脚本会以你的权限在本机运行，授权保存在当前 profile，之后不再询问。",
+   "keys": [
+    "pluginManager:installApprovalConsequence"
+   ]
+  },
+  {
+   "en": "Open",
+   "zh": "打开",
+   "keys": [
+    "open-in-app:path.open",
+    "plan:preview.action"
+   ]
+  },
+  {
+   "en": "Open {name}",
+   "zh": "打开 {name}",
+   "keys": [
+    "workflowRun:member.open"
+   ]
+  },
+  {
+   "en": "Open in {app}",
+   "zh": "用 {app} 打开",
+   "keys": [
+    "open-in-app:open.title"
+   ]
+  },
+  {
+   "en": "Open locally",
+   "zh": "在本地打开",
+   "keys": [
+    "open-in-app:open.tooltip"
+   ]
+  },
+  {
+   "en": "Open member conversation",
+   "zh": "打开成员会话",
+   "keys": [
+    "agent-team:open"
+   ]
+  },
+  {
+   "en": "Open question details",
+   "zh": "展开问题详情",
+   "keys": [
+    "question:reply.open"
+   ]
+  },
+  {
+   "en": "Open reminder details: {title}",
+   "zh": "打开提醒详情：{title}",
+   "keys": [
+    "schedule.catalog:list.open"
+   ]
+  },
+  {
+   "en": "Opening workspace",
+   "zh": "正在打开工作区",
+   "keys": [
+    "open-in-app:shortcut.busy"
+   ]
+  },
+  {
+   "en": "Other configuration still uses this bundle's components; switch them off first.",
+   "zh": "其他配置仍在使用这个组合包的组件，请先停用它们",
+   "keys": [
+    "pluginManager:reasonBundleInUse"
+   ]
+  },
+  {
+   "en": "Other sessions",
+   "zh": "其他会话",
+   "keys": [
+    "cordis:panel.group.others"
+   ]
+  },
+  {
+   "en": "Owner",
+   "zh": "Owner",
+   "keys": [
+    "agent-team:owner",
+    "conversation:detail.field.owner"
+   ]
+  },
+  {
+   "en": "Package metadata error: {error}",
+   "zh": "包元信息错误：{error}",
+   "keys": [
+    "pluginManager:metadataError",
+    "settings.pluginInventory:metadataError"
+   ]
+  },
+  {
+   "en": "Package name or address",
+   "zh": "包名或地址",
+   "keys": [
+    "pluginManager:installSpecLabel"
+   ]
+  },
+  {
+   "en": "Package unavailable",
+   "zh": "包不可用",
+   "keys": [
+    "pluginManager:statusMissingFiles"
+   ]
+  },
+  {
+   "en": "Paused · {seconds}s remaining",
+   "zh": "已暂停 · 剩余 {seconds} 秒",
+   "keys": [
+    "question:wait.paused"
+   ]
+  },
+  {
+   "en": "Pending",
+   "zh": "待处理",
+   "keys": [
+    "agent-team:status.pending",
+    "conversation:todo.status.pending"
+   ]
+  },
+  {
+   "en": "PhpStorm",
+   "zh": "PhpStorm",
+   "keys": [
+    "open-in-app:app.phpstorm"
+   ]
+  },
+  {
+   "en": "Plan review",
+   "zh": "计划待审",
+   "keys": [
+    "question:plan.header",
+    "workspace:status.compact.planReview"
+   ]
+  },
+  {
+   "en": "Please complete this question first.",
+   "zh": "请先完成这道问题。",
+   "keys": [
+    "question:error.incomplete"
+   ]
+  },
+  {
+   "en": "Please select an option or enter a custom answer.",
+   "zh": "请选择一个选项或填写自定义答案。",
+   "keys": [
+    "question:error.unanswered"
+   ]
+  },
+  {
+   "en": "Plugin management needs it; it cannot be switched off or uninstalled.",
+   "zh": "插件管理所需，不能停用或卸载",
+   "keys": [
+    "pluginManager:reasonManagementRequired"
+   ]
+  },
+  {
+   "en": "Plugin package name",
+   "zh": "插件包名",
+   "keys": [
+    "pluginManager:installPackageLabel"
+   ]
+  },
+  {
+   "en": "Plugin source",
+   "zh": "插件代码",
+   "keys": [
+    "cordis:body.source"
+   ]
+  },
+  {
+   "en": "Plugin views",
+   "zh": "插件视图",
+   "keys": [
+    "pluginManager:tabsLabel",
+    "settings.plugins:tabs"
+   ]
+  },
+  {
+   "en": "Plugins",
+   "zh": "插件",
+   "keys": [
+    "pluginManager:panel",
+    "pluginManager:title"
+   ]
+  },
+  {
+   "en": "pnpm blocked install scripts; allow them under allowBuilds in pnpm-workspace.yaml and retry",
+   "zh": "有依赖的安装脚本被 pnpm 拦下，请在 profile 的 pnpm-workspace.yaml 的 allowBuilds 中放行后重试",
+   "keys": [
+    "pluginManager:installFailureBuildBlockedManual"
+   ]
+  },
+  {
+   "en": "pnpm was not found, so nothing can be installed",
+   "zh": "没有找到 pnpm，无法安装",
+   "keys": [
+    "pluginManager:installFailurePnpmMissing"
+   ]
+  },
+  {
+   "en": "Preparing a Cordis tool call",
+   "zh": "准备调用 Cordis 工具",
+   "keys": [
+    "cordis:a11y.preparing"
+   ]
+  },
+  {
+   "en": "Preparing installation…",
+   "zh": "正在准备安装…",
+   "keys": [
+    "pluginManager:installStarting"
+   ]
+  },
+  {
+   "en": "Previous question",
+   "zh": "上一题",
+   "keys": [
+    "question:nav.prev"
+   ]
+  },
+  {
+   "en": "Problem",
+   "zh": "异常",
+   "keys": [
+    "pluginManager:statusProblem",
+    "pluginManager:rowPhaseFailed"
+   ]
+  },
+  {
+   "en": "Provisioning",
+   "zh": "准备中",
+   "keys": [
+    "agent-team:memberStatus.provisioning",
+    "conversation:detail.status.provisioning"
+   ]
+  },
+  {
+   "en": "PyCharm",
+   "zh": "PyCharm",
+   "keys": [
+    "open-in-app:app.pycharm"
+   ]
+  },
+  {
+   "en": "Reading plugins…",
+   "zh": "正在读取插件…",
+   "keys": [
+    "pluginManager:loading",
+    "settings.pluginInventory:loading"
+   ]
+  },
+  {
+   "en": "Reading the plugin inventory failed: {message}",
+   "zh": "读取插件清单失败：{message}",
+   "keys": [
+    "cordis:panel.readFailed"
+   ]
+  },
+  {
+   "en": "Reading…",
+   "zh": "读取中…",
+   "keys": [
+    "cordis:panel.loading",
+    "sidebarFiles:loading"
+   ]
+  },
+  {
+   "en": "Ready",
+   "zh": "可开始",
+   "keys": [
+    "agent-team:ready",
+    "conversation:detail.status.ready"
+   ]
+  },
+  {
+   "en": "Reason",
+   "zh": "原因",
+   "keys": [
+    "pluginManager:reasonLabel"
+   ]
+  },
+  {
+   "en": "Recommended",
+   "zh": "推荐",
+   "keys": [
+    "question:option.recommended"
+   ]
+  },
+  {
+   "en": "Refresh",
+   "zh": "刷新",
+   "keys": [
+    "pluginManager:refresh",
+    "schedule.manager:delivery.refresh"
+   ]
+  },
+  {
+   "en": "Refresh failed. Please try again.",
+   "zh": "刷新失败，请重试",
+   "keys": [
+    "pluginManager:refreshError"
+   ]
+  },
+  {
+   "en": "Refuse",
+   "zh": "拒绝",
+   "keys": [
+    "question:plan.decline"
+   ]
+  },
+  {
+   "en": "Register Cordis Plugin",
+   "zh": "注册 Cordis 插件",
+   "keys": [
+    "cordis:row.defineTitle"
+   ]
+  },
+  {
+   "en": "Registry",
+   "zh": "安装源",
+   "keys": [
+    "pluginManager:registryToggle"
+   ]
+  },
+  {
+   "en": "Reminders",
+   "zh": "提醒",
+   "keys": [
+    "schedule.catalog:trigger.label"
+   ]
+  },
+  {
+   "en": "Remove",
+   "zh": "移除",
+   "keys": [
+    "cordis:action.remove",
+    "shortcuts:clear"
+   ]
+  },
+  {
+   "en": "Rendering failed in {slot}; the default UI was restored:",
+   "zh": "{slot} 渲染失败，已恢复默认界面：",
+   "keys": [
+    "cordis:render.failedAbdicated"
+   ]
+  },
+  {
+   "en": "Rendering failed in {slot}:",
+   "zh": "{slot} 渲染失败：",
+   "keys": [
+    "cordis:render.failedHeld"
+   ]
+  },
+  {
+   "en": "Replace this with the actual Git repository address.",
+   "zh": "请替换为实际的 Git 仓库地址",
+   "keys": [
+    "pluginManager:installGitTemplateHint"
+   ]
+  },
+  {
+   "en": "Replace this with the actual path to your local plugin directory.",
+   "zh": "请替换为本机插件目录的实际路径",
+   "keys": [
+    "pluginManager:installPathTemplateHint"
+   ]
+  },
+  {
+   "en": "Reply sent; the panel could not close.",
+   "zh": "回答已发送；面板未能关闭。",
+   "keys": [
+    "question:status.sent"
+   ]
+  },
+  {
+   "en": "Reply to earlier pending questions",
+   "zh": "回答先前等待中的问题",
+   "keys": [
+    "question:reply.label"
+   ]
+  },
+  {
+   "en": "Request changes",
+   "zh": "要求修改",
+   "keys": [
+    "question:plan.discuss"
+   ]
+  },
+  {
+   "en": "Restart DSH to apply the change. {reason}",
+   "zh": "请重启 DSH 使更改生效。{reason}",
+   "keys": [
+    "pluginManager:restartNotice"
+   ]
+  },
+  {
+   "en": "Results per search",
+   "zh": "每次搜索结果数",
+   "keys": [
+    "settings.webSearch:count"
+   ]
+  },
+  {
+   "en": "Results returned per query: an integer from 1 to 50, default 10. This controls result count, not search calls. web_search keeps no more sources than its own result limit.",
+   "zh": "每个查询返回的结果条数，须为 1–50 的整数，默认 10；不控制搜索调用次数。web_search 保留的来源数不超过其自身的结果上限。",
+   "keys": [
+    "settings.webSearch:countHint"
+   ]
+  },
+  {
+   "en": "Rider",
+   "zh": "Rider",
+   "keys": [
+    "open-in-app:app.rider"
+   ]
+  },
+  {
+   "en": "Roll back",
+   "zh": "回退",
+   "keys": [
+    "cordis:action.rollback"
+   ]
+  },
+  {
+   "en": "Run",
+   "zh": "运行",
+   "keys": [
+    "cordis:action.run"
+   ]
+  },
+  {
+   "en": "Run controls live in the Cordis panel above Settings",
+   "zh": "运行控制在左下角设置上方的 Cordis 面板",
+   "keys": [
+    "cordis:panel.hint"
+   ]
+  },
+  {
+   "en": "Run failed",
+   "zh": "运行失败",
+   "keys": [
+    "cordis:status.failed"
+   ]
+  },
+  {
+   "en": "Running",
+   "zh": "运行中",
+   "keys": [
+    "agent-team:memberStatus.running",
+    "chat:row.running"
+   ]
+  },
+  {
+   "en": "Running {count}",
+   "zh": "运行中 {count}",
+   "keys": [
+    "workflowRun:statusCount.running"
+   ]
+  },
+  {
+   "en": "RustRover",
+   "zh": "RustRover",
+   "keys": [
+    "open-in-app:app.rustrover"
+   ]
+  },
+  {
+   "en": "Search / Fetch API base URL",
+   "zh": "Search / Fetch API 基础地址",
+   "keys": [
+    "settings.webSearch:searchApiBaseUrl"
+   ]
+  },
+  {
+   "en": "Search & Fetch guide",
+   "zh": "网页搜索与抓取指南",
+   "keys": [
+    "settings.webSearch:searchGuide"
+   ]
+  },
+  {
+   "en": "second",
+   "zh": "秒",
+   "keys": [
+    "schedule.catalog:unit.second.one",
+    "schedule.manager:unit.second.one"
+   ]
+  },
+  {
+   "en": "seconds",
+   "zh": "秒",
+   "keys": [
+    "schedule.catalog:unit.second.other",
+    "schedule.manager:unit.second.other"
+   ]
+  },
+  {
+   "en": "Select a session first",
+   "zh": "请先选择会话",
+   "keys": [
+    "sidebarFiles:shortcut.noSession",
+    "sidebarRight:command.noSession"
+   ]
+  },
+  {
+   "en": "Set up the DeepSeek search provider.",
+   "zh": "设置 DeepSeek 的搜索提供方。",
+   "keys": [
+    "settings.webSearch:description"
+   ]
+  },
+  {
+   "en": "Shared tasks",
+   "zh": "共享任务",
+   "keys": [
+    "agent-team:tasks"
+   ]
+  },
+  {
+   "en": "Show file location",
+   "zh": "显示文件位置",
+   "keys": [
+    "open-in-app:path.reveal"
+   ]
+  },
+  {
+   "en": "Show install details",
+   "zh": "查看安装详情",
+   "keys": [
+    "pluginManager:installDetailsShow"
+   ]
+  },
+  {
+   "en": "Show less",
+   "zh": "收起",
+   "keys": [
+    "agent-team:task.collapse",
+    "workspace:sessions.collapse"
+   ]
+  },
+  {
+   "en": "Show more",
+   "zh": "展开",
+   "keys": [
+    "agent-team:task.expand",
+    "session-inspector:object.more"
+   ]
+  },
+  {
+   "en": "Skills",
+   "zh": "技能",
+   "keys": [
+    "slash.menu:skill"
+   ]
+  },
+  {
+   "en": "Skipped",
+   "zh": "已跳过",
+   "keys": [
+    "question:reply.skipped"
+   ]
+  },
+  {
+   "en": "SmartGit",
+   "zh": "SmartGit",
+   "keys": [
+    "open-in-app:app.smartgit"
+   ]
+  },
+  {
+   "en": "Something went wrong during the install; the details say what",
+   "zh": "安装过程中出错，原因见安装详情",
+   "keys": [
+    "pluginManager:installFailureGeneric"
+   ]
+  },
+  {
+   "en": "Source for this DSH",
+   "zh": "当前 DSH 对应来源",
+   "keys": [
+    "pluginManager:sourceTargetSpec"
+   ]
+  },
+  {
+   "en": "Sourcetree",
+   "zh": "Sourcetree",
+   "keys": [
+    "open-in-app:app.sourcetree"
+   ]
+  },
+  {
+   "en": "Stop",
+   "zh": "停止",
+   "keys": [
+    "cordis:action.stop"
+   ]
+  },
+  {
+   "en": "Stopping installation…",
+   "zh": "正在停止安装…",
+   "keys": [
+    "pluginManager:installCancelling"
+   ]
+  },
+  {
+   "en": "Stored outside the settings file. Leave blank to keep the current key.",
+   "zh": "不写入设置文件。留空表示保持当前密钥。",
+   "keys": [
+    "settings.webSearch:apiKeyHint"
+   ]
+  },
+  {
+   "en": "Sublime Merge",
+   "zh": "Sublime Merge",
+   "keys": [
+    "open-in-app:app.sublimemerge"
+   ]
+  },
+  {
+   "en": "Sublime Text",
+   "zh": "Sublime Text",
+   "keys": [
+    "open-in-app:app.sublimetext"
+   ]
+  },
+  {
+   "en": "Supports npm packages, Git repositories, and local directories",
+   "zh": "支持 npm 包、Git 仓库和本地目录",
+   "keys": [
+    "pluginManager:installExistingDescription"
+   ]
+  },
+  {
+   "en": "Tab",
+   "zh": "Tab",
+   "keys": [
+    "slash.menu:drill.key"
+   ]
+  },
+  {
+   "en": "Take time",
+   "zh": "慢慢回答",
+   "keys": [
+    "question:wait.takeTime"
+   ]
+  },
+  {
+   "en": "Tarball",
+   "zh": "压缩包",
+   "keys": [
+    "pluginManager:installSubjectTarball"
+   ]
+  },
+  {
+   "en": "Team is unavailable",
+   "zh": "Team 暂不可用",
+   "keys": [
+    "agent-team:unavailable"
+   ]
+  },
+  {
+   "en": "Terminal",
+   "zh": "终端",
+   "keys": [
+    "open-in-app:app.terminal",
+    "sidebarTerminal:title"
+   ]
+  },
+  {
+   "en": "That directory is gone. It may have been moved or deleted.",
+   "zh": "这个目录不在了。可能已被移动或删除。",
+   "keys": [
+    "sidebarFiles:error.notFound"
+   ]
+  },
+  {
+   "en": "That directory is outside the workspace, so the sidebar will not read it.",
+   "zh": "这个目录在工作区之外，侧栏不会读取它。",
+   "keys": [
+    "sidebarFiles:error.outsideWorkspace"
+   ]
+  },
+  {
+   "en": "That is not a directory.",
+   "zh": "这不是一个目录。",
+   "keys": [
+    "sidebarFiles:error.notDirectory"
+   ]
+  },
+  {
+   "en": "The answer did not arrive before work continued; submit it again.",
+   "zh": "回答未送达，工作已继续，请再提交一次。",
+   "keys": [
+    "question:error.resubmit"
+   ]
+  },
+  {
+   "en": "The change reaches a plugin running outside the plugin list.",
+   "zh": "更改涉及一个不受插件列表管理的插件。",
+   "keys": [
+    "pluginManager:restartReasonUnmanagedPlugin"
+   ]
+  },
+  {
+   "en": "The change reaches modules DSH itself loaded.",
+   "zh": "更改涉及 DSH 自身已加载的模块。",
+   "keys": [
+    "pluginManager:restartReasonHostModule"
+   ]
+  },
+  {
+   "en": "The disk is full; the install stopped",
+   "zh": "磁盘空间不足，安装已停止",
+   "keys": [
+    "pluginManager:installFailureDiskFull"
+   ]
+  },
+  {
+   "en": "The downloaded package failed its integrity check",
+   "zh": "下载的安装包校验失败",
+   "keys": [
+    "pluginManager:installFailureIntegrity"
+   ]
+  },
+  {
+   "en": "The Host has no active installation with this request id. Check the plugin list before trying again.",
+   "zh": "后端当前没有此安装任务。请检查插件列表后再尝试安装。",
+   "keys": [
+    "pluginManager:installUnknownDescription"
+   ]
+  },
+  {
+   "en": "The Host reported an error.",
+   "zh": "Host 报告了一个错误",
+   "keys": [
+    "pluginManager:reasonOperationError"
+   ]
+  },
+  {
+   "en": "The install timed out",
+   "zh": "安装超时",
+   "keys": [
+    "pluginManager:installFailureTimeout"
+   ]
+  },
+  {
+   "en": "The installation result was not received. Check installation status. {reason}",
+   "zh": "未收到安装结果，请核对安装状态。{reason}",
+   "keys": [
+    "pluginManager:installResultUnconfirmed"
+   ]
+  },
+  {
+   "en": "The network connection failed",
+   "zh": "网络连接失败",
+   "keys": [
+    "pluginManager:installFailureNetwork"
+   ]
+  },
+  {
+   "en": "The npm registry the plugin is downloaded from",
+   "zh": "从哪个 npm 源下载插件",
+   "keys": [
+    "pluginManager:registryLegend"
+   ]
+  },
+  {
+   "en": "The path does not exist or is not a valid plugin package",
+   "zh": "该路径不存在或不是有效的插件包",
+   "keys": [
+    "pluginManager:installProblemNotPackage"
+   ]
+  },
+  {
+   "en": "The pending script approvals changed; install again to refresh them.",
+   "zh": "待允许的安装脚本列表已变化，请重新安装以刷新",
+   "keys": [
+    "pluginManager:reasonStaleApproval"
+   ]
+  },
+  {
+   "en": "The plugin could not be installed",
+   "zh": "插件安装失败",
+   "keys": [
+    "pluginManager:installFailedTitle"
+   ]
+  },
+  {
+   "en": "The plugin could not be looked up: {reason}",
+   "zh": "无法获取插件信息：{reason}",
+   "keys": [
+    "pluginManager:installProblemUnknown"
+   ]
+  },
+  {
+   "en": "The plugin package name is the npm package name (like dsh-xxx or @author/plugin): the part after dsh plugin add or pnpm add in a community plugin's README install command.",
+   "zh": "插件包名即 npm 包名（如 dsh-xxx 或 @作者/插件名），社区插件的 README 安装命令中 dsh plugin add 或 pnpm add 之后的部分。",
+   "keys": [
+    "pluginManager:installGuideIdHint"
+   ]
+  },
+  {
+   "en": "The plugin registry could not be reached; check the network and try again",
+   "zh": "无法连接插件源，请检查网络后重试",
+   "keys": [
+    "pluginManager:installProblemNetwork"
+   ]
+  },
+  {
+   "en": "The profile patch cannot address this one uniquely.",
+   "zh": "当前 profile 的 patch 无法唯一定位这一项",
+   "keys": [
+    "pluginManager:reasonUnaddressable"
+   ]
+  },
+  {
+   "en": "These packages have install scripts that pnpm did not run.",
+   "zh": "以下包声明了安装脚本，pnpm 默认不运行。",
+   "keys": [
+    "pluginManager:installApprovalDescription"
+   ]
+  },
+  {
+   "en": "This deployment exposes no plugin views.",
+   "zh": "本部署没有开放任何插件视图。",
+   "keys": [
+    "settings.plugins:empty"
+   ]
+  },
+  {
+   "en": "This deployment runs without a manageable profile, so plugins cannot be installed or switched here.",
+   "zh": "本部署没有可管理的 profile，无法安装或启停插件。",
+   "keys": [
+    "pluginManager:unavailable"
+   ]
+  },
+  {
+   "en": "This is not a package name or address that can be installed: {reason}",
+   "zh": "无法识别这个包名或地址：{reason}",
+   "keys": [
+    "pluginManager:installProblemInvalid"
+   ]
+  },
+  {
+   "en": "This package declares no bundle, so it cannot be installed as a plugin: {reason}",
+   "zh": "这个包没有声明组合包，无法作为插件安装：{reason}",
+   "keys": [
+    "pluginManager:installProblemNotBundle"
+   ]
+  },
+  {
+   "en": "This package declares no bundle, so it cannot be managed as a plugin.",
+   "zh": "这个包没有声明组合包，不能作为插件管理",
+   "keys": [
+    "pluginManager:reasonNotBundle"
+   ]
+  },
+  {
+   "en": "This package is already installed; uninstall it before installing another version.",
+   "zh": "这个包已经安装；要安装其他版本，请先卸载它",
+   "keys": [
+    "pluginManager:reasonAlreadyInstalled"
+   ]
+  },
+  {
+   "en": "This package is not owned by the profile, or plugin management needs it.",
+   "zh": "这个包不属于当前 profile，或者是插件管理所需的组件",
+   "keys": [
+    "pluginManager:reasonNotRemovable"
+   ]
+  },
+  {
+   "en": "This package no longer exists",
+   "zh": "包已不存在",
+   "keys": [
+    "cordis:run.removed"
+   ]
+  },
+  {
+   "en": "This plugin cannot be installed",
+   "zh": "无法安装此插件",
+   "keys": [
+    "pluginManager:installConfirmedRefused"
+   ]
+  },
+  {
+   "en": "This plugin is already installed. To upgrade it, uninstall it and install it again",
+   "zh": "该插件已安装。如需升级，请卸载后重新安装",
+   "keys": [
+    "pluginManager:installProblemInstalled"
+   ]
+  },
+  {
+   "en": "This plugin is incompatible with the running DSH version; running it may cause crashes or data loss.",
+   "zh": "这个插件与当前 DSH 版本不兼容，运行它可能导致崩溃或数据丢失。",
+   "keys": [
+    "pluginManager:reasonIncompatibleVersionUnnamed"
+   ]
+  },
+  {
+   "en": "This plugin pack contains no components.",
+   "zh": "这个插件包不包含任何组件。",
+   "keys": [
+    "pluginManager:partsEmpty"
+   ]
+  },
+  {
+   "en": "This plugin ships with DSH; upgrading DSH updates it",
+   "zh": "该插件随 DSH 提供，升级 DSH 即可获得新版本",
+   "keys": [
+    "pluginManager:installProblemShipped"
+   ]
+  },
+  {
+   "en": "This profile applies changes only at startup.",
+   "zh": "这个 profile 只在启动时应用更改。",
+   "keys": [
+    "pluginManager:restartReasonNoHmr"
+   ]
+  },
+  {
+   "en": "This profile runs without HMR; stop it and uninstall the package with dsh plugin.",
+   "zh": "这个 profile 没有启用 HMR，正在使用的包要停止后用 dsh plugin 卸载",
+   "keys": [
+    "pluginManager:reasonStopProfile"
+   ]
+  },
+  {
+   "en": "This question was skipped.",
+   "zh": "这道问题当时被跳过。",
+   "keys": [
+    "question:review.skipped"
+   ]
+  },
+  {
+   "en": "This session",
+   "zh": "当前会话",
+   "keys": [
+    "cordis:panel.group.current"
+   ]
+  },
+  {
+   "en": "This session has no workspace directory.",
+   "zh": "这个会话没有工作区目录。",
+   "keys": [
+    "sidebarFiles:noWorkspace"
+   ]
+  },
+  {
+   "en": "Too many entries, showing only some of them.",
+   "zh": "条目太多，只显示了一部分。",
+   "keys": [
+    "sidebarFiles:truncated"
+   ]
+  },
+  {
+   "en": "Tower",
+   "zh": "Tower",
+   "keys": [
+    "open-in-app:app.tower"
+   ]
+  },
+  {
+   "en": "Trigger suggestions",
+   "zh": "触发候选建议",
+   "keys": [
+    "slash.menu:suggestions.aria"
+   ]
+  },
+  {
+   "en": "Try another installation source.",
+   "zh": "请尝试其他安装来源。",
+   "keys": [
+    "pluginManager:installGithubFailedDescription"
+   ]
+  },
+  {
+   "en": "Try another way",
+   "zh": "试试其他方式",
+   "keys": [
+    "pluginManager:installTryAnotherWay"
+   ]
+  },
+  {
+   "en": "Type your answer",
+   "zh": "输入你的答案",
+   "keys": [
+    "question:custom.placeholder"
+   ]
+  },
+  {
+   "en": "Under pnpm's supply-chain security policy (minimumReleaseAge), versions published more recently than the required age are not installed automatically, so this installation used {installed} instead of the latest version {version}. A newly published version has not completed this waiting period and may contain undetected malicious code or defects. If you need {version}, uninstall the current version and then install {exact} to request that version.",
+   "zh": "根据 pnpm 供应链安全策略（minimumReleaseAge），发布时间未满规定时长的版本不会被自动安装，因此本次安装的是 {installed}，而非最新版本 {version}。新发布的版本尚未经过该观察期，可能存在未被发现的恶意代码或缺陷。如确需使用 {version}，请先卸载当前版本，再安装 {exact} 以指定该版本。",
+   "keys": [
+    "pluginManager:installDoneOtherVersion"
+   ]
+  },
+  {
+   "en": "Uninstall",
+   "zh": "卸载",
+   "keys": [
+    "pluginManager:uninstall",
+    "pluginManager:confirmUninstall"
+   ]
+  },
+  {
+   "en": "Uninstall \"{name}\"?",
+   "zh": "卸载「{name}」？",
+   "keys": [
+    "pluginManager:confirmUninstallTitle"
+   ]
+  },
+  {
+   "en": "Uninstall {name}",
+   "zh": "卸载 {name}",
+   "keys": [
+    "pluginManager:uninstallLabel"
+   ]
+  },
+  {
+   "en": "Uninstall it and install a version compatible with this DSH.",
+   "zh": "请卸载后重新安装与当前 DSH 兼容的版本。",
+   "keys": [
+    "pluginManager:reasonIncompatibleInstalled"
+   ]
+  },
+  {
+   "en": "Unloading",
+   "zh": "卸载中",
+   "keys": [
+    "pluginManager:rowPhaseUnloading",
+    "settings.pluginInventory:unloading"
+   ]
+  },
+  {
+   "en": "Unowned",
+   "zh": "未分配",
+   "keys": [
+    "agent-team:unowned"
+   ]
+  },
+  {
+   "en": "Unphased",
+   "zh": "未分阶段",
+   "keys": [
+    "workflowRun:phase.unassigned"
+   ]
+  },
+  {
+   "en": "Update",
+   "zh": "更新",
+   "keys": [
+    "pluginManager:update",
+    "settings:desktop.update.available"
+   ]
+  },
+  {
+   "en": "Update {name}",
+   "zh": "更新 {name}",
+   "keys": [
+    "pluginManager:updateLabel"
+   ]
+  },
+  {
+   "en": "Update available",
+   "zh": "可更新",
+   "keys": [
+    "pluginManager:statusUpdateAvailable"
+   ]
+  },
+  {
+   "en": "Update Cordis Plugin",
+   "zh": "更新 Cordis 插件",
+   "keys": [
+    "cordis:row.updateTitle"
+   ]
+  },
+  {
+   "en": "Use example",
+   "zh": "填入示例",
+   "keys": [
+    "pluginManager:installGuideFill"
+   ]
+  },
+  {
+   "en": "Use mainland China mirror",
+   "zh": "改用国内镜像",
+   "keys": [
+    "pluginManager:installUseGithubMirror"
+   ]
+  },
+  {
+   "en": "Use the example {example}",
+   "zh": "填入示例 {example}",
+   "keys": [
+    "pluginManager:installGuideFillAria"
+   ]
+  },
+  {
+   "en": "Use the new Web Search API",
+   "zh": "启用新版 Web 搜索 API",
+   "keys": [
+    "settings.webSearch:useSearchApi"
+   ]
+  },
+  {
+   "en": "UTC",
+   "zh": "UTC",
+   "keys": [
+    "schedule.catalog:time.utcPrefix",
+    "schedule.manager:time.utcPrefix"
+   ]
+  },
+  {
+   "en": "v{version}",
+   "zh": "v{version}",
+   "keys": [
+    "pluginManager:versionTag"
+   ]
+  },
+  {
+   "en": "Version",
+   "zh": "版本",
+   "keys": [
+    "cordis:panel.version"
+   ]
+  },
+  {
+   "en": "Version {version}",
+   "zh": "版本 {version}",
+   "keys": [
+    "pluginManager:installVersion"
+   ]
+  },
+  {
+   "en": "Version for this DSH",
+   "zh": "当前 DSH 对应版本",
+   "keys": [
+    "pluginManager:sourceTargetVersion"
+   ]
+  },
+  {
+   "en": "View {name}",
+   "zh": "查看 {name}",
+   "keys": [
+    "pluginManager:openDetail"
+   ]
+  },
+  {
+   "en": "View installation",
+   "zh": "查看安装任务",
+   "keys": [
+    "pluginManager:installViewTask"
+   ]
+  },
+  {
+   "en": "VS Code",
+   "zh": "VS Code",
+   "keys": [
+    "open-in-app:app.vscode"
+   ]
+  },
+  {
+   "en": "VS Code Insiders",
+   "zh": "VS Code Insiders",
+   "keys": [
+    "open-in-app:app.vscodeinsiders"
+   ]
+  },
+  {
+   "en": "Waiting for dependencies",
+   "zh": "等待依赖",
+   "keys": [
+    "pluginManager:rowPhasePending",
+    "settings.pluginInventory:pending"
+   ]
+  },
+  {
+   "en": "Waiting for the Host to accept installation. Cancellation will retry automatically after confirmation.",
+   "zh": "正在等待后端接收安装任务，收到确认后会自动重试取消。",
+   "keys": [
+    "pluginManager:installAwaitingAcceptance"
+   ]
+  },
+  {
+   "en": "Waiting until you answer",
+   "zh": "会一直等你回答",
+   "keys": [
+    "question:wait.held"
+   ]
+  },
+  {
+   "en": "Warp",
+   "zh": "Warp",
+   "keys": [
+    "open-in-app:app.warp"
+   ]
+  },
+  {
+   "en": "Web search",
+   "zh": "网页搜索",
+   "keys": [
+    "settings.webSearch:title"
+   ]
+  },
+  {
+   "en": "WebStorm",
+   "zh": "WebStorm",
+   "keys": [
+    "open-in-app:app.webstorm"
+   ]
+  },
+  {
+   "en": "Weekly on {weekdays} at {time}",
+   "zh": "每周{weekdays} {time}",
+   "keys": [
+    "schedule.catalog:frequency.weeklyLocal",
+    "schedule.manager:frequency.weeklyLocal"
+   ]
+  },
+  {
+   "en": "Weekly on {weekdays} at {time} ({timeZone})",
+   "zh": "每周{weekdays} {time}（{timeZone}）",
+   "keys": [
+    "schedule.catalog:frequency.weekly",
+    "schedule.manager:frequency.weekly"
+   ]
+  },
+  {
+   "en": "What it provides goes away once it is uninstalled.",
+   "zh": "卸载后它提供的功能会消失。",
+   "keys": [
+    "pluginManager:confirmUninstallDescription"
+   ]
+  },
+  {
+   "en": "Which package was installed cannot be told from the dependency change.",
+   "zh": "无法从依赖变更中确定安装了哪一个包",
+   "keys": [
+    "pluginManager:reasonAmbiguousInstall"
+   ]
+  },
+  {
+   "en": "Windows Terminal",
+   "zh": "Windows Terminal",
+   "keys": [
+    "open-in-app:app.windowsterminal"
+   ]
+  },
+  {
+   "en": "Windsurf",
+   "zh": "Windsurf",
+   "keys": [
+    "open-in-app:app.windsurf"
+   ]
+  },
+  {
+   "en": "Work continued — you can still answer",
+   "zh": "已继续工作，仍可回答",
+   "keys": [
+    "question:wait.continued"
+   ]
+  },
+  {
+   "en": "Workspace files",
+   "zh": "工作区文件",
+   "keys": [
+    "sidebarFiles:guide.title"
+   ]
+  },
+  {
+   "en": "Write scopes",
+   "zh": "写入范围",
+   "keys": [
+    "agent-team:writeScopes",
+    "conversation:detail.field.writeScopes"
+   ]
+  },
+  {
+   "en": "Xcode",
+   "zh": "Xcode",
+   "keys": [
+    "open-in-app:app.xcode"
+   ]
+  },
+  {
+   "en": "Zed",
+   "zh": "Zed",
+   "keys": [
+    "open-in-app:app.zed"
+   ]
+  }
+ ]
+}

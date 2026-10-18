@@ -1,0 +1,1681 @@
+{
+ "chunk": "02",
+ "count": 239,
+ "entries": [
+  {
+   "zh": " —— 開新工作階段時會和其他 api 一起注入上下文。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": " · 已填 ",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": " ⬆︎多片",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": " 的文件…",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": " 的文件加入清單",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": " 個 api",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": " 個 api 的文件",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": " 個 api 的文件會一起注入它的上下文（提示也會一起複製）。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": " 個 api 的文件一起注入新工作階段的上下文，並把完整提示複製到剪貼簿。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": " 個 api 可用（文件都已取得，請不要再呼叫 docs 端點）；",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": " 個參數",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": " 個欄位",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "（空目录）",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "（空目錄）",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "(未選桶)",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "(未知)",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "{x} 個項目",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "{x}（点击预览）",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "{x}（點擊預覽）",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "{x}/{x} 片{x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "「開新工作階段」會把清單上這 ",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "「開新工作階段」會把這份 api 文件注入新工作階段的上下文，並把完整提示複製到剪貼簿。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "@ 给 agent",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "@ 目录给 agent",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "↑ 上層",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "⚠️ 宿主外掛還是舊版（改完程式碼後未重啟 DSH）：刪除會改用逐一刪除、簽章連結與「複製設定」會失敗、大檔（>32MB）也不能用 multipart 上傳；重啟 DSH 後恢復正常。",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "❗️ 複製設定",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "❗️ 連線設定（含金鑰）",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "📁 文件",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "1. 不要再取得文件 —— 上面的文件就是欄位名稱與型別的唯一依據。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "2. 只呼叫使用者指定的那個 api；沒指定就先問要呼叫哪一個（或哪幾個）。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "2. inbound 照上面送即可，空白的篩選條件已經省略。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "3. 用 fdep_call 工具（mode: \"execute\"）執行，並回報結果。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "3. inbound 照對應 api 那一段送，空白的篩選條件已經省略。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "4. 每個 api 都用 fdep_call 工具（mode: \"execute\"）執行，並回報各自的結果。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "按「開新工作階段」時，這 ",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "把 ",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "把端點／金鑰／region／預設桶複製成 JSON（含金鑰，平常不顯示）",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "本機憑證不可用",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "不支援預覽 .{x} 類型，請下載。",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "步驟：",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "參數",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "參數：無（這個 api 不需要 inbound 欄位）",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "參數（名稱: 型別 — 範例值；留空的欄位不送）：",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "處理中…",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "從清單移除",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "從清單移除 ",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "打包下载",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "打包下载失败：{x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "等待会话工作区…",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "点击文件名或行内「预览」查看内容；悬停文件行可 下载 / @，悬停目录行可 整目录打包下载；勾选多项后可批量打包下载。写操作请交给 agent（本 tab 只读）。",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "點檔名預覽；懸停有 預覽／下載／簽章連結／改名／刪除；勾選可批次刪除；上傳會以目前前綴為目錄。",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "範例：",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "放棄",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "放棄未完成的上傳失敗：{x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "服務不可用",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "複製",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle",
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "複製回應",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "複製提示",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "改名",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "改名失敗：{x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "更新 ",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "工作区",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "關閉",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "过滤名称…",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "過濾名稱…",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "還沒有 api。左邊成功取得文件後按「加入 ＋」，這裡就會列出要一起注入工作階段的 api。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "還沒有成功取得文件的 api_id",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "還沒有文件",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "還缺片（{x}/{x}），再選一次同一個檔案會續傳",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "含有 MinIO 的存取金鑰：貼進別的工具或文件前，先確認那個地方是可信的。",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "回應",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "回應顯示在下方。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "会话工作区 · 只读",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "匯出設定失敗：{x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "匯出設定失敗：宿主外掛還沒重新載入，請重啟 DSH 後再試（此按鈕需要新的宿主路由）",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "繼續",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "加入 ",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "加入清單",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "加载目录树…",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "加载预览…",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "剪貼簿不可用 —— 請展開「預先組好的 skill 提示」手動複製。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "剪貼簿不可用，請在框內全選複製",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "建立資料夾失敗：{x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "进入",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "進入",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "開始下載 {x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "開新工作階段",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "看起來是網路或 CORS 被拒（",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "來自文件",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "例：test.demo",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "歷史 ",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "歷史 API ID",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "連結",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "連線服務查詢失敗",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "連線服務沒有可用的資料",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "連線設定不可用",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "連線至 MinIO…",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "瀏覽器請求被擋下",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "每個 api 各自帶著它自己的 inbound：",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "目录条目超过宿主上限（2000），仅显示前 2000 项",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "目前沒有可用的桶（bucket）。",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "排隊中",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "批次刪除",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "批次刪除失敗",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "清單 ",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "清空",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "清空清單",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "請改用宿主端 fdep_call 工具 —— 複製下面的提示帶到工作階段執行。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "請檢查欄位值",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "請稍後重試",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "請使用 fdep-api-request skill 呼叫下列 FDEP API。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "請手動全選複製",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "請手動選取回應文字複製。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "請先成功取得這個 api 的文件，再加入清單。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "請先取得文件，才知道 inbound 有哪些欄位。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "請先輸入 api_id，例如 test.demo。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "請先輸入 api_id。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "請先選一個桶。",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "請展開下方「預先組好的 skill 提示」手動複製。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "取得連結失敗：{x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "取得文件",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "取得文件失敗",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "取得文件中",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "取消選取",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "確定",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "刪除",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "刪除 {x} 個項目？此操作無法復原。",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "刪除 {x}？（只會刪掉這個空目錄標記，裡面的物件請先自行刪除）",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "刪除 {x}？此操作無法復原。",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "刪除失敗：{x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "刪除失敗（{x}/{x} 成功）：{x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "刪除物件",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "刪除選取",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "刪除資料夾",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "上傳",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "上傳後大小不符（遠端 {x} / 本地 {x}）",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "上傳失敗{x}：{x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "上一層",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "尚未取得文件",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "失敗",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "输入框正在提交或输入域不可用，已复制到剪贴板，请手动粘贴",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "刷新",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "宿主 workspaceFiles Remote 不可用",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "宿主端的 fdep_call 工具沒有這個限制 —— 請用「複製提示」帶到工作階段裡執行。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "宿主端沒有掛載 systemPrompt，文件不會進入上下文 —— 提示本身帶著它們。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "宿主端上下文不可用 —— 提示本身就帶著文件。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "宿主端外掛是較舊的版本（請重啟 dsh web 讓注入生效）—— 提示本身帶著文件。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "宿主外掛還沒重新載入（multipart 路由不存在）→ 請重啟 DSH；或改用 skill 的 `minio.mjs upload`",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "宿主未重載，改用單次 PUT",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "提示也已在剪貼簿 —— 貼上（Ctrl/Cmd+V）就能說明要做什麼。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "填好下面的欄位後執行。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "完成",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle",
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "網路錯誤（連線中斷）",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "未完成的上傳 {x} 筆 —— 重新選同一個檔案上傳即可續傳，或按「放棄」清掉伺服器上的片",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "未知错误",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "文件",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "文件过大（{x}），不支持在线预览，请下载或 @ 给 agent 查看。",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "文件与文件夹可混选，打包为 zip（保留目录结构）",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "无会话上下文",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "无匹配项",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "無參數",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "無法開啟工作階段",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "無法連線",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "無法連線：{x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "無法使用剪貼簿",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "無符合的項目",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "物件過大（{x}），請下載後查看。",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "下载",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "下载 {x} 失败：{x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "下載",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "先成功取得文件，才能加入清單",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "先取得文件，才知道這個 API 需要哪些欄位。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "項目一, 項目二",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "新名稱",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "新資料夾",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "需要 API ID",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "需要 true 或 false",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "需要合法的 JSON",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "需要數字，例如 ",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "需要一個數字",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "选择以便打包下载",
+   "kind": "exact",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "選取以便批次刪除",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "選擇 API",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "要一起注入的 api 清單",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "已打包下载 {x}（{x} 项）",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "已放棄 {x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "已複製",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "已複製 1 小時有效的簽章連結",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "已複製到剪貼簿",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "已複製連線設定",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "已複製為「{x}」，但原檔刪不掉（{x}）—— 現在會有兩個檔案，請再刪一次原檔。",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "已改名為 {x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "已加入清單",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "已建立資料夾 {x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "已截斷顯示（超過一頁），請用前綴或過濾縮小範圍。nextToken：{x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "已開啟新工作階段",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "已取得文件",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "已取得文件，共 ",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "已刪除 {x}{x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "已上傳 {x} 個檔案",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "已收到 {x} 片",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "已下载 {x}（{x}）",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "已选 {x} 项",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "已選 {x} 項",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "已暫停",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "已注入它的上下文。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "以逗號或換行分隔。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "用過的 API ID",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "用過的 API ID（",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "预览",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "预览失败：{x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "預覽",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "預覽失敗：{x}",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "預先組好的 skill 提示（貼到新工作階段）",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "原始 docs 內容（與 fdep_call mode:\"docs\" 回傳的 data.docs 完全相同）：",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "再複製一次",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "載入物件…",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "載入預覽…",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "暂不支持预览 .{x} 类型，请下载或 @ 给 agent 处理。",
+   "kind": "dynamic",
+   "plugins": [
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "暫停",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "這次工作階段有 ",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "這個 api 的 inbound（面板目前的值）：",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "這個 api 的文件",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "這個 api 的文件（已取得 —— 請不要再呼叫 docs 端點）：",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "這個 API 沒有參數，直接執行即可。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "這個 MinIO 上沒有可用的桶。",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "這個組合裡沒有掛載 uiWorkspace。",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "正在向 MCP網關 取得 ",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "執行",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "執行 ",
+   "kind": "fragment",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "執行失敗",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "執行中…",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "重連",
+   "kind": "fragment",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "重新連線",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "重新取得連線",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "資料夾名稱",
+   "kind": "exact",
+   "plugins": [
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "API 清單",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "MCP網關",
+   "kind": "exact",
+   "plugins": [
+    "fdep-api-request-bundle"
+   ]
+  }
+ ]
+}

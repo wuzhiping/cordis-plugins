@@ -1,0 +1,30 @@
+{
+  "name": "vi-VN",
+  "version": "0.1.0",
+  "description": "Vietnamese (vi-VN) locale for the DSH Web GUI: registers Tiếng Việt in the Language picker and translates the shipped English UI strings of every web client namespace.",
+  "private": true,
+  "type": "commonjs",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/client.js",
+    "lib/index.js",
+    "cordis.patch.yml",
+    "package.json",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "license": "MIT"
+}

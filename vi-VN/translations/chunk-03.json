@@ -1,0 +1,3073 @@
+{
+ "chunk": "03",
+ "count": 429,
+ "namespaces": [
+  "chat",
+  "goal",
+  "permission.access",
+  "secretMask",
+  "session-inspector",
+  "settings.account",
+  "settings.agentPreset",
+  "settings.permission",
+  "settings.pluginInventory",
+  "sidebarImage",
+  "sidebarTerminal",
+  "skill"
+ ],
+ "entries": [
+  {
+   "en": " · ",
+   "zh": " · ",
+   "keys": [
+    "chat:message.turnProcess.separator"
+   ]
+  },
+  {
+   "en": " ({tokens} reasoning)",
+   "zh": "（其中推理 {tokens}）",
+   "keys": [
+    "chat:message.turnUsage.reasoning"
+   ]
+  },
+  {
+   "en": ",",
+   "zh": ",",
+   "keys": [
+    "chat:number.groupSeparator"
+   ]
+  },
+  {
+   "en": ", ",
+   "zh": "，",
+   "keys": [
+    "chat:message.stepProcess.comma",
+    "chat:message.referenceSeparator"
+   ]
+  },
+  {
+   "en": ", then open it in your browser to finish signing in.",
+   "zh": "，手动打开登录页完成登录。",
+   "keys": [
+    "settings.account:browserDescription"
+   ]
+  },
+  {
+   "en": "… {count} more",
+   "zh": "…还有 {count} 条",
+   "keys": [
+    "chat:message.context.catalog.more"
+   ]
+  },
+  {
+   "en": "… truncated, {total} characters total",
+   "zh": "… 已截断，共 {total} 字符",
+   "keys": [
+    "chat:json.truncated"
+   ]
+  },
+  {
+   "en": "[Empty slot]",
+   "zh": "[空槽]",
+   "keys": [
+    "session-inspector:object.absent"
+   ]
+  },
+  {
+   "en": "[Getter / Setter, not evaluated]",
+   "zh": "[Getter / Setter，未执行]",
+   "keys": [
+    "session-inspector:object.accessor"
+   ]
+  },
+  {
+   "en": "{added} added, {removed} removed",
+   "zh": "新增 {added} 个，移除 {removed} 个",
+   "keys": [
+    "chat:message.toolsChanged",
+    "trajectory:layout.toolsChanged"
+   ]
+  },
+  {
+   "en": "{count} added",
+   "zh": "新增 {count} 个",
+   "keys": [
+    "chat:message.toolsAddedCount",
+    "conversation:todo.diff.added"
+   ]
+  },
+  {
+   "en": "{count} message",
+   "zh": "{count} 条消息",
+   "keys": [
+    "chat:message.turnProcess.messages.one"
+   ]
+  },
+  {
+   "en": "{count} messages",
+   "zh": "{count} 条消息",
+   "keys": [
+    "chat:message.turnProcess.messages.other"
+   ]
+  },
+  {
+   "en": "{count} more matches in other presets: ",
+   "zh": "其他预设中还有 {count} 个匹配：",
+   "keys": [
+    "settings.pluginInventory:matchesInOtherPresets"
+   ]
+  },
+  {
+   "en": "{count} removed",
+   "zh": "移除 {count} 个",
+   "keys": [
+    "chat:message.toolsRemovedCount",
+    "conversation:todo.diff.removed"
+   ]
+  },
+  {
+   "en": "{count} subagent",
+   "zh": "{count} 个 subagent",
+   "keys": [
+    "chat:message.turnProcess.subagents.one",
+    "subagent:count.total.one"
+   ]
+  },
+  {
+   "en": "{count} subagents",
+   "zh": "{count} 个 subagent",
+   "keys": [
+    "chat:message.turnProcess.subagents.other",
+    "subagent:count.total.other"
+   ]
+  },
+  {
+   "en": "{count} tok",
+   "zh": "{count} tok",
+   "keys": [
+    "chat:message.turnUsage.count"
+   ]
+  },
+  {
+   "en": "{count} tool call",
+   "zh": "{count} 次工具调用",
+   "keys": [
+    "chat:message.turnProcess.toolCalls.one",
+    "trajectory:summary.toolCalls.one"
+   ]
+  },
+  {
+   "en": "{count} tool calls",
+   "zh": "{count} 次工具调用",
+   "keys": [
+    "chat:message.turnProcess.toolCalls.other",
+    "trajectory:summary.toolCalls.other"
+   ]
+  },
+  {
+   "en": "{first} and {second}",
+   "zh": "{first}并{second}",
+   "keys": [
+    "chat:message.stepProcess.joinTwo"
+   ]
+  },
+  {
+   "en": "{label} ({retry}/{maximum}) · {seconds}s",
+   "zh": "{label}（{retry}/{maximum}） · {seconds}s",
+   "keys": [
+    "chat:message.retry.status"
+   ]
+  },
+  {
+   "en": "{m}/{d}",
+   "zh": "{m}月{d}日",
+   "keys": [
+    "chat:clock.md"
+   ]
+  },
+  {
+   "en": "{milliseconds}ms",
+   "zh": "{milliseconds}毫秒",
+   "keys": [
+    "chat:duration.milliseconds"
+   ]
+  },
+  {
+   "en": "{minutes}m{seconds}s",
+   "zh": "{minutes}分{seconds}秒",
+   "keys": [
+    "chat:duration.compactMinutes"
+   ]
+  },
+  {
+   "en": "{name} (default)",
+   "zh": "{name}（默认）",
+   "keys": [
+    "settings.pluginInventory:presetOptionDefault"
+   ]
+  },
+  {
+   "en": "{name} (failed to load)",
+   "zh": "{name}（加载失败）",
+   "keys": [
+    "settings.pluginInventory:presetOptionBroken"
+   ]
+  },
+  {
+   "en": "{retained} kept · {omitted} omitted",
+   "zh": "保留 {retained} 条 · 省略 {omitted} 条",
+   "keys": [
+    "chat:message.context.recall.counts"
+   ]
+  },
+  {
+   "en": "{seconds}s",
+   "zh": "{seconds}秒",
+   "keys": [
+    "chat:duration.compactSeconds",
+    "job:duration.seconds"
+   ]
+  },
+  {
+   "en": "{title}, etc.",
+   "zh": "{title}等",
+   "keys": [
+    "chat:message.stepProcess.more"
+   ]
+  },
+  {
+   "en": "{tps} tok/s",
+   "zh": "{tps} tok/s",
+   "keys": [
+    "chat:message.tokensPerSecond"
+   ]
+  },
+  {
+   "en": "{turns} turns {steps} steps",
+   "zh": "{turns} 轮 {steps} 步",
+   "keys": [
+    "chat:stats.counts"
+   ]
+  },
+  {
+   "en": "{y}-{m}-{d}",
+   "zh": "{y}年{m}月{d}日",
+   "keys": [
+    "chat:clock.ymd",
+    "workspace:date.ymd"
+   ]
+  },
+  {
+   "en": "Access mode, current: {name}",
+   "zh": "访问模式，当前：{name}",
+   "keys": [
+    "permission.access:mode"
+   ]
+  },
+  {
+   "en": "Account",
+   "zh": "账号与余额",
+   "keys": [
+    "settings.account:nav"
+   ]
+  },
+  {
+   "en": "Account details are not available yet.",
+   "zh": "账号资料暂不可用",
+   "keys": [
+    "settings.account:profileUnavailable"
+   ]
+  },
+  {
+   "en": "Account menu",
+   "zh": "账号菜单",
+   "keys": [
+    "settings.account:menu"
+   ]
+  },
+  {
+   "en": "Add API Key",
+   "zh": "添加 API Key",
+   "keys": [
+    "settings.account:addApiKey"
+   ]
+  },
+  {
+   "en": "Add credits",
+   "zh": "准备可用额度",
+   "keys": [
+    "settings.account:onboardingCredit",
+    "settings.account:onboardingTopUp"
+   ]
+  },
+  {
+   "en": "added",
+   "zh": "已新增",
+   "keys": [
+    "chat:message.context.instructions.added"
+   ]
+  },
+  {
+   "en": "Added: {names}",
+   "zh": "新增：{names}",
+   "keys": [
+    "chat:message.toolsAdded",
+    "trajectory:layout.toolsAdded"
+   ]
+  },
+  {
+   "en": "Agent presets",
+   "zh": "Agent 预设",
+   "keys": [
+    "settings.agentPreset:nav"
+   ]
+  },
+  {
+   "en": "Analysis completed",
+   "zh": "已完成分析",
+   "keys": [
+    "chat:message.stepProcess.done.thinking"
+   ]
+  },
+  {
+   "en": "Analyze raw logs and grouped chat messages for the current session in the sidebar.",
+   "zh": "在侧边栏分析当前会话原始日志和聊天分组数据",
+   "keys": [
+    "session-inspector:tab.description"
+   ]
+  },
+  {
+   "en": "Analyzing the request",
+   "zh": "正在分析请求",
+   "keys": [
+    "chat:message.stepProcess.thinking"
+   ]
+  },
+  {
+   "en": "API key is invalid",
+   "zh": "API 密钥无效",
+   "keys": [
+    "chat:message.failure.auth",
+    "trajectory:details.failure.auth"
+   ]
+  },
+  {
+   "en": "Apply filter",
+   "zh": "确认筛选",
+   "keys": [
+    "session-inspector:filter.apply"
+   ]
+  },
+  {
+   "en": "Asked questions",
+   "zh": "向用户提出了问题",
+   "keys": [
+    "chat:message.stepProcess.done.questions"
+   ]
+  },
+  {
+   "en": "Auto review",
+   "zh": "自动审查",
+   "keys": [
+    "permission.access:auto.label"
+   ]
+  },
+  {
+   "en": "Auto review runs without a sandbox. Before every native tool call and PTC inner call, the same model as the current agent reviews whether to allow it; you approve or reject each call it denies. This feature is experimental, can falsely allow or deny actions, and uses additional tokens.",
+   "zh": "自动审查不使用沙箱。每次原生工具调用和 PTC 内层调用前，都会由与当前 agent 相同的模型进行审查；审查拒绝的调用由你批准或拒绝。此功能仍属实验性，可能误放行或误拒绝，并会消耗额外 token。",
+   "keys": [
+    "permission.access:auto.confirm.description"
+   ]
+  },
+  {
+   "en": "Automation task",
+   "zh": "自动化任务",
+   "keys": [
+    "chat:message.trigger.schedule"
+   ]
+  },
+  {
+   "en": "Available only on the last message of a completed turn",
+   "zh": "仅可从已完成轮次的最后一条消息分支",
+   "keys": [
+    "chat:message.branchUnavailable"
+   ]
+  },
+  {
+   "en": "Avg time to first token (TTFT)",
+   "zh": "首 token 平均（TTFT）",
+   "keys": [
+    "chat:stats.dialog.ttft"
+   ]
+  },
+  {
+   "en": "Back to bottom",
+   "zh": "回到底部",
+   "keys": [
+    "chat:chat.toBottom"
+   ]
+  },
+  {
+   "en": "Back to DeepSeek Harness",
+   "zh": "返回 DeepSeek Harness",
+   "keys": [
+    "settings.account:backToHarness"
+   ]
+  },
+  {
+   "en": "Background task updated",
+   "zh": "后台任务状态更新",
+   "keys": [
+    "chat:message.trigger.job"
+   ]
+  },
+  {
+   "en": "Blocked Goal",
+   "zh": "受阻的目标",
+   "keys": [
+    "goal:phase.blocked"
+   ]
+  },
+  {
+   "en": "Bonus credited",
+   "zh": "赠金已到账",
+   "keys": [
+    "settings.account:bonusNoticeTitle"
+   ]
+  },
+  {
+   "en": "Branch into a new conversation",
+   "zh": "在新对话中分支",
+   "keys": [
+    "chat:message.branch"
+   ]
+  },
+  {
+   "en": "Built-in",
+   "zh": "内置",
+   "keys": [
+    "settings.agentPreset:builtInGroup"
+   ]
+  },
+  {
+   "en": "Cache hit",
+   "zh": "缓存命中",
+   "keys": [
+    "chat:message.turnUsage.cacheHit"
+   ]
+  },
+  {
+   "en": "Cache hit {percent}%",
+   "zh": "缓存命中 {percent}%",
+   "keys": [
+    "chat:stats.cacheHit"
+   ]
+  },
+  {
+   "en": "Cache write",
+   "zh": "缓存写入",
+   "keys": [
+    "chat:message.turnUsage.cacheWrite"
+   ]
+  },
+  {
+   "en": "Cached input",
+   "zh": "缓存读取",
+   "keys": [
+    "chat:message.turnUsage.cacheRead"
+   ]
+  },
+  {
+   "en": "Called tools",
+   "zh": "已调用工具",
+   "keys": [
+    "chat:message.stepProcess.done.tools"
+   ]
+  },
+  {
+   "en": "Calling tools",
+   "zh": "正在调用工具",
+   "keys": [
+    "chat:message.stepProcess.tools"
+   ]
+  },
+  {
+   "en": "Cancel edit",
+   "zh": "取消编辑",
+   "keys": [
+    "goal:action.cancel"
+   ]
+  },
+  {
+   "en": "Cancel picking (Esc)",
+   "zh": "取消选取 (Esc)",
+   "keys": [
+    "session-inspector:picker.cancel"
+   ]
+  },
+  {
+   "en": "Chat",
+   "zh": "对话",
+   "keys": [
+    "chat:view.chat",
+    "subagent:sidebar.chat"
+   ]
+  },
+  {
+   "en": "Chat Group",
+   "zh": "对话分组",
+   "keys": [
+    "session-inspector:view.chatNode"
+   ]
+  },
+  {
+   "en": "Checking whether Creator mode is available",
+   "zh": "正在确认创造模式是否可用",
+   "keys": [
+    "settings.agentPreset:createPluginChecking"
+   ]
+  },
+  {
+   "en": "Choose Creator mode for a new task. Describe the capability you want, where it should appear, and how you will verify it.",
+   "zh": "新建任务时选择「创造模式」，说明希望增加什么能力、从哪里使用，以及怎样验证效果。",
+   "keys": [
+    "settings.agentPreset:guideCordisIntro"
+   ]
+  },
+  {
+   "en": "Choose how much detail to show for tool calls",
+   "zh": "选择希望看到多少工具调用细节",
+   "keys": [
+    "chat:settings.transcript.description"
+   ]
+  },
+  {
+   "en": "Choose how much performance and usage information to show",
+   "zh": "选择性能与用量信息展示的详细程度",
+   "keys": [
+    "chat:settings.performance.description"
+   ]
+  },
+  {
+   "en": "Choose Minimal mode for a new task. For a comparison, hold the model, permissions, input, and starting workspace state constant across runs.",
+   "zh": "新建任务时选择「极简模式」。做对照测试时，保持模型、权限、任务输入和工作区起始状态一致。",
+   "keys": [
+    "settings.agentPreset:guideMinimalIntro"
+   ]
+  },
+  {
+   "en": "Choose PTC mode when starting a new task. Specify the input files, processing rules, and output format. The agent writes the code.",
+   "zh": "新建任务时选择「PTC 模式」，说明输入文件、处理规则和输出格式。代码由 Agent 编写。",
+   "keys": [
+    "settings.agentPreset:guidePtcIntro"
+   ]
+  },
+  {
+   "en": "Choose shell",
+   "zh": "选择 Shell",
+   "keys": [
+    "sidebarTerminal:shell"
+   ]
+  },
+  {
+   "en": "Choose Standard mode when starting a new task. Describe what you want to accomplish, point to the relevant files, and explain how to check the result.",
+   "zh": "新建任务时选择「标准模式」，说明要完成什么、相关文件在哪里，以及怎样判断任务完成。",
+   "keys": [
+    "settings.agentPreset:guideStandardIntro"
+   ]
+  },
+  {
+   "en": "Choose the agent preset for your new task",
+   "zh": "选择新任务使用的 Agent 预设",
+   "keys": [
+    "settings.agentPreset:seatHint"
+   ]
+  },
+  {
+   "en": "Choose the agent preset to inspect",
+   "zh": "选择要查看的 Agent 预设",
+   "keys": [
+    "settings.pluginInventory:switcherLabel"
+   ]
+  },
+  {
+   "en": "Choose the agent’s tools and how it works. Use Standard mode for everyday tasks, or Creator mode to add capabilities to DSH.",
+   "zh": "选择 Agent 的工具和工作方式。日常任务用「标准模式」，扩展 DSH 的能力用「创造模式」。",
+   "keys": [
+    "settings.agentPreset:sectionIntro"
+   ]
+  },
+  {
+   "en": "Choose the default permission mode for new sessions",
+   "zh": "选择新会话的默认权限模式",
+   "keys": [
+    "settings.permission:description"
+   ]
+  },
+  {
+   "en": "Choose when to automatically collapse work details",
+   "zh": "选择何时自动收起工作步骤",
+   "keys": [
+    "chat:settings.collapse.description"
+   ]
+  },
+  {
+   "en": "Choose where to open web links",
+   "zh": "对话中网页链接的打开位置",
+   "keys": [
+    "chat:settings.links.description"
+   ]
+  },
+  {
+   "en": "Choose zoom",
+   "zh": "选择缩放比例",
+   "keys": [
+    "sidebarImage:zoomMenu",
+    "sidebarPdf:zoomMenu"
+   ]
+  },
+  {
+   "en": "Clear goal",
+   "zh": "清除目标",
+   "keys": [
+    "goal:action.clear"
+   ]
+  },
+  {
+   "en": "Close image preview",
+   "zh": "关闭图片预览",
+   "keys": [
+    "chat:image.close"
+   ]
+  },
+  {
+   "en": "Coding & development",
+   "zh": "代码与开发",
+   "keys": [
+    "settings.account:onboardingDevelopment"
+   ]
+  },
+  {
+   "en": "Collapse children",
+   "zh": "收起子行",
+   "keys": [
+    "session-inspector:table.collapse"
+   ]
+  },
+  {
+   "en": "Command",
+   "zh": "指令",
+   "keys": [
+    "chat:command.title"
+   ]
+  },
+  {
+   "en": "Command failed",
+   "zh": "指令失败",
+   "keys": [
+    "chat:command.failed"
+   ]
+  },
+  {
+   "en": "Command input",
+   "zh": "指令输入",
+   "keys": [
+    "goal:commandInput.aria"
+   ]
+  },
+  {
+   "en": "compact",
+   "zh": "compact",
+   "keys": [
+    "chat:message.compaction.commandTitle",
+    "command:token.compact"
+   ]
+  },
+  {
+   "en": "Compact",
+   "zh": "简洁",
+   "keys": [
+    "chat:settings.performance.compact",
+    "chat:settings.transcript.compact"
+   ]
+  },
+  {
+   "en": "Compacted {items} history items (~{tokens} tokens)",
+   "zh": "已压缩 {items} 条历史记录（约 {tokens} tokens）",
+   "keys": [
+    "chat:message.compaction.completed"
+   ]
+  },
+  {
+   "en": "Compacting context…",
+   "zh": "正在压缩…",
+   "keys": [
+    "chat:message.compaction.running",
+    "trajectory:layout.compacting"
+   ]
+  },
+  {
+   "en": "Compaction summary unavailable",
+   "zh": "压缩摘要不可用",
+   "keys": [
+    "chat:message.compaction.unavailable"
+   ]
+  },
+  {
+   "en": "Completed in ",
+   "zh": "已完成，用时 ",
+   "keys": [
+    "chat:message.turnProcess.took"
+   ]
+  },
+  {
+   "en": "Completing sign in…",
+   "zh": "正在完成登录…",
+   "keys": [
+    "settings.account:completing"
+   ]
+  },
+  {
+   "en": "Composed per session by agent presets",
+   "zh": "由 Agent 预设按会话组成",
+   "keys": [
+    "settings.pluginInventory:presetSubtitle"
+   ]
+  },
+  {
+   "en": "Conditional",
+   "zh": "条件启用",
+   "keys": [
+    "settings.pluginInventory:conditionalTag"
+   ]
+  },
+  {
+   "en": "Configuration",
+   "zh": "配置状态",
+   "keys": [
+    "settings.pluginInventory:configuration"
+   ]
+  },
+  {
+   "en": "Connecting…",
+   "zh": "正在连接…",
+   "keys": [
+    "sidebarTerminal:connecting"
+   ]
+  },
+  {
+   "en": "Contains matching (*keyword*). Enter confirms; Esc cancels.",
+   "zh": "默认包含匹配（*关键词*）；Enter 确认，Esc 取消。",
+   "keys": [
+    "session-inspector:filter.help"
+   ]
+  },
+  {
+   "en": "Context compacted",
+   "zh": "上下文已压缩",
+   "keys": [
+    "chat:message.compaction",
+    "trajectory:layout.compacted"
+   ]
+  },
+  {
+   "en": "Context injection",
+   "zh": "上下文注入",
+   "keys": [
+    "chat:message.contextInjection"
+   ]
+  },
+  {
+   "en": "Continue",
+   "zh": "继续",
+   "keys": [
+    "settings.account:onboardingContinue",
+    "settings.models:welcomeContinue"
+   ]
+  },
+  {
+   "en": "Continue in your browser",
+   "zh": "请在浏览器中继续",
+   "keys": [
+    "settings.account:waiting"
+   ]
+  },
+  {
+   "en": "Continue setup",
+   "zh": "继续设置",
+   "keys": [
+    "settings.account:onboardingKeepSetting"
+   ]
+  },
+  {
+   "en": "Continuing goal",
+   "zh": "继续执行目标",
+   "keys": [
+    "chat:message.trigger.goal"
+   ]
+  },
+  {
+   "en": "Coordinated subagents",
+   "zh": "已协调子智能体",
+   "keys": [
+    "chat:message.stepProcess.done.subagents"
+   ]
+  },
+  {
+   "en": "Coordinating subagents",
+   "zh": "正在协调子智能体",
+   "keys": [
+    "chat:message.stepProcess.subagents"
+   ]
+  },
+  {
+   "en": "Copy sign-in link",
+   "zh": "复制登录链接",
+   "keys": [
+    "settings.account:copyLink"
+   ]
+  },
+  {
+   "en": "Could not check running tasks. Signing out may interrupt tasks using this account. Sign out now?",
+   "zh": "暂时无法确认任务状态。退出登录可能会中断使用此账号的任务，是否继续？",
+   "keys": [
+    "settings.account:signOutUnknownDescription"
+   ]
+  },
+  {
+   "en": "Could not complete the operation. Try again.",
+   "zh": "操作未完成，请重试",
+   "keys": [
+    "settings.account:platformFailed",
+    "settings.account:failed"
+   ]
+  },
+  {
+   "en": "Could not save settings. Try again.",
+   "zh": "未能保存设置，请重试。",
+   "keys": [
+    "settings.account:onboardingSaveFailed"
+   ]
+  },
+  {
+   "en": "Could not sign in",
+   "zh": "登录失败",
+   "keys": [
+    "settings.account:failureTitle"
+   ]
+  },
+  {
+   "en": "Could not switch to {name}: {reason}",
+   "zh": "无法切换到「{name}」：{reason}",
+   "keys": [
+    "settings.agentPreset:switchRefused"
+   ]
+  },
+  {
+   "en": "Couldn’t open file",
+   "zh": "无法打开文件",
+   "keys": [
+    "chat:fileOpen.title",
+    "reference:fileOpen.title"
+   ]
+  },
+  {
+   "en": "Couldn’t open this file",
+   "zh": "无法打开此文件",
+   "keys": [
+    "chat:fileOpen.unknown"
+   ]
+  },
+  {
+   "en": "Creator mode",
+   "zh": "创造模式",
+   "keys": [
+    "settings.agentPreset:presetCordisName"
+   ]
+  },
+  {
+   "en": "Creator mode is not included in this configuration",
+   "zh": "当前配置未提供创造模式",
+   "keys": [
+    "settings.agentPreset:createPluginMissing"
+   ]
+  },
+  {
+   "en": "Customize DSH through conversation. Let the agent write plugins that add features or UI, or combine tools and prompts to create your own mode.",
+   "zh": "用对话定制 DSH：让 Agent 编写插件，添加新功能或界面；也能组合工具和提示词，创建自己的模式。",
+   "keys": [
+    "settings.agentPreset:presetCordisDescription"
+   ]
+  },
+  {
+   "en": "Deep diving",
+   "zh": "深度求索中",
+   "keys": [
+    "chat:chat.deepDiving"
+   ]
+  },
+  {
+   "en": "Deep diving for {duration} ···",
+   "zh": "深度求索中，用时 {duration} ···",
+   "keys": [
+    "chat:chat.deepDivingFor"
+   ]
+  },
+  {
+   "en": "DeepSeek Harness",
+   "zh": "DeepSeek Harness",
+   "keys": [
+    "settings.account:onboardingBrand"
+   ]
+  },
+  {
+   "en": "DeepSeek Harness can’t start new tasks without credits. You can add them later in Settings → Account.",
+   "zh": "没有可用额度时，DeepSeek Harness 将无法开始新的任务。你可以稍后前往 设置 → 账号与余额 进行充值。",
+   "keys": [
+    "settings.account:onboardingNoCreditDescription"
+   ]
+  },
+  {
+   "en": "DeepSeek Harness cannot start a new task with this account when no balance is available. Would you like to top up? You can also top up later in Settings → Account.",
+   "zh": "没有可用额度时，DeepSeek Harness 无法开始新的任务，是否前往充值？或者可以稍后前往 设置 → 账号与余额 进行充值。",
+   "keys": [
+    "settings.account:quotaDescription"
+   ]
+  },
+  {
+   "en": "DeepSeek Harness charges credits based on the tokens used by models and tools. Add credits in advance to keep your tasks running without interruption. Your balance is only used while the agent is working on a task.",
+   "zh": "DeepSeek Harness 执行任务时，会根据模型与工具使用的 token 量扣除额度。请提前添加额度，避免任务在执行过程中被迫中断。你的余额只会在 Agent 实际执行任务时消耗。",
+   "keys": [
+    "settings.account:onboardingCreditDescription"
+   ]
+  },
+  {
+   "en": "DeepSeek Harness works in a local folder and uses tools to read and write files on your computer. It can help you research and organize information, create documents and spreadsheets, write code, troubleshoot issues, and more.",
+   "zh": "DeepSeek Harness 会以本地文件夹作为工作区，通过调用各种工具，读写本机文件，完成搜索整理资料、制作文档表格、编写代码、排查问题等各种任务。",
+   "keys": [
+    "settings.account:onboardingIntroduction"
+   ]
+  },
+  {
+   "en": "Default Browser",
+   "zh": "默认浏览器",
+   "keys": [
+    "chat:settings.links.newTab"
+   ]
+  },
+  {
+   "en": "Detailed",
+   "zh": "详细",
+   "keys": [
+    "chat:settings.performance.detailed",
+    "chat:settings.transcript.detailed"
+   ]
+  },
+  {
+   "en": "Disabled",
+   "zh": "已停用",
+   "keys": [
+    "settings.pluginInventory:disabledTag"
+   ]
+  },
+  {
+   "en": "Disabled globally; agent presets provide it per session",
+   "zh": "全局已停用，由 Agent 预设按会话提供",
+   "keys": [
+    "settings.pluginInventory:presetProvidedDetail"
+   ]
+  },
+  {
+   "en": "Disabled when",
+   "zh": "禁用条件",
+   "keys": [
+    "settings.pluginInventory:condition"
+   ]
+  },
+  {
+   "en": "Disconnected.",
+   "zh": "连接已断开。",
+   "keys": [
+    "sidebarTerminal:disconnected"
+   ]
+  },
+  {
+   "en": "Edit code, debug issues, run commands, manage project files, and more",
+   "zh": "修改代码、调试问题、运行命令和管理项目文件等",
+   "keys": [
+    "settings.account:onboardingDevelopmentDescription"
+   ]
+  },
+  {
+   "en": "Edit documents, organize data, create presentations, and more",
+   "zh": "编辑文档、整理数据和制作演示文稿等",
+   "keys": [
+    "settings.account:onboardingOfficeDescription"
+   ]
+  },
+  {
+   "en": "Edit goal",
+   "zh": "编辑目标",
+   "keys": [
+    "goal:action.edit"
+   ]
+  },
+  {
+   "en": "Edited files",
+   "zh": "修改了文件",
+   "keys": [
+    "chat:message.stepProcess.done.edit"
+   ]
+  },
+  {
+   "en": "Editing files",
+   "zh": "正在编辑文件",
+   "keys": [
+    "chat:message.stepProcess.edit"
+   ]
+  },
+  {
+   "en": "Empty",
+   "zh": "空",
+   "keys": [
+    "session-inspector:object.empty"
+   ]
+  },
+  {
+   "en": "Enable Auto review",
+   "zh": "启用自动审查",
+   "keys": [
+    "permission.access:auto.confirm.enable"
+   ]
+  },
+  {
+   "en": "Enable Auto review (experimental)?",
+   "zh": "确认启用自动审查（实验）？",
+   "keys": [
+    "permission.access:auto.confirm.title"
+   ]
+  },
+  {
+   "en": "Enable Full access",
+   "zh": "启用完全权限",
+   "keys": [
+    "permission.access:confirm.enable",
+    "settings.permission:confirm.enable"
+   ]
+  },
+  {
+   "en": "Enable Full access?",
+   "zh": "确认启用完全权限？",
+   "keys": [
+    "permission.access:confirm.title",
+    "settings.permission:confirm.title"
+   ]
+  },
+  {
+   "en": "Enabled in",
+   "zh": "启用于",
+   "keys": [
+    "settings.pluginInventory:enabledIn"
+   ]
+  },
+  {
+   "en": "Enter Creator mode and make your own DSH plugin",
+   "zh": "进入创造模式，制作属于你的 DSH 插件",
+   "keys": [
+    "settings.agentPreset:createPluginDescription"
+   ]
+  },
+  {
+   "en": "Example task",
+   "zh": "示例任务",
+   "keys": [
+    "settings.agentPreset:guideExampleTask"
+   ]
+  },
+  {
+   "en": "Execution requested",
+   "zh": "收到执行请求",
+   "keys": [
+    "chat:message.trigger.request"
+   ]
+  },
+  {
+   "en": "EXP",
+   "zh": "EXP",
+   "keys": [
+    "permission.access:auto.badge"
+   ]
+  },
+  {
+   "en": "Expand children",
+   "zh": "展开子行",
+   "keys": [
+    "session-inspector:table.expand"
+   ]
+  },
+  {
+   "en": "External event received",
+   "zh": "收到外部事件",
+   "keys": [
+    "chat:message.trigger.webhook"
+   ]
+  },
+  {
+   "en": "Extra content block",
+   "zh": "附加内容块",
+   "keys": [
+    "chat:message.extraBlock"
+   ]
+  },
+  {
+   "en": "Failed to load history: {message} ({code})",
+   "zh": "历史加载失败：{message}（{code}）",
+   "keys": [
+    "chat:chat.loadError"
+   ]
+  },
+  {
+   "en": "Failed to start",
+   "zh": "启动失败",
+   "keys": [
+    "settings.pluginInventory:failed"
+   ]
+  },
+  {
+   "en": "Failure reason: ",
+   "zh": "失败原因：",
+   "keys": [
+    "chat:message.retry.failure"
+   ]
+  },
+  {
+   "en": "Filter types",
+   "zh": "筛选类型",
+   "keys": [
+    "session-inspector:filter.title"
+   ]
+  },
+  {
+   "en": "Finding suggestions…",
+   "zh": "正在查找候选…",
+   "keys": [
+    "session-inspector:filter.loading"
+   ]
+  },
+  {
+   "en": "Fit width",
+   "zh": "适应宽度",
+   "keys": [
+    "sidebarImage:zoomFitWidth",
+    "sidebarPdf:zoomFitWidth"
+   ]
+  },
+  {
+   "en": "Focus on results, with only the most important steps and actions shown",
+   "zh": "结果优先，仅展示重要步骤和关键操作",
+   "keys": [
+    "settings.account:onboardingStandardDescription"
+   ]
+  },
+  {
+   "en": "Follow Latest",
+   "zh": "跟踪最新",
+   "keys": [
+    "session-inspector:table.latest"
+   ]
+  },
+  {
+   "en": "From",
+   "zh": "来自",
+   "keys": [
+    "settings.pluginInventory:fromPreset"
+   ]
+  },
+  {
+   "en": "From session {session}",
+   "zh": "来自会话 {session}",
+   "keys": [
+    "chat:message.context.relay.from"
+   ]
+  },
+  {
+   "en": "Full access",
+   "zh": "完全权限",
+   "keys": [
+    "permission.access:preset.fullAccess",
+    "settings.permission:preset.fullAccess"
+   ]
+  },
+  {
+   "en": "Full access lets new sessions reduce confirmation steps and perform more actions directly, including sensitive operations, file changes, or external commands. Only use it when you trust subsequent tasks.",
+   "zh": "启用完全权限后，新会话将减少确认步骤，并且可以直接执行更多操作，包括敏感操作、文件修改或外部命令。仅建议在你信任后续任务时使用。",
+   "keys": [
+    "settings.permission:confirm.description"
+   ]
+  },
+  {
+   "en": "Full access reduces confirmation steps and lets the agent perform more actions directly, including sensitive operations, file changes, or external commands. Only use it when you trust the current task.",
+   "zh": "启用完全权限后，智能体将减少确认步骤，并且可以直接执行更多操作，包括敏感操作、文件修改或外部命令。仅建议在你信任当前任务时使用。",
+   "keys": [
+    "permission.access:confirm.description"
+   ]
+  },
+  {
+   "en": "Full details",
+   "zh": "完整过程",
+   "keys": [
+    "settings.account:onboardingDetailed"
+   ]
+  },
+  {
+   "en": "Get started",
+   "zh": "开始设置",
+   "keys": [
+    "settings.account:onboardingStart",
+    "settings.account:loginTitle"
+   ]
+  },
+  {
+   "en": "GitHub event received",
+   "zh": "收到 GitHub 事件",
+   "keys": [
+    "chat:message.trigger.github"
+   ]
+  },
+  {
+   "en": "Global plugins",
+   "zh": "全局插件",
+   "keys": [
+    "settings.pluginInventory:globalTitle"
+   ]
+  },
+  {
+   "en": "Goal objective",
+   "zh": "目标内容",
+   "keys": [
+    "goal:objective.aria"
+   ]
+  },
+  {
+   "en": "Got it",
+   "zh": "我知道了",
+   "keys": [
+    "settings.account:onboardingUnderstood"
+   ]
+  },
+  {
+   "en": "Granted balance",
+   "zh": "赠金余额",
+   "keys": [
+    "settings.account:bonusBalance"
+   ]
+  },
+  {
+   "en": "Group",
+   "zh": "Group",
+   "keys": [
+    "session-inspector:object.group"
+   ]
+  },
+  {
+   "en": "Group Data",
+   "zh": "Group Data",
+   "keys": [
+    "session-inspector:object.groupData"
+   ]
+  },
+  {
+   "en": "Guide sections",
+   "zh": "帮助内容",
+   "keys": [
+    "settings.agentPreset:guideSections"
+   ]
+  },
+  {
+   "en": "h ",
+   "zh": "小时",
+   "keys": [
+    "chat:duration.hourUnit"
+   ]
+  },
+  {
+   "en": "Hide secret",
+   "zh": "隐藏密钥",
+   "keys": [
+    "secretMask:secret.hide",
+    "settings.models:keyHide"
+   ]
+  },
+  {
+   "en": "Hover in the main Chat to preview, then click to select. Esc cancels.",
+   "zh": "在左侧 Chat 中悬停预览，点击选取；Esc 取消。",
+   "keys": [
+    "session-inspector:picker.instructions"
+   ]
+  },
+  {
+   "en": "How much detail would you like to see?",
+   "zh": "你希望看到多少工作过程？",
+   "keys": [
+    "settings.account:onboardingProcess"
+   ]
+  },
+  {
+   "en": "How to use",
+   "zh": "如何使用",
+   "keys": [
+    "settings.agentPreset:howToUse"
+   ]
+  },
+  {
+   "en": "I understand the risks and want to continue",
+   "zh": "我已了解风险，并愿意继续",
+   "keys": [
+    "permission.access:confirm.acknowledge",
+    "settings.permission:confirm.acknowledge"
+   ]
+  },
+  {
+   "en": "I understand these risks and want to continue",
+   "zh": "我已了解这些风险，并愿意继续",
+   "keys": [
+    "permission.access:auto.confirm.acknowledge"
+   ]
+  },
+  {
+   "en": "Image preview",
+   "zh": "图片预览",
+   "keys": [
+    "chat:image.dialog"
+   ]
+  },
+  {
+   "en": "Image preview requires the complete file contents.",
+   "zh": "图片预览需要完整文件内容",
+   "keys": [
+    "sidebarImage:unsupported"
+   ]
+  },
+  {
+   "en": "Image preview unavailable",
+   "zh": "图片无法预览",
+   "keys": [
+    "chat:image.failed"
+   ]
+  },
+  {
+   "en": "Image preview: {name}",
+   "zh": "图片预览：{name}",
+   "keys": [
+    "sidebarImage:preview"
+   ]
+  },
+  {
+   "en": "In-App Sidebar",
+   "zh": "应用内侧边栏",
+   "keys": [
+    "chat:settings.links.sidebar"
+   ]
+  },
+  {
+   "en": "Inactive Goal",
+   "zh": "已暂停的目标",
+   "keys": [
+    "goal:phase.active.disarmed"
+   ]
+  },
+  {
+   "en": "Includes all Standard mode capabilities. Better suited to tasks that call tools in batches and then filter, organize, deduplicate, count, or summarize the results.",
+   "zh": "包含标准模式的所有能力，更适合批量调用工具，并对结果进行筛选、整理、去重、统计或汇总的任务。",
+   "keys": [
+    "settings.agentPreset:presetPtcDescription"
+   ]
+  },
+  {
+   "en": "Index",
+   "zh": "序号",
+   "keys": [
+    "session-inspector:table.id"
+   ]
+  },
+  {
+   "en": "Instructions",
+   "zh": "说明",
+   "keys": [
+    "skill:row.instructions"
+   ]
+  },
+  {
+   "en": "Jump to turn {turn}",
+   "zh": "跳转到第 {turn} 轮",
+   "keys": [
+    "chat:chat.turnNavigation.jump"
+   ]
+  },
+  {
+   "en": "Key details",
+   "zh": "关键细节",
+   "keys": [
+    "settings.account:onboardingStandard"
+   ]
+  },
+  {
+   "en": "Let the agent create a plugin",
+   "zh": "让 Agent 创建插件",
+   "keys": [
+    "settings.agentPreset:createPlugin"
+   ]
+  },
+  {
+   "en": "Let the agent help me create a preset",
+   "zh": "让 Agent 帮我创建预设模式",
+   "keys": [
+    "settings.agentPreset:creatorDraft"
+   ]
+  },
+  {
+   "en": "Link copied",
+   "zh": "链接已复制",
+   "keys": [
+    "settings.account:copiedLink"
+   ]
+  },
+  {
+   "en": "LLM time",
+   "zh": "模型用时",
+   "keys": [
+    "chat:stats.dialog.llmTime"
+   ]
+  },
+  {
+   "en": "Load and jump to turn {turn}",
+   "zh": "加载并跳转到第 {turn} 轮",
+   "keys": [
+    "chat:chat.turnNavigation.jumpLoad"
+   ]
+  },
+  {
+   "en": "Load earlier",
+   "zh": "加载更早",
+   "keys": [
+    "chat:chat.loadOlder",
+    "session-inspector:table.older"
+   ]
+  },
+  {
+   "en": "loaded",
+   "zh": "已载入",
+   "keys": [
+    "chat:message.context.instructions.loaded"
+   ]
+  },
+  {
+   "en": "Loading history…",
+   "zh": "载入历史…",
+   "keys": [
+    "chat:chat.loadingHistory"
+   ]
+  },
+  {
+   "en": "Loading image…",
+   "zh": "加载图片…",
+   "keys": [
+    "chat:image.loading",
+    "conversation:image.loading"
+   ]
+  },
+  {
+   "en": "Loading settings…",
+   "zh": "正在加载设置…",
+   "keys": [
+    "settings.account:onboardingLoading"
+   ]
+  },
+  {
+   "en": "Loading shells…",
+   "zh": "正在读取 Shell…",
+   "keys": [
+    "sidebarTerminal:shellLoading"
+   ]
+  },
+  {
+   "en": "Loading skill",
+   "zh": "正在加载 skill",
+   "keys": [
+    "skill:row.running"
+   ]
+  },
+  {
+   "en": "m ",
+   "zh": "分",
+   "keys": [
+    "chat:duration.minuteUnit"
+   ]
+  },
+  {
+   "en": "Minimal mode",
+   "zh": "极简模式",
+   "keys": [
+    "settings.agentPreset:presetMinimalName"
+   ]
+  },
+  {
+   "en": "Mode details",
+   "zh": "模式说明",
+   "keys": [
+    "settings.agentPreset:modeExplanation"
+   ]
+  },
+  {
+   "en": "Model request retry cancelled",
+   "zh": "模型请求重试已取消",
+   "keys": [
+    "chat:message.retry.cancelled"
+   ]
+  },
+  {
+   "en": "Model unavailable. Please sign in and try again.",
+   "zh": "当前模型暂不可用，请登录后再试",
+   "keys": [
+    "settings.account:modelSignInRequired"
+   ]
+  },
+  {
+   "en": "Module",
+   "zh": "完整名称",
+   "keys": [
+    "settings.pluginInventory:moduleLabel"
+   ]
+  },
+  {
+   "en": "More account information",
+   "zh": "更多账号信息",
+   "keys": [
+    "settings.account:accountInfo"
+   ]
+  },
+  {
+   "en": "New task default",
+   "zh": "新任务默认",
+   "keys": [
+    "settings.agentPreset:inUse"
+   ]
+  },
+  {
+   "en": "New terminal",
+   "zh": "新建终端",
+   "keys": [
+    "sidebarTerminal:new"
+   ]
+  },
+  {
+   "en": "No balance available",
+   "zh": "当前无可用余额",
+   "keys": [
+    "settings.account:quotaTitle"
+   ]
+  },
+  {
+   "en": "No description.",
+   "zh": "暂无描述。",
+   "keys": [
+    "settings.agentPreset:noDescription"
+   ]
+  },
+  {
+   "en": "No matching plugins.",
+   "zh": "没有匹配的插件。",
+   "keys": [
+    "settings.pluginInventory:emptySearch"
+   ]
+  },
+  {
+   "en": "No matching record in this table. Pick another element or press Esc to cancel.",
+   "zh": "当前表格没有匹配记录，请选择其他元素或按 Esc 取消。",
+   "keys": [
+    "session-inspector:picker.noMatch"
+   ]
+  },
+  {
+   "en": "No plugins are available.",
+   "zh": "暂无插件。",
+   "keys": [
+    "settings.pluginInventory:empty"
+   ]
+  },
+  {
+   "en": "No records",
+   "zh": "暂无记录",
+   "keys": [
+    "session-inspector:table.empty"
+   ]
+  },
+  {
+   "en": "No shells available",
+   "zh": "没有可用的 Shell",
+   "keys": [
+    "sidebarTerminal:shellEmpty"
+   ]
+  },
+  {
+   "en": "No suggestions. You can still apply this keyword.",
+   "zh": "没有匹配候选，仍可确认当前关键词。",
+   "keys": [
+    "session-inspector:filter.noCandidates"
+   ]
+  },
+  {
+   "en": "Node",
+   "zh": "Node",
+   "keys": [
+    "session-inspector:object.node"
+   ]
+  },
+  {
+   "en": "Node Data",
+   "zh": "Node Data",
+   "keys": [
+    "session-inspector:object.nodeData"
+   ]
+  },
+  {
+   "en": "Not signed in",
+   "zh": "尚未登录",
+   "keys": [
+    "settings.account:signedOut"
+   ]
+  },
+  {
+   "en": "Office & creative work",
+   "zh": "办公与创作",
+   "keys": [
+    "settings.account:onboardingOffice"
+   ]
+  },
+  {
+   "en": "On completion",
+   "zh": "回答结束后",
+   "keys": [
+    "chat:settings.collapse.completion"
+   ]
+  },
+  {
+   "en": "On next message",
+   "zh": "下次有新消息时",
+   "keys": [
+    "chat:settings.collapse.nextInput"
+   ]
+  },
+  {
+   "en": "Ongoing Goal",
+   "zh": "进行中的目标",
+   "keys": [
+    "goal:phase.active"
+   ]
+  },
+  {
+   "en": "Open app",
+   "zh": "进入应用",
+   "keys": [
+    "settings.account:onboardingEnter"
+   ]
+  },
+  {
+   "en": "Open browser",
+   "zh": "打开浏览器",
+   "keys": [
+    "settings.account:open"
+   ]
+  },
+  {
+   "en": "Open chat links in",
+   "zh": "网页链接默认打开方式",
+   "keys": [
+    "chat:settings.links.title"
+   ]
+  },
+  {
+   "en": "Open this Session in the main Chat before picking.",
+   "zh": "请先在主区域打开当前 Session 的 Chat。",
+   "keys": [
+    "session-inspector:picker.noChat"
+   ]
+  },
+  {
+   "en": "Other properties",
+   "zh": "其他属性",
+   "keys": [
+    "session-inspector:object.properties"
+   ]
+  },
+  {
+   "en": "Output",
+   "zh": "输出",
+   "keys": [
+    "chat:message.turnUsage.output",
+    "trajectory:column.output"
+   ]
+  },
+  {
+   "en": "Output token limit reached",
+   "zh": "已达到输出 token 上限",
+   "keys": [
+    "chat:message.maxTokens"
+   ]
+  },
+  {
+   "en": "Page did not open automatically? ",
+   "zh": "没有自动打开新页面？",
+   "keys": [
+    "settings.account:browserPrompt"
+   ]
+  },
+  {
+   "en": "Parent context of a matching record",
+   "zh": "匹配记录的父级上下文",
+   "keys": [
+    "session-inspector:filter.context"
+   ]
+  },
+  {
+   "en": "Pause goal",
+   "zh": "暂停目标",
+   "keys": [
+    "goal:action.pause"
+   ]
+  },
+  {
+   "en": "Paused Goal",
+   "zh": "已暂停的目标",
+   "keys": [
+    "goal:phase.paused"
+   ]
+  },
+  {
+   "en": "Performance & usage",
+   "zh": "性能与用量",
+   "keys": [
+    "chat:settings.performance.title"
+   ]
+  },
+  {
+   "en": "Pick an element in Chat View",
+   "zh": "在对话面板中选取元素",
+   "keys": [
+    "session-inspector:picker.pick"
+   ]
+  },
+  {
+   "en": "Plugin list",
+   "zh": "插件列表",
+   "keys": [
+    "settings.pluginInventory:tab"
+   ]
+  },
+  {
+   "en": "Plugin status updated",
+   "zh": "插件状态更新",
+   "keys": [
+    "chat:message.trigger.plugin"
+   ]
+  },
+  {
+   "en": "Plugins are temporarily unavailable.",
+   "zh": "暂时无法读取插件。",
+   "keys": [
+    "settings.pluginInventory:error"
+   ]
+  },
+  {
+   "en": "Preparing questions",
+   "zh": "准备提问",
+   "keys": [
+    "chat:message.stepProcess.prepare.questions"
+   ]
+  },
+  {
+   "en": "Preparing to coordinate subagents",
+   "zh": "准备协调子智能体",
+   "keys": [
+    "chat:message.stepProcess.prepare.subagents"
+   ]
+  },
+  {
+   "en": "Preparing to edit files",
+   "zh": "准备编辑文件",
+   "keys": [
+    "chat:message.stepProcess.prepare.edit"
+   ]
+  },
+  {
+   "en": "Preparing to load a skill",
+   "zh": "准备加载技能",
+   "keys": [
+    "skill:row.preparing"
+   ]
+  },
+  {
+   "en": "Preparing to read files",
+   "zh": "准备读取文件",
+   "keys": [
+    "chat:message.stepProcess.prepare.read"
+   ]
+  },
+  {
+   "en": "Preparing to read images",
+   "zh": "准备读取图片",
+   "keys": [
+    "chat:message.stepProcess.prepare.readImage"
+   ]
+  },
+  {
+   "en": "Preparing to run code",
+   "zh": "准备运行代码",
+   "keys": [
+    "chat:message.stepProcess.prepare.code"
+   ]
+  },
+  {
+   "en": "Preparing to run commands",
+   "zh": "准备运行命令",
+   "keys": [
+    "chat:message.stepProcess.prepare.commands"
+   ]
+  },
+  {
+   "en": "Preparing to search code",
+   "zh": "准备搜索代码",
+   "keys": [
+    "chat:message.stepProcess.prepare.search"
+   ]
+  },
+  {
+   "en": "Preparing to search the web",
+   "zh": "准备搜索网页",
+   "keys": [
+    "chat:message.stepProcess.prepare.webSearch"
+   ]
+  },
+  {
+   "en": "Preparing to update the plan",
+   "zh": "准备更新计划",
+   "keys": [
+    "chat:message.stepProcess.prepare.plan"
+   ]
+  },
+  {
+   "en": "Preparing to visit web pages",
+   "zh": "准备访问网页",
+   "keys": [
+    "chat:message.stepProcess.prepare.webFetch"
+   ]
+  },
+  {
+   "en": "Preparing to write files",
+   "zh": "准备写入文件",
+   "keys": [
+    "chat:message.stepProcess.prepare.write"
+   ]
+  },
+  {
+   "en": "Preparing tool calls",
+   "zh": "准备调用工具",
+   "keys": [
+    "chat:message.stepProcess.prepare.tools"
+   ]
+  },
+  {
+   "en": "Presentation",
+   "zh": "展示形式",
+   "keys": [
+    "session-inspector:view.presentation"
+   ]
+  },
+  {
+   "en": "Process exited ({code})",
+   "zh": "进程已退出（{code}）",
+   "keys": [
+    "sidebarTerminal:exited"
+   ]
+  },
+  {
+   "en": "Provider / model",
+   "zh": "提供方 / 模型",
+   "keys": [
+    "chat:message.turnUsage.model"
+   ]
+  },
+  {
+   "en": "PTC mode",
+   "zh": "PTC 模式",
+   "keys": [
+    "settings.agentPreset:presetPtcName"
+   ]
+  },
+  {
+   "en": "Ran code",
+   "zh": "运行了代码",
+   "keys": [
+    "chat:message.stepProcess.done.code"
+   ]
+  },
+  {
+   "en": "Ran commands",
+   "zh": "执行了命令",
+   "keys": [
+    "chat:message.stepProcess.done.commands"
+   ]
+  },
+  {
+   "en": "Raw data",
+   "zh": "原始数据",
+   "keys": [
+    "session-inspector:table.raw"
+   ]
+  },
+  {
+   "en": "Raw data navigation",
+   "zh": "原始数据导航",
+   "keys": [
+    "session-inspector:object.navigation"
+   ]
+  },
+  {
+   "en": "Raw Log",
+   "zh": "原始数据",
+   "keys": [
+    "session-inspector:view.sessionLog"
+   ]
+  },
+  {
+   "en": "Read files",
+   "zh": "已读取文件",
+   "keys": [
+    "chat:message.stepProcess.done.read"
+   ]
+  },
+  {
+   "en": "Read images",
+   "zh": "已读取图片",
+   "keys": [
+    "chat:message.stepProcess.done.readImage"
+   ]
+  },
+  {
+   "en": "Read Only",
+   "zh": "仅可查看",
+   "keys": [
+    "permission.access:preset.readOnly",
+    "settings.permission:preset.readOnly"
+   ]
+  },
+  {
+   "en": "Reading files",
+   "zh": "正在读取文件",
+   "keys": [
+    "chat:message.stepProcess.read"
+   ]
+  },
+  {
+   "en": "Reading images",
+   "zh": "正在读取图片",
+   "keys": [
+    "chat:message.stepProcess.readImage"
+   ]
+  },
+  {
+   "en": "Reading terminal environment…",
+   "zh": "正在读取终端环境…",
+   "keys": [
+    "sidebarTerminal:loading"
+   ]
+  },
+  {
+   "en": "Reconnect",
+   "zh": "重新连接",
+   "keys": [
+    "sidebarTerminal:reconnect"
+   ]
+  },
+  {
+   "en": "Referenced session · {labels}",
+   "zh": "引用会话 · {labels}",
+   "keys": [
+    "chat:message.referenceSummary"
+   ]
+  },
+  {
+   "en": "removed",
+   "zh": "已移除",
+   "keys": [
+    "chat:message.context.instructions.removed"
+   ]
+  },
+  {
+   "en": "Removed: {names}",
+   "zh": "移除：{names}",
+   "keys": [
+    "chat:message.toolsRemoved",
+    "trajectory:layout.toolsRemoved"
+   ]
+  },
+  {
+   "en": "Replacement catalog",
+   "zh": "替换目录",
+   "keys": [
+    "chat:message.context.catalog.replaced"
+   ]
+  },
+  {
+   "en": "Request quota exhausted.",
+   "zh": "当前请求的额度已用尽",
+   "keys": [
+    "chat:message.failure.quota"
+   ]
+  },
+  {
+   "en": "Resize raw data panel",
+   "zh": "调整原始数据面板高度",
+   "keys": [
+    "session-inspector:table.resizeDetails"
+   ]
+  },
+  {
+   "en": "Results only",
+   "zh": "聚焦结果",
+   "keys": [
+    "settings.account:onboardingCompact"
+   ]
+  },
+  {
+   "en": "Resume goal",
+   "zh": "恢复目标",
+   "keys": [
+    "goal:action.resume"
+   ]
+  },
+  {
+   "en": "Retried model request",
+   "zh": "已重试模型请求",
+   "keys": [
+    "chat:message.retry.started"
+   ]
+  },
+  {
+   "en": "Retry delay: ",
+   "zh": "重试延迟：",
+   "keys": [
+    "chat:message.retry.delay"
+   ]
+  },
+  {
+   "en": "Retry terminal recovery",
+   "zh": "重试恢复终端",
+   "keys": [
+    "sidebarTerminal:retryRecovery"
+   ]
+  },
+  {
+   "en": "Retry this page",
+   "zh": "重试本页面同步",
+   "keys": [
+    "settings.pluginInventory:clientSyncRetry"
+   ]
+  },
+  {
+   "en": "Retrying model request",
+   "zh": "正在重试模型请求",
+   "keys": [
+    "chat:message.retry.active"
+   ]
+  },
+  {
+   "en": "Run commands in the Session workspace",
+   "zh": "在会话工作区运行命令",
+   "keys": [
+    "sidebarTerminal:description"
+   ]
+  },
+  {
+   "en": "Run without a sandbox after an experimental same-model review of every native tool call and PTC inner call.",
+   "zh": "无沙箱运行；每次原生工具调用和 PTC 内层调用前由同一模型进行实验性审查。",
+   "keys": [
+    "permission.access:auto.description"
+   ]
+  },
+  {
+   "en": "Running code",
+   "zh": "正在运行代码",
+   "keys": [
+    "chat:message.stepProcess.code"
+   ]
+  },
+  {
+   "en": "Running commands",
+   "zh": "正在运行命令",
+   "keys": [
+    "chat:message.stepProcess.commands"
+   ]
+  },
+  {
+   "en": "Running…",
+   "zh": "执行中…",
+   "keys": [
+    "chat:command.running",
+    "conversation:details.running"
+   ]
+  },
+  {
+   "en": "s",
+   "zh": "秒",
+   "keys": [
+    "chat:duration.secondUnit"
+   ]
+  },
+  {
+   "en": "Save goal",
+   "zh": "保存目标",
+   "keys": [
+    "goal:action.save"
+   ]
+  },
+  {
+   "en": "Search plugins",
+   "zh": "搜索插件",
+   "keys": [
+    "settings.pluginInventory:search"
+   ]
+  },
+  {
+   "en": "Searched code",
+   "zh": "已搜索代码",
+   "keys": [
+    "chat:message.stepProcess.done.search"
+   ]
+  },
+  {
+   "en": "Searched the web",
+   "zh": "已搜索网页",
+   "keys": [
+    "chat:message.stepProcess.done.webSearch"
+   ]
+  },
+  {
+   "en": "Searching code",
+   "zh": "正在搜索代码",
+   "keys": [
+    "chat:message.stepProcess.search"
+   ]
+  },
+  {
+   "en": "Searching the web",
+   "zh": "正在搜索网页",
+   "keys": [
+    "chat:message.stepProcess.webSearch"
+   ]
+  },
+  {
+   "en": "See just the results in a clean, simple interface",
+   "zh": "只看结果，保持界面简洁明了",
+   "keys": [
+    "settings.account:onboardingCompactDescription"
+   ]
+  },
+  {
+   "en": "See the full process for easier debugging and troubleshooting",
+   "zh": "查看完整工作过程，方便调试和排查问题",
+   "keys": [
+    "settings.account:onboardingDetailedDescription"
+   ]
+  },
+  {
+   "en": "Session Log",
+   "zh": "会话数据诊断",
+   "keys": [
+    "session-inspector:tab.title"
+   ]
+  },
+  {
+   "en": "Session plugins",
+   "zh": "会话插件",
+   "keys": [
+    "settings.pluginInventory:presetTitle"
+   ]
+  },
+  {
+   "en": "Session recall",
+   "zh": "跨会话召回",
+   "keys": [
+    "chat:message.contextRecall"
+   ]
+  },
+  {
+   "en": "Session statistics",
+   "zh": "会话统计",
+   "keys": [
+    "chat:stats.dialog.title"
+   ]
+  },
+  {
+   "en": "Set as new task default",
+   "zh": "设为新任务默认",
+   "keys": [
+    "settings.agentPreset:setDefault"
+   ]
+  },
+  {
+   "en": "Shared by the system and every session",
+   "zh": "系统与所有会话共用",
+   "keys": [
+    "settings.pluginInventory:globalSubtitle"
+   ]
+  },
+  {
+   "en": "Show secret",
+   "zh": "显示密钥",
+   "keys": [
+    "secretMask:secret.reveal",
+    "settings.models:keyReveal"
+   ]
+  },
+  {
+   "en": "Sign in",
+   "zh": "登录",
+   "keys": [
+    "settings.account:signIn"
+   ]
+  },
+  {
+   "en": "Sign in again",
+   "zh": "重新登录",
+   "keys": [
+    "settings.account:retry"
+   ]
+  },
+  {
+   "en": "Sign in again to continue.",
+   "zh": "请重新登录后继续操作。",
+   "keys": [
+    "settings.account:timeoutDescription"
+   ]
+  },
+  {
+   "en": "Sign in expired. Try again.",
+   "zh": "登录已过期，请重试。",
+   "keys": [
+    "settings.account:expired"
+   ]
+  },
+  {
+   "en": "Sign in timed out",
+   "zh": "登录已超时",
+   "keys": [
+    "settings.account:timeoutTitle"
+   ]
+  },
+  {
+   "en": "Sign in to DeepSeek and ensure the request destination supports account authentication.",
+   "zh": "请先登录 DeepSeek，并确认请求地址支持账号认证。",
+   "keys": [
+    "chat:message.failure.accountSignInRequired"
+   ]
+  },
+  {
+   "en": "Sign in to DeepSeek Harness to get your dedicated API Key",
+   "zh": "登录 DeepSeek Harness 账号获取专属 API Key",
+   "keys": [
+    "settings.account:settingsSignedOutDescription"
+   ]
+  },
+  {
+   "en": "Sign in to view",
+   "zh": "登录后查看",
+   "keys": [
+    "settings.account:balanceSignedOut"
+   ]
+  },
+  {
+   "en": "Sign in to your DeepSeek account or add an API Key to get started. Your projects and files are stored locally.",
+   "zh": "登录 DeepSeek 账号，或添加 API Key，即可开始使用。你的项目和文件保存在本地。",
+   "keys": [
+    "settings.account:loginDescription"
+   ]
+  },
+  {
+   "en": "Sign out",
+   "zh": "退出登录",
+   "keys": [
+    "settings.account:signOut"
+   ]
+  },
+  {
+   "en": "Signed in to DeepSeek",
+   "zh": "已登录 DeepSeek",
+   "keys": [
+    "settings.account:signedIn"
+   ]
+  },
+  {
+   "en": "Signing out will not delete any data. You can sign in to this account again.",
+   "zh": "退出登录不会丢失任何数据，你仍可以登录此账号。",
+   "keys": [
+    "settings.account:signOutDescription"
+   ]
+  },
+  {
+   "en": "Skill",
+   "zh": "加载技能",
+   "keys": [
+    "skill:row.title"
+   ]
+  },
+  {
+   "en": "Skill load failed",
+   "zh": "skill 加载失败",
+   "keys": [
+    "skill:row.failed"
+   ]
+  },
+  {
+   "en": "Skill load stopped",
+   "zh": "skill 加载已中止",
+   "keys": [
+    "skill:row.stopped"
+   ]
+  },
+  {
+   "en": "Skip adding credits?",
+   "zh": "暂时跳过充值？",
+   "keys": [
+    "settings.account:onboardingNoCreditTitle"
+   ]
+  },
+  {
+   "en": "Skip setup?",
+   "zh": "跳过设置？",
+   "keys": [
+    "settings.account:onboardingSkipTitle"
+   ]
+  },
+  {
+   "en": "Some plugins could not sync on this page. Host enablement is unchanged.",
+   "zh": "本页面的插件未能完成同步；服务端的启用状态保持不变。",
+   "keys": [
+    "settings.pluginInventory:clientSyncFailed"
+   ]
+  },
+  {
+   "en": "Something went wrong. Please check your network connection and try again.",
+   "zh": "操作未完成，可能是网络异常，请检查你的网络状况后重试",
+   "keys": [
+    "settings.account:noResponse"
+   ]
+  },
+  {
+   "en": "Standard",
+   "zh": "标准",
+   "keys": [
+    "chat:settings.transcript.standard"
+   ]
+  },
+  {
+   "en": "Standard mode",
+   "zh": "标准模式",
+   "keys": [
+    "settings.agentPreset:presetStandardName"
+   ]
+  },
+  {
+   "en": "Standard mode is unavailable. Restore it or choose another available mode.",
+   "zh": "标准模式不可用，请恢复该模式或选择其他可用模式。",
+   "keys": [
+    "settings.agentPreset:standardUnavailable"
+   ]
+  },
+  {
+   "en": "Starting sign in…",
+   "zh": "正在发起登录…",
+   "keys": [
+    "settings.account:initializing"
+   ]
+  },
+  {
+   "en": "Starting…",
+   "zh": "正在启动…",
+   "keys": [
+    "sidebarTerminal:creating"
+   ]
+  },
+  {
+   "en": "Step Data",
+   "zh": "Step Data",
+   "keys": [
+    "session-inspector:object.stepData"
+   ]
+  },
+  {
+   "en": "Stopped",
+   "zh": "已停止",
+   "keys": [
+    "chat:message.stopped",
+    "conversation:bash.stopped"
+   ]
+  },
+  {
+   "en": "Stopped because you signed out of DeepSeek.",
+   "zh": "任务已因退出 DeepSeek 登录而停止。",
+   "keys": [
+    "chat:message.failure.accountSignedOut"
+   ]
+  },
+  {
+   "en": "Subtask status updated",
+   "zh": "子任务状态更新",
+   "keys": [
+    "chat:message.trigger.subagent"
+   ]
+  },
+  {
+   "en": "Supersedes earlier snapshots",
+   "zh": "取代先前的快照",
+   "keys": [
+    "chat:message.context.snapshot.supersedes"
+   ]
+  },
+  {
+   "en": "Syncing plugins on this page…",
+   "zh": "正在同步本页面的插件…",
+   "keys": [
+    "settings.pluginInventory:clientSyncing"
+   ]
+  },
+  {
+   "en": "System prompt",
+   "zh": "系统提示词",
+   "keys": [
+    "chat:message.systemPrompt",
+    "conversation:context.system"
+   ]
+  },
+  {
+   "en": "System prompt update",
+   "zh": "系统提示词更新",
+   "keys": [
+    "chat:message.systemPromptUpdate"
+   ]
+  },
+  {
+   "en": "T/S",
+   "zh": "T/S",
+   "keys": [
+    "session-inspector:table.location"
+   ]
+  },
+  {
+   "en": "Take control",
+   "zh": "接管输入",
+   "keys": [
+    "sidebarTerminal:control"
+   ]
+  },
+  {
+   "en": "Task message received",
+   "zh": "收到任务消息",
+   "keys": [
+    "chat:message.trigger.agent"
+   ]
+  },
+  {
+   "en": "Task stopped",
+   "zh": "任务已停止",
+   "keys": [
+    "chat:message.taskStopped"
+   ]
+  },
+  {
+   "en": "Tasks are currently running. Signing out will interrupt them. Sign out now?",
+   "zh": "当前有进程正在执行中，点击“退出登录”，将会打断进程，是否即刻退出登录？",
+   "keys": [
+    "settings.account:signOutRunningDescription"
+   ]
+  },
+  {
+   "en": "Team message received",
+   "zh": "收到团队消息",
+   "keys": [
+    "chat:message.trigger.team"
+   ]
+  },
+  {
+   "en": "Temporarily unavailable. Reopen this menu to retry",
+   "zh": "暂时不可用，请重新打开菜单重试",
+   "keys": [
+    "settings.agentPreset:createPluginUnavailable"
+   ]
+  },
+  {
+   "en": "Terminal “{title}” could not be ended: {message}",
+   "zh": "终端「{title}」未能结束：{message}",
+   "keys": [
+    "sidebarTerminal:cleanupFailed"
+   ]
+  },
+  {
+   "en": "Terminal closed.",
+   "zh": "终端已关闭。",
+   "keys": [
+    "sidebarTerminal:closed"
+   ]
+  },
+  {
+   "en": "Terminal error: {message}",
+   "zh": "终端错误：{message}",
+   "keys": [
+    "sidebarTerminal:failed"
+   ]
+  },
+  {
+   "en": "Terminal name",
+   "zh": "终端名称",
+   "keys": [
+    "sidebarTerminal:rename"
+   ]
+  },
+  {
+   "en": "Terminal recovery failed: {message}",
+   "zh": "恢复终端失败：{message}",
+   "keys": [
+    "sidebarTerminal:recoveryFailed"
+   ]
+  },
+  {
+   "en": "The agent preset chosen when this task started",
+   "zh": "本任务的 Agent 预设，在任务开始时确定",
+   "keys": [
+    "settings.agentPreset:headerHint"
+   ]
+  },
+  {
+   "en": "The agent uses a terminal and image reading, with context compaction. Useful for testing and comparing its basic performance.",
+   "zh": "Agent 使用终端和图片读取工具，并支持上下文压缩，适合测试和对比其基础表现。",
+   "keys": [
+    "settings.agentPreset:presetMinimalDescription"
+   ]
+  },
+  {
+   "en": "The DSH process exited before this turn finished (for example, it was killed, crashed, or timed out while shutting down), so the turn was closed when DSH restarted. Unfinished tool calls have unknown outcomes.",
+   "zh": "DSH 进程在本轮完成前退出（例如被强制结束、崩溃或关闭超时），重新启动后本轮已中止。未完成的工具调用结果未知。",
+   "keys": [
+    "chat:message.failure.interrupted"
+   ]
+  },
+  {
+   "en": "The input buffer is full. Reconnect and try again.",
+   "zh": "输入缓冲区已满，请重新连接后重试。",
+   "keys": [
+    "sidebarTerminal:inputFull"
+   ]
+  },
+  {
+   "en": "The reply was cut off; earlier output is preserved in the conversation. Send \"continue\" to let the model resume.",
+   "zh": "回答被截断，已有输出保留在对话中。发送“继续”可让模型接着输出。",
+   "keys": [
+    "chat:message.maxTokens.hint"
+   ]
+  },
+  {
+   "en": "The terminal connection ended. Reconnect to continue.",
+   "zh": "终端连接已结束，请重新连接。",
+   "keys": [
+    "sidebarTerminal:attachmentEnded"
+   ]
+  },
+  {
+   "en": "The terminal limit has been reached. Close unused terminals and try again. Exited terminals also count toward the limit.",
+   "zh": "终端数量已达上限，请关闭不用的终端后重试。已退出的终端也计入数量。",
+   "keys": [
+    "sidebarTerminal:terminalLimit"
+   ]
+  },
+  {
+   "en": "The terminal screen could not be received. Reconnect to recover it.",
+   "zh": "终端画面传输异常，请重新连接。",
+   "keys": [
+    "sidebarTerminal:invalidOutput"
+   ]
+  },
+  {
+   "en": "Think",
+   "zh": "思考",
+   "keys": [
+    "chat:message.think",
+    "trajectory:column.think"
+   ]
+  },
+  {
+   "en": "This image could not be displayed.",
+   "zh": "无法显示这张图片",
+   "keys": [
+    "sidebarImage:failed"
+   ]
+  },
+  {
+   "en": "This notification triggered this response.",
+   "zh": "这条通知触发了本轮回复。",
+   "keys": [
+    "chat:message.trigger.explanation"
+   ]
+  },
+  {
+   "en": "This only changes how progress is shown, not what DeepSeek Harness can do.",
+   "zh": "这只会影响工作过程的展示方式，不会影响 DeepSeek Harness 的工作能力。",
+   "keys": [
+    "settings.account:onboardingProcessDescription"
+   ]
+  },
+  {
+   "en": "This record could not be serialized. Select another record to continue.",
+   "zh": "无法序列化这条记录，可以选择其他记录继续查看。",
+   "keys": [
+    "session-inspector:table.rawError"
+   ]
+  },
+  {
+   "en": "This record was removed or settled. Select a current record.",
+   "zh": "该记录已移除或结算，请选择当前记录。",
+   "keys": [
+    "session-inspector:table.removed"
+   ]
+  },
+  {
+   "en": "This terminal no longer exists. Open a new terminal.",
+   "zh": "此终端已不存在，请新建终端。",
+   "keys": [
+    "sidebarTerminal:missingTerminal"
+   ]
+  },
+  {
+   "en": "This turn failed",
+   "zh": "本轮运行失败",
+   "keys": [
+    "chat:message.turnError"
+   ]
+  },
+  {
+   "en": "This view is read-only.",
+   "zh": "此页面当前只读。",
+   "keys": [
+    "sidebarTerminal:readonly"
+   ]
+  },
+  {
+   "en": "Thought for a while",
+   "zh": "已思考",
+   "keys": [
+    "chat:message.turnProcess.thoughtForAWhile"
+   ]
+  },
+  {
+   "en": "Time (UTC)",
+   "zh": "时间 (UTC)",
+   "keys": [
+    "session-inspector:table.time"
+   ]
+  },
+  {
+   "en": "to help with?",
+   "zh": "帮你做什么？",
+   "keys": [
+    "settings.account:onboardingPurposeSuffix"
+   ]
+  },
+  {
+   "en": "Token usage",
+   "zh": "Token 用量",
+   "keys": [
+    "chat:stats.dialog.usageTitle"
+   ]
+  },
+  {
+   "en": "Tokens per second (TPS)",
+   "zh": "输出速度（TPS）",
+   "keys": [
+    "chat:stats.dialog.speed"
+   ]
+  },
+  {
+   "en": "Tool added: {name}",
+   "zh": "已添加工具：{name}",
+   "keys": [
+    "chat:message.toolAdded",
+    "trajectory:layout.toolAdded"
+   ]
+  },
+  {
+   "en": "Tool removed: {name}",
+   "zh": "已移除工具：{name}",
+   "keys": [
+    "chat:message.toolRemoved",
+    "trajectory:layout.toolRemoved"
+   ]
+  },
+  {
+   "en": "Tool time",
+   "zh": "工具调用用时",
+   "keys": [
+    "chat:stats.dialog.toolTime"
+   ]
+  },
+  {
+   "en": "Tools updated",
+   "zh": "工具已更新",
+   "keys": [
+    "chat:message.toolsUpdated",
+    "trajectory:layout.toolUpdateNotice"
+   ]
+  },
+  {
+   "en": "Top up",
+   "zh": "充值",
+   "keys": [
+    "settings.account:topUp",
+    "settings.account:quotaTopUp"
+   ]
+  },
+  {
+   "en": "Topped-up balance",
+   "zh": "充值余额",
+   "keys": [
+    "settings.account:balance"
+   ]
+  },
+  {
+   "en": "truncated",
+   "zh": "已截断",
+   "keys": [
+    "chat:message.context.recall.truncated"
+   ]
+  },
+  {
+   "en": "Turn {turn}",
+   "zh": "第 {turn} 轮",
+   "keys": [
+    "chat:chat.turnNavigation.turn",
+    "trajectory:turn.label"
+   ]
+  },
+  {
+   "en": "Turn Data",
+   "zh": "Turn Data",
+   "keys": [
+    "session-inspector:object.turnData"
+   ]
+  },
+  {
+   "en": "Turn navigation",
+   "zh": "轮次导航",
+   "keys": [
+    "chat:chat.turnNavigation.label"
+   ]
+  },
+  {
+   "en": "Turn usage",
+   "zh": "本轮用量",
+   "keys": [
+    "chat:message.turnUsage.title"
+   ]
+  },
+  {
+   "en": "Type a fragment, e.g. delta",
+   "zh": "输入类型片段，如 delta",
+   "keys": [
+    "session-inspector:filter.placeholder"
+   ]
+  },
+  {
+   "en": "Type keyword",
+   "zh": "类型关键词",
+   "keys": [
+    "session-inspector:filter.input"
+   ]
+  },
+  {
+   "en": "Type suggestions",
+   "zh": "类型候选",
+   "keys": [
+    "session-inspector:filter.candidates"
+   ]
+  },
+  {
+   "en": "Type suggestions could not be loaded.",
+   "zh": "无法获取类型候选。",
+   "keys": [
+    "session-inspector:filter.failed"
+   ]
+  },
+  {
+   "en": "Unavailable",
+   "zh": "不可用",
+   "keys": [
+    "settings.permission:unavailable",
+    "sidebarTerminal:unavailable"
+   ]
+  },
+  {
+   "en": "Uncached input",
+   "zh": "未缓存输入",
+   "keys": [
+    "chat:message.turnUsage.input"
+   ]
+  },
+  {
+   "en": "Unknown content block",
+   "zh": "未知内容块",
+   "keys": [
+    "chat:message.unknownBlock"
+   ]
+  },
+  {
+   "en": "Unknown surface event: {type}",
+   "zh": "未知 surface 事件：{type}",
+   "keys": [
+    "chat:message.unknownSurface"
+   ]
+  },
+  {
+   "en": "updated",
+   "zh": "已更新",
+   "keys": [
+    "chat:message.context.instructions.updated"
+   ]
+  },
+  {
+   "en": "Updated the plan",
+   "zh": "更新了计划",
+   "keys": [
+    "chat:message.stepProcess.done.plan"
+   ]
+  },
+  {
+   "en": "Updating the plan",
+   "zh": "正在更新计划",
+   "keys": [
+    "chat:message.stepProcess.plan"
+   ]
+  },
+  {
+   "en": "Usage {total}",
+   "zh": "用量 {total}",
+   "keys": [
+    "chat:message.turnUsage.consumed"
+   ]
+  },
+  {
+   "en": "Use your DeepSeek account to get started.",
+   "zh": "登录 DeepSeek 账号以开始使用",
+   "keys": [
+    "settings.account:signInDescription"
+   ]
+  },
+  {
+   "en": "user-only",
+   "zh": "仅用户",
+   "keys": [
+    "skill:menu.userOnly"
+   ]
+  },
+  {
+   "en": "Verbose",
+   "zh": "完全展开",
+   "keys": [
+    "chat:settings.transcript.verbose"
+   ]
+  },
+  {
+   "en": "Via presets",
+   "zh": "预设中启用",
+   "keys": [
+    "settings.pluginInventory:presetEnabledTag"
+   ]
+  },
+  {
+   "en": "View compaction summary",
+   "zh": "点击查看压缩摘要",
+   "keys": [
+    "chat:message.compaction.expand"
+   ]
+  },
+  {
+   "en": "View configuration",
+   "zh": "查看配置",
+   "keys": [
+    "settings.agentPreset:view"
+   ]
+  },
+  {
+   "en": "View full image",
+   "zh": "查看大图",
+   "keys": [
+    "chat:image.open"
+   ]
+  },
+  {
+   "en": "View on Platform",
+   "zh": "前往开放平台查看",
+   "keys": [
+    "settings.account:balanceUnavailable"
+   ]
+  },
+  {
+   "en": "View usage",
+   "zh": "查询用量",
+   "keys": [
+    "settings.account:usage"
+   ]
+  },
+  {
+   "en": "Visited web pages",
+   "zh": "已访问网页",
+   "keys": [
+    "chat:message.stepProcess.done.webFetch"
+   ]
+  },
+  {
+   "en": "Visiting web pages",
+   "zh": "正在访问网页",
+   "keys": [
+    "chat:message.stepProcess.webFetch"
+   ]
+  },
+  {
+   "en": "Waiting for sign in",
+   "zh": "等待登录",
+   "keys": [
+    "settings.account:browserTitle"
+   ]
+  },
+  {
+   "en": "Waiting for your action",
+   "zh": "等待你的操作",
+   "keys": [
+    "chat:message.stepProcess.questions"
+   ]
+  },
+  {
+   "en": "Waiting to retry model request",
+   "zh": "等待重试模型请求",
+   "keys": [
+    "chat:message.retry.scheduled"
+   ]
+  },
+  {
+   "en": "We’ll tailor the interface and tools to fit the way you work.",
+   "zh": "我们会根据你的选择调整界面和工具，以更适合你的工作方式。",
+   "keys": [
+    "settings.account:onboardingPurposeDescription"
+   ]
+  },
+  {
+   "en": "Welcome to",
+   "zh": "欢迎使用",
+   "keys": [
+    "settings.account:onboardingWelcome"
+   ]
+  },
+  {
+   "en": "What would you like",
+   "zh": "你希望",
+   "keys": [
+    "settings.account:onboardingPurposePrefix"
+   ]
+  },
+  {
+   "en": "When to Collapse Work Details",
+   "zh": "工作步骤收起时机",
+   "keys": [
+    "chat:settings.collapse.title"
+   ]
+  },
+  {
+   "en": "Work details",
+   "zh": "工作步骤展示",
+   "keys": [
+    "chat:settings.transcript.title"
+   ]
+  },
+  {
+   "en": "Work with code, files, and information. Suitable for most tasks, with search, editing, terminal commands, and other tools available as needed.",
+   "zh": "处理代码、文件和资料，适合大多数任务。Agent 会按需使用检索、编辑和终端等工具。",
+   "keys": [
+    "settings.agentPreset:presetStandardDescription"
+   ]
+  },
+  {
+   "en": "Workspace Write",
+   "zh": "工作区内修改",
+   "keys": [
+    "permission.access:preset.workspaceWrite",
+    "settings.permission:preset.workspaceWrite"
+   ]
+  },
+  {
+   "en": "Writing files",
+   "zh": "正在写入文件",
+   "keys": [
+    "chat:message.stepProcess.write"
+   ]
+  },
+  {
+   "en": "Wrote files",
+   "zh": "已写入文件",
+   "keys": [
+    "chat:message.stepProcess.done.write"
+   ]
+  },
+  {
+   "en": "You are not signed in to DeepSeek Harness",
+   "zh": "当前未登录 DeepSeek Harness 账号",
+   "keys": [
+    "settings.account:settingsSignedOutTitle"
+   ]
+  },
+  {
+   "en": "You can change how progress, performance, and usage are displayed, or enable Coding Tools, anytime in Settings → General.",
+   "zh": "你可以随时前往 设置 → 通用设置 中调整工作过程、性能与用量展示方式或开启代码工作工具。",
+   "keys": [
+    "settings.account:onboardingSkipDescription"
+   ]
+  },
+  {
+   "en": "You have signed out of your account, please log in again.",
+   "zh": "登录信息已失效，请重新登录",
+   "keys": [
+    "settings.account:sessionExpired"
+   ]
+  },
+  {
+   "en": "Zoom controls",
+   "zh": "缩放控件",
+   "keys": [
+    "sidebarImage:zoomControls",
+    "sidebarPdf:zoomControls"
+   ]
+  },
+  {
+   "en": "Zoom in",
+   "zh": "放大",
+   "keys": [
+    "sidebarImage:zoomIn",
+    "sidebarPdf:zoomIn"
+   ]
+  },
+  {
+   "en": "Zoom out",
+   "zh": "缩小",
+   "keys": [
+    "sidebarImage:zoomOut",
+    "sidebarPdf:zoomOut"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,13 @@
+# vi-VN bundle patch.
+#
+# Adds a single host plugin entry whose `name` is our own package name. The
+# dsh-client-modules host half then scans this entry, reads our package.json
+# `dsh.client.platform: "web"` declaration, and composes `window.__DSH_BOOT__`
+# so the browser fetches /plugins/vi-VN/client.js. The factory inside that
+# bundle registers the Vietnamese locale and its dictionaries.
+#
+# dsh patch-loader semantics: a plain `- id:` row only patches an EXISTING
+# entry; new entries must be added with an `insert:` block.
+- insert:
+    - id: vi-VN
+      name: vi-VN

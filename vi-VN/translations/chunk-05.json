@@ -1,0 +1,3080 @@
+{
+ "chunk": "05",
+ "count": 428,
+ "namespaces": [
+  "command",
+  "common",
+  "deliverables",
+  "model",
+  "plan",
+  "schedule.manager",
+  "settings.locale",
+  "settings.models",
+  "sidebar",
+  "sidebarExcel",
+  "sidebarPdf",
+  "subagent"
+ ],
+ "entries": [
+  {
+   "en": " (system)",
+   "zh": "（系统）",
+   "keys": [
+    "schedule.manager:rule.zone.system"
+   ]
+  },
+  {
+   "en": "-{count}",
+   "zh": "-{count}",
+   "keys": [
+    "deliverables:changes.deleted"
+   ]
+  },
+  {
+   "en": "… truncated at {total} characters",
+   "zh": "… 已截断，共 {total} 字符",
+   "keys": [
+    "common:markdown.truncatedCharacters"
+   ]
+  },
+  {
+   "en": "{action}; right-click for copy options",
+   "zh": "{action}；右键点击可选择复制方式",
+   "keys": [
+    "common:copy.optionsHint"
+   ]
+  },
+  {
+   "en": "{count} subagent running",
+   "zh": "{count} 个子智能体，正在运行",
+   "keys": [
+    "subagent:count.running.one"
+   ]
+  },
+  {
+   "en": "{count} subagents running",
+   "zh": "{count} 个子智能体，正在运行",
+   "keys": [
+    "subagent:count.running.other"
+   ]
+  },
+  {
+   "en": "{days}d",
+   "zh": "{days}天",
+   "keys": [
+    "subagent:duration.days"
+   ]
+  },
+  {
+   "en": "{days}d {hours}h",
+   "zh": "{days}天{hours}小时",
+   "keys": [
+    "subagent:duration.daysHours"
+   ]
+  },
+  {
+   "en": "{days}d {hours}h {minutes}m {seconds}s",
+   "zh": "{days}天{hours}小时{minutes}分{seconds}秒",
+   "keys": [
+    "subagent:duration.exactDays"
+   ]
+  },
+  {
+   "en": "{hours}h {minutes}m {seconds}s",
+   "zh": "{hours}小时{minutes}分{seconds}秒",
+   "keys": [
+    "subagent:duration.hours"
+   ]
+  },
+  {
+   "en": "{name} failed to load: {message}",
+   "zh": "{name} 加载失败：{message}",
+   "keys": [
+    "model:warning.groupLoad"
+   ]
+  },
+  {
+   "en": "{url}",
+   "zh": "{url}",
+   "keys": [
+    "settings.models:baseUrlPlaceholder"
+   ]
+  },
+  {
+   "en": "{value} tok",
+   "zh": "{value} tok",
+   "keys": [
+    "subagent:tokens.total",
+    "trajectory:unit.tokens"
+   ]
+  },
+  {
+   "en": "{value}K",
+   "zh": "{value}K",
+   "keys": [
+    "common:number.thousand",
+    "subagent:tokens.thousand"
+   ]
+  },
+  {
+   "en": "{value}M",
+   "zh": "{value}M",
+   "keys": [
+    "common:number.million",
+    "subagent:tokens.million"
+   ]
+  },
+  {
+   "en": "/{command} does not accept attachments; remove them first",
+   "zh": "/{command} 不接受附件，请先移除附件",
+   "keys": [
+    "command:notice.attachmentsUnsupported",
+    "conversation:command.attachmentsUnsupported"
+   ]
+  },
+  {
+   "en": "/{command} matches",
+   "zh": "/{command} 匹配项",
+   "keys": [
+    "command:listbox.aria"
+   ]
+  },
+  {
+   "en": "/{command} options",
+   "zh": "/{command} 选项",
+   "keys": [
+    "command:overlay.aria"
+   ]
+  },
+  {
+   "en": "+{count}",
+   "zh": "+{count}",
+   "keys": [
+    "deliverables:changes.added"
+   ]
+  },
+  {
+   "en": "~{months}mo",
+   "zh": "约{months}个月",
+   "keys": [
+    "subagent:duration.months"
+   ]
+  },
+  {
+   "en": "~{months}mo {days}d",
+   "zh": "约{months}个月{days}天",
+   "keys": [
+    "subagent:duration.monthsDays"
+   ]
+  },
+  {
+   "en": "~{years}y",
+   "zh": "约{years}年",
+   "keys": [
+    "subagent:duration.years"
+   ]
+  },
+  {
+   "en": "~{years}y {months}mo",
+   "zh": "约{years}年{months}个月",
+   "keys": [
+    "subagent:duration.yearsMonths"
+   ]
+  },
+  {
+   "en": "A capacity must be a number, optionally suffixed K or M.",
+   "zh": "容量需为数字，可加 K 或 M 后缀。",
+   "keys": [
+    "settings.models:modelCapacityInvalid"
+   ]
+  },
+  {
+   "en": "A custom provider needs a base URL.",
+   "zh": "自定义模型 API 需要填写 API 地址。",
+   "keys": [
+    "settings.models:customNeedsBaseUrl"
+   ]
+  },
+  {
+   "en": "A custom provider needs at least one model.",
+   "zh": "自定义模型 API 至少需要一个模型。",
+   "keys": [
+    "settings.models:customNeedsModels"
+   ]
+  },
+  {
+   "en": "A one-time task stores only its target moment, not a time zone. The date and time are interpreted in the selected time zone.",
+   "zh": "单次任务只保存触发时刻，不保存时区；日期和时间按所选时区换算",
+   "keys": [
+    "schedule.manager:timing.zoneNoStored"
+   ]
+  },
+  {
+   "en": "A provider already uses this ID.",
+   "zh": "已有提供商使用了这个 ID。",
+   "keys": [
+    "settings.models:customRouteTaken"
+   ]
+  },
+  {
+   "en": "About reasoning levels",
+   "zh": "推理等级说明",
+   "keys": [
+    "settings.models:modelReasoningHelp"
+   ]
+  },
+  {
+   "en": "Add",
+   "zh": "添加",
+   "keys": [
+    "command:section.add"
+   ]
+  },
+  {
+   "en": "Add an API key to get started",
+   "zh": "添加一个 API Key 开始使用",
+   "keys": [
+    "settings.models:onboardingTitle"
+   ]
+  },
+  {
+   "en": "Add at least one level besides Off, or turn reasoning levels off.",
+   "zh": "至少添加一个 Off 以外的档位；不需要思考请关闭推理等级。",
+   "keys": [
+    "settings.models:modelReasoningNeedsLevel"
+   ]
+  },
+  {
+   "en": "Add level",
+   "zh": "添加档位",
+   "keys": [
+    "settings.models:modelReasoningAdd"
+   ]
+  },
+  {
+   "en": "Add model",
+   "zh": "添加模型",
+   "keys": [
+    "settings.models:addModel"
+   ]
+  },
+  {
+   "en": "Add model provider",
+   "zh": "添加模型提供商",
+   "keys": [
+    "settings.models:add"
+   ]
+  },
+  {
+   "en": "Add selected",
+   "zh": "添加所选",
+   "keys": [
+    "settings.models:fetchAdopt"
+   ]
+  },
+  {
+   "en": "All",
+   "zh": "全部",
+   "keys": [
+    "schedule.manager:statusFilter.all"
+   ]
+  },
+  {
+   "en": "All {count} files",
+   "zh": "全部 {count} 个文件",
+   "keys": [
+    "deliverables:presented.all",
+    "deliverables:changes.all"
+   ]
+  },
+  {
+   "en": "Anthropic Messages",
+   "zh": "Anthropic Messages",
+   "keys": [
+    "settings.models:protocolAnthropicMessages"
+   ]
+  },
+  {
+   "en": "API key",
+   "zh": "API 密钥",
+   "keys": [
+    "settings.models:keyInput",
+    "settings.webSearch:apiKey"
+   ]
+  },
+  {
+   "en": "API key configured",
+   "zh": "API 密钥已配置",
+   "keys": [
+    "settings.models:credentialConfigured"
+   ]
+  },
+  {
+   "en": "API key missing",
+   "zh": "API 密钥缺失",
+   "keys": [
+    "settings.models:credentialMissing"
+   ]
+  },
+  {
+   "en": "API protocol",
+   "zh": "API 协议",
+   "keys": [
+    "settings.models:customApi"
+   ]
+  },
+  {
+   "en": "API value",
+   "zh": "API 参数值",
+   "keys": [
+    "settings.models:modelReasoningValue"
+   ]
+  },
+  {
+   "en": "Apply",
+   "zh": "保存",
+   "keys": [
+    "settings.models:apply"
+   ]
+  },
+  {
+   "en": "Applying…",
+   "zh": "正在应用…",
+   "keys": [
+    "command:status.applying",
+    "settings.models:applying"
+   ]
+  },
+  {
+   "en": "Asking the provider…",
+   "zh": "正在询问提供商…",
+   "keys": [
+    "settings.models:fetching"
+   ]
+  },
+  {
+   "en": "At least 1 hour. The interval counts from task creation or the last rule change and is independent of time zones.",
+   "zh": "至少 1 小时。间隔自任务创建或上次修改规则时起计，不受时区影响",
+   "keys": [
+    "schedule.manager:timing.intervalHint.hour"
+   ]
+  },
+  {
+   "en": "At least 1 minute. The interval counts from task creation or the last rule change and is independent of time zones.",
+   "zh": "至少 1 分钟。间隔自任务创建或上次修改规则时起计，不受时区影响",
+   "keys": [
+    "schedule.manager:timing.intervalHint.minute"
+   ]
+  },
+  {
+   "en": "At least 60 seconds. The interval counts from task creation or the last rule change and is independent of time zones.",
+   "zh": "至少 60 秒。间隔自任务创建或上次修改规则时起计，不受时区影响",
+   "keys": [
+    "schedule.manager:timing.intervalHint.second"
+   ]
+  },
+  {
+   "en": "At minute",
+   "zh": "在第几分钟",
+   "keys": [
+    "schedule.manager:cronForm.atMinute"
+   ]
+  },
+  {
+   "en": "Authentication details",
+   "zh": "认证说明",
+   "keys": [
+    "settings.models:authHelp"
+   ]
+  },
+  {
+   "en": "Automation task actions",
+   "zh": "自动化任务操作",
+   "keys": [
+    "schedule.manager:detail.more"
+   ]
+  },
+  {
+   "en": "Automation task instruction",
+   "zh": "自动化任务内容",
+   "keys": [
+    "schedule.manager:detail.instruction"
+   ]
+  },
+  {
+   "en": "Automation task name",
+   "zh": "自动化任务名称",
+   "keys": [
+    "schedule.manager:detail.name"
+   ]
+  },
+  {
+   "en": "Automation tasks",
+   "zh": "自动化任务",
+   "keys": [
+    "schedule.manager:panel",
+    "schedule.manager:title"
+   ]
+  },
+  {
+   "en": "Back",
+   "zh": "返回",
+   "keys": [
+    "common:back",
+    "settings.account:onboardingBack"
+   ]
+  },
+  {
+   "en": "Base URL",
+   "zh": "API 地址",
+   "keys": [
+    "settings.models:baseUrl"
+   ]
+  },
+  {
+   "en": "binary",
+   "zh": "二进制",
+   "keys": [
+    "deliverables:changes.binary"
+   ]
+  },
+  {
+   "en": "Binary file; changes cannot be shown",
+   "zh": "二进制文件，无法显示改动",
+   "keys": [
+    "deliverables:diff.binary"
+   ]
+  },
+  {
+   "en": "Both sides hold the same lines",
+   "zh": "两侧内容相同",
+   "keys": [
+    "deliverables:diff.unchanged"
+   ]
+  },
+  {
+   "en": "Cancel",
+   "zh": "取消",
+   "keys": [
+    "common:cancel",
+    "permission.access:confirm.cancel"
+   ]
+  },
+  {
+   "en": "Cannot display PDF: {message}",
+   "zh": "无法显示 PDF：{message}",
+   "keys": [
+    "sidebarPdf:failed"
+   ]
+  },
+  {
+   "en": "Catalog failed to load: {message}",
+   "zh": "目录加载失败：{message}",
+   "keys": [
+    "model:option.loadError"
+   ]
+  },
+  {
+   "en": "charts",
+   "zh": "图表",
+   "keys": [
+    "sidebarExcel:charts"
+   ]
+  },
+  {
+   "en": "Choose a date and time in the future.",
+   "zh": "请选择未来的日期和时间",
+   "keys": [
+    "schedule.manager:timing.notFuture"
+   ]
+  },
+  {
+   "en": "Choose models to add",
+   "zh": "选择要添加的模型",
+   "keys": [
+    "settings.models:fetchTitle"
+   ]
+  },
+  {
+   "en": "Choose the file to review",
+   "zh": "选择要查看的文件",
+   "keys": [
+    "deliverables:review.selectFile"
+   ]
+  },
+  {
+   "en": "Clear search",
+   "zh": "清除搜索",
+   "keys": [
+    "model:search.clear",
+    "schedule.manager:search.clear"
+   ]
+  },
+  {
+   "en": "Close",
+   "zh": "关闭",
+   "keys": [
+    "common:close",
+    "permission.access:close"
+   ]
+  },
+  {
+   "en": "Close deletion confirmation",
+   "zh": "关闭删除确认",
+   "keys": [
+    "schedule.manager:delete.close"
+   ]
+  },
+  {
+   "en": "Close details",
+   "zh": "关闭详情",
+   "keys": [
+    "schedule.manager:detail.close",
+    "trajectory:details.close"
+   ]
+  },
+  {
+   "en": "Code block",
+   "zh": "代码块",
+   "keys": [
+    "common:codeBlock.title"
+   ]
+  },
+  {
+   "en": "Collapse",
+   "zh": "收起",
+   "keys": [
+    "common:collapse",
+    "deliverables:presented.collapse"
+   ]
+  },
+  {
+   "en": "Collapse {label} descendants",
+   "zh": "收起 {label} 的下级子智能体",
+   "keys": [
+    "subagent:branch.collapse"
+   ]
+  },
+  {
+   "en": "Collapse changed files",
+   "zh": "收起改动文件列表",
+   "keys": [
+    "deliverables:changes.collapseAria"
+   ]
+  },
+  {
+   "en": "Collapse delivered files",
+   "zh": "收起交付文件列表",
+   "keys": [
+    "deliverables:presented.collapseAria"
+   ]
+  },
+  {
+   "en": "Collapse sidebar",
+   "zh": "收起侧边栏",
+   "keys": [
+    "sidebar:toggle.collapse",
+    "sidebarRight:chrome.collapse"
+   ]
+  },
+  {
+   "en": "Commands",
+   "zh": "指令",
+   "keys": [
+    "command:section.commands",
+    "slash.menu:command"
+   ]
+  },
+  {
+   "en": "Compact older conversation history",
+   "zh": "压缩以上对话内容",
+   "keys": [
+    "command:description.compact"
+   ]
+  },
+  {
+   "en": "conditional formatting",
+   "zh": "条件格式",
+   "keys": [
+    "sidebarExcel:conditionalFormatting"
+   ]
+  },
+  {
+   "en": "Configure later",
+   "zh": "稍后配置",
+   "keys": [
+    "settings.models:onboardingLater"
+   ]
+  },
+  {
+   "en": "Configure the official DeepSeek provider to start building.",
+   "zh": "配置 DeepSeek 官方模型，即可开始使用。",
+   "keys": [
+    "settings.models:onboardingDescription"
+   ]
+  },
+  {
+   "en": "Confirm deletion",
+   "zh": "确认删除",
+   "keys": [
+    "schedule.manager:delete.confirm"
+   ]
+  },
+  {
+   "en": "Connect a relay, a self-hosted server, or any other OpenAI- or Anthropic-compatible endpoint by its base URL, protocol, and models.",
+   "zh": "连接中转站、自部署服务或其他兼容 OpenAI / Anthropic 协议的接口，需填写 API 地址、协议和模型。",
+   "keys": [
+    "settings.models:addCustomHint"
+   ]
+  },
+  {
+   "en": "Context window",
+   "zh": "上下文窗口",
+   "keys": [
+    "settings.models:contextWindow"
+   ]
+  },
+  {
+   "en": "Context window must be a positive count, like 131072, 256K, or 1M.",
+   "zh": "上下文窗口必须是正数，例如 131072、256K 或 1M。",
+   "keys": [
+    "settings.models:modelContextInvalid"
+   ]
+  },
+  {
+   "en": "continuable",
+   "zh": "可继续",
+   "keys": [
+    "subagent:mode.continuable"
+   ]
+  },
+  {
+   "en": "Copied",
+   "zh": "复制成功",
+   "keys": [
+    "common:copied",
+    "cordis:body.copied"
+   ]
+  },
+  {
+   "en": "Copy",
+   "zh": "复制",
+   "keys": [
+    "common:copy",
+    "cordis:body.copy"
+   ]
+  },
+  {
+   "en": "Copy compact JSON",
+   "zh": "复制紧凑 JSON",
+   "keys": [
+    "common:copy.compactJson"
+   ]
+  },
+  {
+   "en": "Copy failed",
+   "zh": "复制失败",
+   "keys": [
+    "common:copy.failed",
+    "settings.account:copyFailed"
+   ]
+  },
+  {
+   "en": "Copy JSON",
+   "zh": "复制 JSON",
+   "keys": [
+    "common:copy.json"
+   ]
+  },
+  {
+   "en": "Copy pretty JSON",
+   "zh": "复制格式化 JSON",
+   "keys": [
+    "common:copy.prettyJson"
+   ]
+  },
+  {
+   "en": "Copy property path",
+   "zh": "复制属性路径",
+   "keys": [
+    "common:copy.path"
+   ]
+  },
+  {
+   "en": "Copy value",
+   "zh": "复制值",
+   "keys": [
+    "common:copy.value"
+   ]
+  },
+  {
+   "en": "Could not confirm the rule update. The row shows the saved rule.",
+   "zh": "无法确认规则是否已更新。当前显示已保存的规则",
+   "keys": [
+    "schedule.manager:rule.error.unknown"
+   ]
+  },
+  {
+   "en": "Could not confirm the timing update. Your draft is retained. Check the task before retrying.",
+   "zh": "无法确认时间修改是否已保存。草稿已保留，请在重试前检查任务",
+   "keys": [
+    "schedule.manager:timing.error"
+   ]
+  },
+  {
+   "en": "Could not delete the task.",
+   "zh": "无法删除任务",
+   "keys": [
+    "schedule.manager:toast.deleteFailed"
+   ]
+  },
+  {
+   "en": "Could not load delivery records.",
+   "zh": "无法加载任务运行记录",
+   "keys": [
+    "schedule.manager:delivery.error"
+   ]
+  },
+  {
+   "en": "Could not load plan",
+   "zh": "无法读取计划",
+   "keys": [
+    "plan:preview.failed"
+   ]
+  },
+  {
+   "en": "Could not load tasks.",
+   "zh": "无法加载任务",
+   "keys": [
+    "schedule.manager:list.error"
+   ]
+  },
+  {
+   "en": "Could not open containing folder. Try again.",
+   "zh": "无法打开所在文件夹，请重试",
+   "keys": [
+    "deliverables:presented.directoryError"
+   ]
+  },
+  {
+   "en": "Could not open. Click to retry.",
+   "zh": "打开失败，点击重试",
+   "keys": [
+    "deliverables:presented.error"
+   ]
+  },
+  {
+   "en": "Could not read the changes",
+   "zh": "无法读取改动",
+   "keys": [
+    "deliverables:diff.error"
+   ]
+  },
+  {
+   "en": "Could not read the Host desktop information",
+   "zh": "无法读取主机桌面信息",
+   "keys": [
+    "deliverables:presented.hostError"
+   ]
+  },
+  {
+   "en": "Could not show in file manager. Try again.",
+   "zh": "无法在文件管理器中显示，请重试",
+   "keys": [
+    "deliverables:presented.revealError"
+   ]
+  },
+  {
+   "en": "Create provider",
+   "zh": "创建提供商",
+   "keys": [
+    "settings.models:create"
+   ]
+  },
+  {
+   "en": "Created in this turn",
+   "zh": "本轮新建的文件",
+   "keys": [
+    "deliverables:diff.created"
+   ]
+  },
+  {
+   "en": "Creating…",
+   "zh": "创建中…",
+   "keys": [
+    "settings.models:creating"
+   ]
+  },
+  {
+   "en": "Cron expression",
+   "zh": "Cron 表达式",
+   "keys": [
+    "schedule.manager:rule.cronLabel"
+   ]
+  },
+  {
+   "en": "Custom",
+   "zh": "自定义",
+   "keys": [
+    "schedule.manager:rule.cron",
+    "settings.agentPreset:customGroup"
+   ]
+  },
+  {
+   "en": "Custom model API",
+   "zh": "自定义模型 API",
+   "keys": [
+    "settings.models:addCustom"
+   ]
+  },
+  {
+   "en": "Customized model catalog",
+   "zh": "已自定义模型目录",
+   "keys": [
+    "settings.models:modelsCustomized"
+   ]
+  },
+  {
+   "en": "Customized settings",
+   "zh": "自定义设置",
+   "keys": [
+    "settings.models:customized"
+   ]
+  },
+  {
+   "en": "Date",
+   "zh": "日期",
+   "keys": [
+    "schedule.manager:timing.date"
+   ]
+  },
+  {
+   "en": "Day {day}",
+   "zh": "{day} 日",
+   "keys": [
+    "schedule.manager:cronForm.dateOption"
+   ]
+  },
+  {
+   "en": "Decrease interval",
+   "zh": "减小间隔",
+   "keys": [
+    "schedule.manager:timing.intervalDecrease"
+   ]
+  },
+  {
+   "en": "Decrease minute",
+   "zh": "减小分钟",
+   "keys": [
+    "schedule.manager:cronForm.minuteDecrease"
+   ]
+  },
+  {
+   "en": "DeepSeek Account",
+   "zh": "DeepSeek 账号",
+   "keys": [
+    "model:provider.account",
+    "settings.models:deepSeekAccount"
+   ]
+  },
+  {
+   "en": "DeepSeek Harness 0.2 is still in preview, and many areas need continued improvement and refinement. We welcome feedback and suggestions from all developers and users. The new desktop app now targets a broad range of users, while developer-related advanced features can be enabled in the settings. DeepSeek Harness’s product features and plugin APIs are expected to continue rapid iteration and evolution, and will gradually stabilize over time.\n\nWe look forward to exploring the limits of intelligence together with users and developers around the world, building on open-source, reusable, and composable infrastructure. We welcome everyone to bring their ideas to life with DeepSeek Harness and participate in the community to enrich the plugin ecosystem.",
+   "zh": "DeepSeek Harness 目前的 0.2 版本仍处于预览阶段，还有许多地方需要持续改进和打磨，希望听取广大开发者和用户的反馈建议。现在，新的桌面端面向广泛用户，开发者相关的进阶功能可在配置中开启使用。预计 DeepSeek Harness 的产品功能以及插件 API 都会继续快速迭代、持续演化，并逐渐趋于稳定。\n\n我们期待与全球用户和开发者一起，在开源、可复用、可组合的基础设施之上，共同探索智能上限。欢迎大家用 DeepSeek Harness 将想法变成现实，与社区一起丰富插件生态。",
+   "keys": [
+    "settings.models:welcomeBody"
+   ]
+  },
+  {
+   "en": "Default",
+   "zh": "Default",
+   "keys": [
+    "model:effort.providerDefault",
+    "settings.theme:fontFamily.placeholder"
+   ]
+  },
+  {
+   "en": "Default workspace",
+   "zh": "默认工作区",
+   "keys": [
+    "common:workspace.defaultName"
+   ]
+  },
+  {
+   "en": "Delete",
+   "zh": "删除",
+   "keys": [
+    "common:delete",
+    "schedule.catalog:delete.action"
+   ]
+  },
+  {
+   "en": "Delete {provider}",
+   "zh": "删除 {provider}",
+   "keys": [
+    "settings.models:removeProvider",
+    "settings.models:deleteConfirm"
+   ]
+  },
+  {
+   "en": "Delete {provider}?",
+   "zh": "删除 {provider}？",
+   "keys": [
+    "settings.models:deleteTitle"
+   ]
+  },
+  {
+   "en": "Delete level",
+   "zh": "删除档位",
+   "keys": [
+    "settings.models:modelReasoningRemove"
+   ]
+  },
+  {
+   "en": "Delete model",
+   "zh": "删除模型",
+   "keys": [
+    "settings.models:removeModel"
+   ]
+  },
+  {
+   "en": "Delete task",
+   "zh": "删除任务",
+   "keys": [
+    "schedule.manager:delete.action"
+   ]
+  },
+  {
+   "en": "Delete this task?",
+   "zh": "删除此任务？",
+   "keys": [
+    "schedule.manager:delete.title"
+   ]
+  },
+  {
+   "en": "Deleted in this turn",
+   "zh": "本轮删除的文件",
+   "keys": [
+    "deliverables:diff.deleted"
+   ]
+  },
+  {
+   "en": "Deleting {provider} removes its configuration and stored API key.",
+   "zh": "删除 {provider} 会移除其配置和存储的 API 密钥。",
+   "keys": [
+    "settings.models:deleteDescriptionWithCredential"
+   ]
+  },
+  {
+   "en": "Deleting {provider} removes its configuration. Any credential it uses is managed elsewhere and will be kept.",
+   "zh": "删除 {provider} 会移除其配置；其使用的凭证（如有）由其他位置管理，将会保留。",
+   "keys": [
+    "settings.models:deleteDescription"
+   ]
+  },
+  {
+   "en": "Deleting {provider}…",
+   "zh": "正在删除 {provider}…",
+   "keys": [
+    "settings.models:deleting"
+   ]
+  },
+  {
+   "en": "Delivered",
+   "zh": "已交付",
+   "keys": [
+    "deliverables:row.ok"
+   ]
+  },
+  {
+   "en": "Delivering",
+   "zh": "正在交付",
+   "keys": [
+    "deliverables:row.running"
+   ]
+  },
+  {
+   "en": "Delivery failed",
+   "zh": "交付失败",
+   "keys": [
+    "deliverables:row.error"
+   ]
+  },
+  {
+   "en": "Deselect all",
+   "zh": "取消全选",
+   "keys": [
+    "settings.models:fetchDeselectAll"
+   ]
+  },
+  {
+   "en": "Disable line wrap",
+   "zh": "关闭自动换行",
+   "keys": [
+    "deliverables:review.nowrap"
+   ]
+  },
+  {
+   "en": "Display name",
+   "zh": "显示名称",
+   "keys": [
+    "settings.models:modelName",
+    "settings.models:customDisplayName"
+   ]
+  },
+  {
+   "en": "Display name cannot be empty.",
+   "zh": "显示名称不能为空。",
+   "keys": [
+    "settings.models:modelNameInvalid"
+   ]
+  },
+  {
+   "en": "Do not wrap lines",
+   "zh": "取消自动换行",
+   "keys": [
+    "common:codeBlock.unwrap"
+   ]
+  },
+  {
+   "en": "Download this Session log as a ZIP archive",
+   "zh": "将当前会话内容导出为 ZIP",
+   "keys": [
+    "command:description.export"
+   ]
+  },
+  {
+   "en": "DSH Local Build",
+   "zh": "DSH 本地构建",
+   "keys": [
+    "common:brand.localBuild"
+   ]
+  },
+  {
+   "en": "Each model ID may appear once.",
+   "zh": "每个模型 ID 只能出现一次。",
+   "keys": [
+    "settings.models:modelDuplicate"
+   ]
+  },
+  {
+   "en": "Each task keeps up to {records} delivery records from the last {days} days.",
+   "zh": "每个任务最多保留近 {days} 天内的 {records} 条运行记录。",
+   "keys": [
+    "schedule.manager:delivery.retentionBounds"
+   ]
+  },
+  {
+   "en": "Earlier delivery records have been cleared",
+   "zh": "更早的运行记录已清理",
+   "keys": [
+    "schedule.manager:delivery.pruned"
+   ]
+  },
+  {
+   "en": "Edit",
+   "zh": "编辑",
+   "keys": [
+    "common:edit",
+    "conversation:tool.title.edit"
+   ]
+  },
+  {
+   "en": "Edit {provider}",
+   "zh": "编辑 {provider}",
+   "keys": [
+    "settings.models:editProvider"
+   ]
+  },
+  {
+   "en": "Edited {count} files",
+   "zh": "已编辑 {count} 个文件",
+   "keys": [
+    "deliverables:changes.title"
+   ]
+  },
+  {
+   "en": "Edited {name}",
+   "zh": "已编辑 {name}",
+   "keys": [
+    "deliverables:changes.singleTitle"
+   ]
+  },
+  {
+   "en": "Effort",
+   "zh": "推理等级",
+   "keys": [
+    "model:menu.effort"
+   ]
+  },
+  {
+   "en": "Enable line wrap",
+   "zh": "开启自动换行",
+   "keys": [
+    "deliverables:review.wrap"
+   ]
+  },
+  {
+   "en": "Enabled",
+   "zh": "已开启",
+   "keys": [
+    "schedule.manager:status.active",
+    "settings.pluginInventory:enabledTag"
+   ]
+  },
+  {
+   "en": "Enter a five-field cron expression, for example 0 9 * * 1-5.",
+   "zh": "请输入 5 字段的 cron 表达式，例如 0 9 * * 1-5",
+   "keys": [
+    "schedule.manager:rule.cronInvalid"
+   ]
+  },
+  {
+   "en": "Enter a task instruction.",
+   "zh": "请输入任务内容",
+   "keys": [
+    "schedule.manager:rule.invalidPrompt"
+   ]
+  },
+  {
+   "en": "Enter a task name of at most 120 characters.",
+   "zh": "请输入不超过 120 个字符的任务名称",
+   "keys": [
+    "schedule.manager:rule.invalidTitle"
+   ]
+  },
+  {
+   "en": "Enter a valid date and time, or check the timing fields.",
+   "zh": "请输入有效的日期和时间，或检查时间字段",
+   "keys": [
+    "schedule.manager:timing.invalid"
+   ]
+  },
+  {
+   "en": "Enter a valid HTTP or HTTPS URL.",
+   "zh": "请输入有效的 HTTP 或 HTTPS 地址。",
+   "keys": [
+    "settings.models:customBaseUrlInvalid"
+   ]
+  },
+  {
+   "en": "Enter a valid IANA time zone, for example Asia/Shanghai.",
+   "zh": "请输入有效的 IANA 时区，例如 Asia/Shanghai",
+   "keys": [
+    "schedule.manager:timing.invalidZone"
+   ]
+  },
+  {
+   "en": "Enter an API key to continue.",
+   "zh": "请输入 API 密钥后继续。",
+   "keys": [
+    "settings.models:keyRequired"
+   ]
+  },
+  {
+   "en": "Enter an interval of at least 1 hour.",
+   "zh": "请输入至少 1 小时的间隔",
+   "keys": [
+    "schedule.manager:timing.invalidInterval.hour"
+   ]
+  },
+  {
+   "en": "Enter an interval of at least 1 minute.",
+   "zh": "请输入至少 1 分钟的间隔",
+   "keys": [
+    "schedule.manager:timing.invalidInterval",
+    "schedule.manager:timing.invalidInterval.minute"
+   ]
+  },
+  {
+   "en": "Enter an interval of at least 60 seconds.",
+   "zh": "请输入至少 60 秒的间隔",
+   "keys": [
+    "schedule.manager:timing.invalidInterval.second"
+   ]
+  },
+  {
+   "en": "Enter or leave plan mode",
+   "zh": "进入或退出计划模式",
+   "keys": [
+    "command:description.plan"
+   ]
+  },
+  {
+   "en": "Enter the API key, or leave the field empty if this provider authenticates another way.",
+   "zh": "请输入 API 密钥；若该提供商以其他方式鉴权，可以留空。",
+   "keys": [
+    "settings.models:keyBlankNew"
+   ]
+  },
+  {
+   "en": "Enter the API key, or leave the field empty to keep the stored one.",
+   "zh": "请输入 API 密钥；留空则保持已存储的密钥。",
+   "keys": [
+    "settings.models:keyBlank"
+   ]
+  },
+  {
+   "en": "Enter the base URL first, then fetch.",
+   "zh": "请先填写 API 地址，再获取。",
+   "keys": [
+    "settings.models:fetchNeedsBaseUrl"
+   ]
+  },
+  {
+   "en": "Enter your API key",
+   "zh": "输入 API 密钥",
+   "keys": [
+    "settings.models:keyPlaceholder"
+   ]
+  },
+  {
+   "en": "Enter your API keys to use models from the following providers.",
+   "zh": "填入各提供商的 API 密钥即可使用其模型。",
+   "keys": [
+    "settings.models:intro"
+   ]
+  },
+  {
+   "en": "Env var detected.",
+   "zh": "已检测到环境变量",
+   "keys": [
+    "settings.models:keyFallbackDetectedHidden"
+   ]
+  },
+  {
+   "en": "Env var detected. ({hint})",
+   "zh": "已检测到环境变量（{hint}）",
+   "keys": [
+    "settings.models:keyFallbackDetected"
+   ]
+  },
+  {
+   "en": "Env var not detected. Enter an API key, or configure {hint} in your env.",
+   "zh": "未检测到环境变量。请填写 API 密钥，或设置环境变量 {hint}。",
+   "keys": [
+    "settings.models:keyFallbackMissing"
+   ]
+  },
+  {
+   "en": "Environment credential status has not been confirmed.",
+   "zh": "环境凭据状态尚未确认",
+   "keys": [
+    "settings.models:keyFallbackUnchecked"
+   ]
+  },
+  {
+   "en": "Every catalog provider is already configured.",
+   "zh": "目录中的提供商都已添加。",
+   "keys": [
+    "settings.models:addCatalogExhausted"
+   ]
+  },
+  {
+   "en": "Every day",
+   "zh": "每天",
+   "keys": [
+    "schedule.manager:rule.daily",
+    "schedule.manager:cronForm.daily"
+   ]
+  },
+  {
+   "en": "Every level besides Off needs an API value, and no value can be empty.",
+   "zh": "Off 以外的档位都需要填写 API 参数值，且参数值不能为空字符串。",
+   "keys": [
+    "settings.models:modelReasoningValueRequired"
+   ]
+  },
+  {
+   "en": "Every N hours",
+   "zh": "每 N 小时",
+   "keys": [
+    "schedule.manager:rule.everyHours"
+   ]
+  },
+  {
+   "en": "Every N minutes",
+   "zh": "每 N 分钟",
+   "keys": [
+    "schedule.manager:rule.everyMinutes"
+   ]
+  },
+  {
+   "en": "Every N seconds",
+   "zh": "每 N 秒",
+   "keys": [
+    "schedule.manager:rule.everySeconds"
+   ]
+  },
+  {
+   "en": "Expand",
+   "zh": "展开",
+   "keys": [
+    "common:expand",
+    "schedule.manager:delivery.expand"
+   ]
+  },
+  {
+   "en": "Expand {label} descendants",
+   "zh": "展开 {label} 的下级子智能体",
+   "keys": [
+    "subagent:branch.expand"
+   ]
+  },
+  {
+   "en": "export",
+   "zh": "导出",
+   "keys": [
+    "command:token.export"
+   ]
+  },
+  {
+   "en": "Export",
+   "zh": "下载日志",
+   "keys": [
+    "command:label.export"
+   ]
+  },
+  {
+   "en": "External task",
+   "zh": "外部任务",
+   "keys": [
+    "subagent:mode.external"
+   ]
+  },
+  {
+   "en": "Failed to exit plan mode",
+   "zh": "退出计划模式失败",
+   "keys": [
+    "plan:chip.exitFailed"
+   ]
+  },
+  {
+   "en": "Failed to load",
+   "zh": "加载失败",
+   "keys": [
+    "common:load.failed",
+    "settings.agentPreset:brokenBadge"
+   ]
+  },
+  {
+   "en": "feedback",
+   "zh": "反馈",
+   "keys": [
+    "command:token.feedback"
+   ]
+  },
+  {
+   "en": "Feedback",
+   "zh": "反馈",
+   "keys": [
+    "command:label.feedback",
+    "session-log-download:menu.feedback"
+   ]
+  },
+  {
+   "en": "Fetch available models",
+   "zh": "获取可用模型",
+   "keys": [
+    "settings.models:fetchModels"
+   ]
+  },
+  {
+   "en": "File too large; changes cannot be shown",
+   "zh": "文件过大，无法显示改动",
+   "keys": [
+    "deliverables:diff.oversized"
+   ]
+  },
+  {
+   "en": "Filter options",
+   "zh": "筛选选项",
+   "keys": [
+    "command:search.aria"
+   ]
+  },
+  {
+   "en": "Footnotes",
+   "zh": "脚注",
+   "keys": [
+    "common:markdown.footnotes",
+    "documentMarkdown:footnotes"
+   ]
+  },
+  {
+   "en": "Frequency",
+   "zh": "提醒频率",
+   "keys": [
+    "schedule.manager:detail.frequency",
+    "schedule.manager:cronForm.frequency"
+   ]
+  },
+  {
+   "en": "Global panels",
+   "zh": "全局面板",
+   "keys": [
+    "sidebar:panels.label"
+   ]
+  },
+  {
+   "en": "goal",
+   "zh": "目标",
+   "keys": [
+    "command:token.goal"
+   ]
+  },
+  {
+   "en": "Goal",
+   "zh": "目标",
+   "keys": [
+    "command:label.goal",
+    "trajectory:source.goal"
+   ]
+  },
+  {
+   "en": "Hour",
+   "zh": "时",
+   "keys": [
+    "schedule.manager:timing.hour"
+   ]
+  },
+  {
+   "en": "How to add",
+   "zh": "添加方式",
+   "keys": [
+    "settings.models:addMode"
+   ]
+  },
+  {
+   "en": "https://api.deepseek.com/anthropic (Default to use DEEPSEEK_BASE_URL)",
+   "zh": "https://api.deepseek.com/anthropic（默认使用环境 DEEPSEEK_BASE_URL）",
+   "keys": [
+    "settings.models:deepSeekBaseUrl"
+   ]
+  },
+  {
+   "en": "https://gateway.example",
+   "zh": "https://gateway.example",
+   "keys": [
+    "settings.models:customAnthropicBaseUrlPlaceholder"
+   ]
+  },
+  {
+   "en": "https://gateway.example/v1",
+   "zh": "https://gateway.example/v1",
+   "keys": [
+    "settings.models:customBaseUrlPlaceholder"
+   ]
+  },
+  {
+   "en": "images",
+   "zh": "图片",
+   "keys": [
+    "sidebarExcel:images"
+   ]
+  },
+  {
+   "en": "Inactive tasks are read-only. Their timing cannot be edited.",
+   "zh": "已结束的任务为只读，无法修改时间",
+   "keys": [
+    "schedule.manager:timing.inactive"
+   ]
+  },
+  {
+   "en": "Increase interval",
+   "zh": "增大间隔",
+   "keys": [
+    "schedule.manager:timing.intervalIncrease"
+   ]
+  },
+  {
+   "en": "Increase minute",
+   "zh": "增大分钟",
+   "keys": [
+    "schedule.manager:cronForm.minuteIncrease"
+   ]
+  },
+  {
+   "en": "Input types",
+   "zh": "输入类型",
+   "keys": [
+    "settings.models:modelInputTypes"
+   ]
+  },
+  {
+   "en": "Inspect call",
+   "zh": "查看调用",
+   "keys": [
+    "deliverables:row.inspect"
+   ]
+  },
+  {
+   "en": "Interrupted",
+   "zh": "已中断",
+   "keys": [
+    "deliverables:row.stopped",
+    "workflowRun:status.interrupted"
+   ]
+  },
+  {
+   "en": "Invalid plan address",
+   "zh": "计划地址无效",
+   "keys": [
+    "plan:preview.invalidAddress"
+   ]
+  },
+  {
+   "en": "Invoked {name}",
+   "zh": "已调用 {name}",
+   "keys": [
+    "schedule.manager:tool.invoked"
+   ]
+  },
+  {
+   "en": "JSON",
+   "zh": "JSON",
+   "keys": [
+    "common:json.label",
+    "trajectory:record.json"
+   ]
+  },
+  {
+   "en": "Language",
+   "zh": "语言",
+   "keys": [
+    "settings.locale:language.title"
+   ]
+  },
+  {
+   "en": "Leave blank to use env as auth ({hint})",
+   "zh": "留空使用环境认证（{hint}）",
+   "keys": [
+    "settings.models:keyPlaceholderFallback"
+   ]
+  },
+  {
+   "en": "Leave blank to use saved credentials",
+   "zh": "留空使用已保存凭据",
+   "keys": [
+    "settings.models:keyPlaceholderSaved"
+   ]
+  },
+  {
+   "en": "Level",
+   "zh": "档位",
+   "keys": [
+    "settings.models:modelReasoningLevel"
+   ]
+  },
+  {
+   "en": "Line comparison timed out; shown as a whole-file replacement",
+   "zh": "逐行对比超时，按整个文件替换显示",
+   "keys": [
+    "deliverables:diff.coarse"
+   ]
+  },
+  {
+   "en": "Line wrap",
+   "zh": "自动换行",
+   "keys": [
+    "deliverables:review.wrapAria",
+    "sidebarDocumentPreview:wrap.aria"
+   ]
+  },
+  {
+   "en": "Linked session",
+   "zh": "关联会话",
+   "keys": [
+    "schedule.manager:detail.session"
+   ]
+  },
+  {
+   "en": "Linked session {title}: open original session",
+   "zh": "关联会话 {title}：打开原会话",
+   "keys": [
+    "schedule.manager:detail.openSessionTitle"
+   ]
+  },
+  {
+   "en": "Linked session: open original session",
+   "zh": "关联会话：打开原会话",
+   "keys": [
+    "schedule.manager:detail.openSession"
+   ]
+  },
+  {
+   "en": "Load more",
+   "zh": "加载更多",
+   "keys": [
+    "schedule.manager:delivery.loadMore",
+    "sidebarDocumentPreview:loadMore"
+   ]
+  },
+  {
+   "en": "Loading delivery records…",
+   "zh": "正在加载任务运行记录…",
+   "keys": [
+    "schedule.manager:delivery.loading"
+   ]
+  },
+  {
+   "en": "Loading models…",
+   "zh": "正在加载模型…",
+   "keys": [
+    "model:trigger.loading",
+    "settings.subagent:subagentModelSelectionLoading"
+   ]
+  },
+  {
+   "en": "Loading options…",
+   "zh": "正在加载选项…",
+   "keys": [
+    "command:status.loading"
+   ]
+  },
+  {
+   "en": "Loading original session information.",
+   "zh": "正在加载原会话信息",
+   "keys": [
+    "schedule.manager:detail.sessionLoading"
+   ]
+  },
+  {
+   "en": "Loading plan…",
+   "zh": "正在读取计划…",
+   "keys": [
+    "plan:preview.loading"
+   ]
+  },
+  {
+   "en": "Loading subagents…",
+   "zh": "正在加载子智能体…",
+   "keys": [
+    "subagent:loading.label"
+   ]
+  },
+  {
+   "en": "Loading tasks…",
+   "zh": "正在加载任务…",
+   "keys": [
+    "schedule.manager:list.loading"
+   ]
+  },
+  {
+   "en": "Loading the provider directory failed",
+   "zh": "加载提供商目录失败",
+   "keys": [
+    "settings.models:loadFailed"
+   ]
+  },
+  {
+   "en": "Loading…",
+   "zh": "加载中…",
+   "keys": [
+    "common:loading",
+    "session-inspector:table.loading"
+   ]
+  },
+  {
+   "en": "Lowercase identifier, starting with a letter, that uniquely names this provider in requests and as its credential name.",
+   "zh": "以小写字母开头的标识，在请求中唯一标识该提供商，并用于派生凭据名。",
+   "keys": [
+    "settings.models:customRouteHint"
+   ]
+  },
+  {
+   "en": "Max output tokens",
+   "zh": "最大输出 token 数",
+   "keys": [
+    "settings.models:maxTokens"
+   ]
+  },
+  {
+   "en": "Max output tokens must be a positive count, like 8192, 64K, or 1M.",
+   "zh": "最大输出 token 数必须是正数，例如 8192、64K 或 1M。",
+   "keys": [
+    "settings.models:modelMaxTokensInvalid"
+   ]
+  },
+  {
+   "en": "Migration required",
+   "zh": "需要迁移",
+   "keys": [
+    "subagent:catalog.migrationRequired"
+   ]
+  },
+  {
+   "en": "Minute",
+   "zh": "分",
+   "keys": [
+    "schedule.manager:timing.minute"
+   ]
+  },
+  {
+   "en": "Model and reasoning effort",
+   "zh": "模型与推理等级",
+   "keys": [
+    "model:menu.aria"
+   ]
+  },
+  {
+   "en": "Model ID",
+   "zh": "模型 ID",
+   "keys": [
+    "settings.models:modelId"
+   ]
+  },
+  {
+   "en": "Model ID is required.",
+   "zh": "模型 ID 不能为空。",
+   "keys": [
+    "settings.models:modelIdRequired"
+   ]
+  },
+  {
+   "en": "Model ID must be unique.",
+   "zh": "模型 ID 不能重复。",
+   "keys": [
+    "settings.models:modelIdDuplicate"
+   ]
+  },
+  {
+   "en": "Model operation failed: {message}",
+   "zh": "模型操作失败：{message}",
+   "keys": [
+    "model:error.action"
+   ]
+  },
+  {
+   "en": "Model options",
+   "zh": "模型选项",
+   "keys": [
+    "settings.models:modelAdvanced"
+   ]
+  },
+  {
+   "en": "Models",
+   "zh": "模型",
+   "keys": [
+    "settings.models:nav",
+    "settings.models:title"
+   ]
+  },
+  {
+   "en": "Monday to Friday",
+   "zh": "周一至周五",
+   "keys": [
+    "schedule.manager:rule.weekdays"
+   ]
+  },
+  {
+   "en": "Monthly",
+   "zh": "每月",
+   "keys": [
+    "schedule.manager:cronForm.monthly"
+   ]
+  },
+  {
+   "en": "More",
+   "zh": "更多",
+   "keys": [
+    "common:more",
+    "pluginManager:moreAction"
+   ]
+  },
+  {
+   "en": "New",
+   "zh": "新建",
+   "keys": [
+    "schedule.manager:new.action"
+   ]
+  },
+  {
+   "en": "New automation task",
+   "zh": "新建自动化任务",
+   "keys": [
+    "schedule.manager:empty.action"
+   ]
+  },
+  {
+   "en": "New session",
+   "zh": "新建会话",
+   "keys": [
+    "sidebar:session.new.label",
+    "workspace:actions.newSession"
+   ]
+  },
+  {
+   "en": "New Session",
+   "zh": "新会话",
+   "keys": [
+    "sidebar:session.new",
+    "workspace:session.new"
+   ]
+  },
+  {
+   "en": "Next",
+   "zh": "下一步",
+   "keys": [
+    "common:next",
+    "question:action.next"
+   ]
+  },
+  {
+   "en": "Next month",
+   "zh": "下个月",
+   "keys": [
+    "schedule.manager:timing.nextMonth"
+   ]
+  },
+  {
+   "en": "Next scheduled time",
+   "zh": "下次计划时间",
+   "keys": [
+    "schedule.manager:detail.next"
+   ]
+  },
+  {
+   "en": "Next scheduled time: ",
+   "zh": "下次计划时间：",
+   "keys": [
+    "schedule.manager:list.nextPrefix"
+   ]
+  },
+  {
+   "en": "No API protocol is available to declare.",
+   "zh": "没有可用的 API 协议。",
+   "keys": [
+    "settings.models:addCustomUnavailable"
+   ]
+  },
+  {
+   "en": "No default endpoint",
+   "zh": "没有默认地址",
+   "keys": [
+    "settings.models:baseUrlDefault"
+   ]
+  },
+  {
+   "en": "No delivery record available",
+   "zh": "暂无任务运行记录",
+   "keys": [
+    "schedule.manager:delivery.empty"
+   ]
+  },
+  {
+   "en": "No inactive automation tasks",
+   "zh": "没有已结束的自动化任务",
+   "keys": [
+    "schedule.manager:list.emptyInactive"
+   ]
+  },
+  {
+   "en": "No matching models.",
+   "zh": "没有匹配的模型。",
+   "keys": [
+    "model:search.empty",
+    "settings.models:fetchNoMatches"
+   ]
+  },
+  {
+   "en": "No matching tasks",
+   "zh": "没有匹配的自动化任务",
+   "keys": [
+    "schedule.manager:list.noMatches"
+   ]
+  },
+  {
+   "en": "No matching time zones",
+   "zh": "没有匹配的时区",
+   "keys": [
+    "schedule.manager:timing.zoneNoResults"
+   ]
+  },
+  {
+   "en": "No models available.",
+   "zh": "暂无可用模型",
+   "keys": [
+    "model:empty.models"
+   ]
+  },
+  {
+   "en": "No models will be shown in the selector. Unlisted IDs can still be sent directly.",
+   "zh": "模型选择器中将不显示任何模型；目录外 ID 仍可直接发送。",
+   "keys": [
+    "settings.models:modelsEmpty"
+   ]
+  },
+  {
+   "en": "No options",
+   "zh": "无选项",
+   "keys": [
+    "command:status.empty"
+   ]
+  },
+  {
+   "en": "No tasks yet. Tasks created in your sessions appear here.",
+   "zh": "还没有自动化任务，在会话中创建的任务会显示在这里",
+   "keys": [
+    "schedule.manager:list.empty"
+   ]
+  },
+  {
+   "en": "None",
+   "zh": "无",
+   "keys": [
+    "common:none",
+    "conversation:detail.none"
+   ]
+  },
+  {
+   "en": "not running",
+   "zh": "当前未运行",
+   "keys": [
+    "subagent:activity.inactive"
+   ]
+  },
+  {
+   "en": "Not selected",
+   "zh": "未选择",
+   "keys": [
+    "settings.models:customApiUnset"
+   ]
+  },
+  {
+   "en": "OK",
+   "zh": "确定",
+   "keys": [
+    "common:ok"
+   ]
+  },
+  {
+   "en": "On dates",
+   "zh": "在以下日期",
+   "keys": [
+    "schedule.manager:cronForm.dates"
+   ]
+  },
+  {
+   "en": "one-shot",
+   "zh": "一次性",
+   "keys": [
+    "subagent:mode.oneShot"
+   ]
+  },
+  {
+   "en": "One-shot subagent record",
+   "zh": "一次性子智能体记录",
+   "keys": [
+    "subagent:readonly.oneShot.title"
+   ]
+  },
+  {
+   "en": "One-shot tasks do not accept follow-ups; review the full execution record here.",
+   "zh": "一次性任务不支持后续消息，可在这里查看完整执行记录。",
+   "keys": [
+    "subagent:readonly.oneShot.body"
+   ]
+  },
+  {
+   "en": "Open {label} in sidebar",
+   "zh": "在侧边栏打开 {label}",
+   "keys": [
+    "subagent:open.sidebar.aria"
+   ]
+  },
+  {
+   "en": "Open {name} in sidebar",
+   "zh": "在侧边栏打开 {name}",
+   "keys": [
+    "deliverables:presented.previewButton",
+    "deliverables:review.openFileAria"
+   ]
+  },
+  {
+   "en": "Open in sidebar",
+   "zh": "在侧边栏打开",
+   "keys": [
+    "subagent:open.sidebar"
+   ]
+  },
+  {
+   "en": "Open plan in sidebar",
+   "zh": "在侧边栏打开计划",
+   "keys": [
+    "plan:preview.open"
+   ]
+  },
+  {
+   "en": "Open plan: {title}",
+   "zh": "打开计划：{title}",
+   "keys": [
+    "plan:preview.openNamed"
+   ]
+  },
+  {
+   "en": "Open requested",
+   "zh": "已请求打开",
+   "keys": [
+    "deliverables:presented.opened"
+   ]
+  },
+  {
+   "en": "Open sidebar",
+   "zh": "打开侧边栏",
+   "keys": [
+    "sidebar:toggle.open",
+    "sidebarRight:chrome.expand"
+   ]
+  },
+  {
+   "en": "Open task details: {title}",
+   "zh": "打开任务详情：{title}",
+   "keys": [
+    "schedule.manager:card.openLabel"
+   ]
+  },
+  {
+   "en": "Open the whole file in the sidebar",
+   "zh": "在侧边栏打开整个文件",
+   "keys": [
+    "deliverables:review.openFile"
+   ]
+  },
+  {
+   "en": "OpenAI Chat Completions",
+   "zh": "OpenAI Chat Completions",
+   "keys": [
+    "settings.models:protocolOpenAiCompletions"
+   ]
+  },
+  {
+   "en": "OpenAI Responses",
+   "zh": "OpenAI Responses",
+   "keys": [
+    "settings.models:protocolOpenAiResponses"
+   ]
+  },
+  {
+   "en": "Opening containing folder…",
+   "zh": "正在打开所在文件夹…",
+   "keys": [
+    "deliverables:presented.directoryOpening"
+   ]
+  },
+  {
+   "en": "Opening this workbook timed out. Try a smaller file.",
+   "zh": "打开表格超时。请缩小文件后重试。",
+   "keys": [
+    "sidebarExcel:timeout"
+   ]
+  },
+  {
+   "en": "Opening…",
+   "zh": "正在打开…",
+   "keys": [
+    "deliverables:presented.opening"
+   ]
+  },
+  {
+   "en": "Other fields live in cordis.patch.yml; edit that section directly.",
+   "zh": "其余字段在 cordis.patch.yml 中，请直接编辑对应段。",
+   "keys": [
+    "settings.models:advancedHint"
+   ]
+  },
+  {
+   "en": "PDF",
+   "zh": "PDF",
+   "keys": [
+    "sidebarPdf:title"
+   ]
+  },
+  {
+   "en": "PDF page {page}",
+   "zh": "PDF 第 {page} 页",
+   "keys": [
+    "sidebarPdf:pageImage"
+   ]
+  },
+  {
+   "en": "PDF preview requires the complete file contents.",
+   "zh": "PDF 预览需要完整文件内容",
+   "keys": [
+    "sidebarPdf:unsupported"
+   ]
+  },
+  {
+   "en": "permission",
+   "zh": "权限",
+   "keys": [
+    "command:token.permission"
+   ]
+  },
+  {
+   "en": "Permission",
+   "zh": "权限",
+   "keys": [
+    "command:label.permission",
+    "settings.permission:title"
+   ]
+  },
+  {
+   "en": "Pick OpenAI, Anthropic, Kimi, or another provider from the built-in catalog and enter its API key.",
+   "zh": "从内置目录中选择 OpenAI、Anthropic、Kimi 等提供商，填入其 API 密钥即可使用。",
+   "keys": [
+    "settings.models:addCatalogHint"
+   ]
+  },
+  {
+   "en": "plan",
+   "zh": "计划",
+   "keys": [
+    "command:token.plan"
+   ]
+  },
+  {
+   "en": "Plan",
+   "zh": "计划",
+   "keys": [
+    "command:label.plan",
+    "plan:chip.label"
+   ]
+  },
+  {
+   "en": "Plan · Markdown",
+   "zh": "计划 · Markdown",
+   "keys": [
+    "plan:preview.document"
+   ]
+  },
+  {
+   "en": "Plan mode on — click to turn off (/plan off)",
+   "zh": "计划模式已开启 — 点击关闭（/plan off）",
+   "keys": [
+    "plan:chip.on.title"
+   ]
+  },
+  {
+   "en": "Plan mode on, press to turn off",
+   "zh": "计划模式已开启，按下关闭",
+   "keys": [
+    "plan:chip.on.aria"
+   ]
+  },
+  {
+   "en": "Plan preview is unavailable",
+   "zh": "计划预览不可用",
+   "keys": [
+    "plan:preview.unavailable"
+   ]
+  },
+  {
+   "en": "Preparing deliverables",
+   "zh": "准备交付",
+   "keys": [
+    "deliverables:row.preparing"
+   ]
+  },
+  {
+   "en": "Present files",
+   "zh": "交付文件",
+   "keys": [
+    "deliverables:row.title"
+   ]
+  },
+  {
+   "en": "Preview {name} in sidebar",
+   "zh": "在侧边栏预览 {name}",
+   "keys": [
+    "deliverables:presented.previewCard"
+   ]
+  },
+  {
+   "en": "Preview in sidebar",
+   "zh": "在侧边栏预览",
+   "keys": [
+    "deliverables:presented.preview"
+   ]
+  },
+  {
+   "en": "Preview Notice",
+   "zh": "预览版说明",
+   "keys": [
+    "settings.models:welcomeTitle"
+   ]
+  },
+  {
+   "en": "Previous",
+   "zh": "上一步",
+   "keys": [
+    "common:previous"
+   ]
+  },
+  {
+   "en": "Previous month",
+   "zh": "上个月",
+   "keys": [
+    "schedule.manager:timing.prevMonth"
+   ]
+  },
+  {
+   "en": "Provider endpoint configuration: {env}",
+   "zh": "提供方地址配置：{env}",
+   "keys": [
+    "settings.models:baseUrlEnvironment"
+   ]
+  },
+  {
+   "en": "Provider ID",
+   "zh": "Provider ID",
+   "keys": [
+    "settings.models:customRoute"
+   ]
+  },
+  {
+   "en": "Provider-configured endpoint",
+   "zh": "由提供方配置地址",
+   "keys": [
+    "settings.models:baseUrlConfigured"
+   ]
+  },
+  {
+   "en": "Read the child session to determine whether it can be continued.",
+   "zh": "读取子会话后才能确定是否可继续。",
+   "keys": [
+    "subagent:readonly.unknown.body"
+   ]
+  },
+  {
+   "en": "Reading changes…",
+   "zh": "正在读取改动…",
+   "keys": [
+    "deliverables:diff.loading"
+   ]
+  },
+  {
+   "en": "Reasoning levels",
+   "zh": "推理等级",
+   "keys": [
+    "settings.models:modelReasoning"
+   ]
+  },
+  {
+   "en": "Record feedback about this session",
+   "zh": "发送关于当前会话的反馈",
+   "keys": [
+    "command:description.feedback"
+   ]
+  },
+  {
+   "en": "Records",
+   "zh": "任务运行记录",
+   "keys": [
+    "schedule.manager:detail.records"
+   ]
+  },
+  {
+   "en": "Records were updated.",
+   "zh": "记录已更新",
+   "keys": [
+    "schedule.manager:delivery.cursorError"
+   ]
+  },
+  {
+   "en": "Refreshing model list…",
+   "zh": "正在刷新模型列表…",
+   "keys": [
+    "model:status.loading"
+   ]
+  },
+  {
+   "en": "Reload",
+   "zh": "重新加载",
+   "keys": [
+    "model:action.reload",
+    "sidebarDocumentPreview:reloadNow"
+   ]
+  },
+  {
+   "en": "Rendering page…",
+   "zh": "正在绘制页面…",
+   "keys": [
+    "sidebarPdf:rendering"
+   ]
+  },
+  {
+   "en": "Repeat every",
+   "zh": "重复间隔",
+   "keys": [
+    "schedule.manager:timing.interval"
+   ]
+  },
+  {
+   "en": "Requested display in file manager",
+   "zh": "已请求在文件管理器中显示",
+   "keys": [
+    "deliverables:presented.revealed"
+   ]
+  },
+  {
+   "en": "Requested opening containing folder",
+   "zh": "已请求打开所在文件夹",
+   "keys": [
+    "deliverables:presented.directoryOpened"
+   ]
+  },
+  {
+   "en": "Restore defaults",
+   "zh": "恢复默认模型",
+   "keys": [
+    "settings.models:resetModels"
+   ]
+  },
+  {
+   "en": "Retention rules",
+   "zh": "保留规则",
+   "keys": [
+    "schedule.manager:delivery.retention"
+   ]
+  },
+  {
+   "en": "Retry",
+   "zh": "重试",
+   "keys": [
+    "common:retry",
+    "cordis:action.retry"
+   ]
+  },
+  {
+   "en": "Review · turn {turn}",
+   "zh": "第 {turn} 轮改动",
+   "keys": [
+    "deliverables:review.title"
+   ]
+  },
+  {
+   "en": "Review this turn’s changes in the sidebar",
+   "zh": "在侧边栏查看本轮改动",
+   "keys": [
+    "deliverables:changes.openReview"
+   ]
+  },
+  {
+   "en": "Rules",
+   "zh": "规则",
+   "keys": [
+    "schedule.manager:detail.rule"
+   ]
+  },
+  {
+   "en": "Run time",
+   "zh": "运行时间",
+   "keys": [
+    "schedule.manager:rule.title"
+   ]
+  },
+  {
+   "en": "Save",
+   "zh": "保存",
+   "keys": [
+    "common:save",
+    "settings.agentLoop:save"
+   ]
+  },
+  {
+   "en": "Save and continue",
+   "zh": "保存并继续",
+   "keys": [
+    "settings.models:onboardingSave"
+   ]
+  },
+  {
+   "en": "Save changes",
+   "zh": "保存修改",
+   "keys": [
+    "schedule.manager:rule.save"
+   ]
+  },
+  {
+   "en": "Saved {provider}.",
+   "zh": "已保存 {provider}。",
+   "keys": [
+    "settings.models:savedProvider"
+   ]
+  },
+  {
+   "en": "Saved credentials are used first. Environment fallbacks shown here, in order: {env}. Sources are launch environment, $cwd/.env, then $DSH_HOME/.env.",
+   "zh": "优先使用已保存的凭据。此处显示的环境后备按以下顺序排列：{env}。来源依次为启动环境、$cwd/.env、$DSH_HOME/.env。",
+   "keys": [
+    "settings.models:keyHelp"
+   ]
+  },
+  {
+   "en": "Saved delivery record",
+   "zh": "已保存的任务运行记录",
+   "keys": [
+    "schedule.manager:delivery.label"
+   ]
+  },
+  {
+   "en": "Saving…",
+   "zh": "保存中…",
+   "keys": [
+    "schedule.manager:rule.saving",
+    "settings.agentLoop:saving"
+   ]
+  },
+  {
+   "en": "Search",
+   "zh": "搜索",
+   "keys": [
+    "common:search",
+    "conversation:tool.title.search"
+   ]
+  },
+  {
+   "en": "Search automation tasks",
+   "zh": "搜索自动化任务",
+   "keys": [
+    "schedule.manager:search.placeholder"
+   ]
+  },
+  {
+   "en": "Search by UTC offset, IANA ID, or city",
+   "zh": "搜索 UTC 偏移、IANA 标识或城市",
+   "keys": [
+    "schedule.manager:timing.zoneSearch"
+   ]
+  },
+  {
+   "en": "Search models",
+   "zh": "搜索模型",
+   "keys": [
+    "settings.models:fetchSearch"
+   ]
+  },
+  {
+   "en": "Search models…",
+   "zh": "搜索模型…",
+   "keys": [
+    "model:search.placeholder"
+   ]
+  },
+  {
+   "en": "Search tasks",
+   "zh": "搜索任务",
+   "keys": [
+    "schedule.manager:search.label"
+   ]
+  },
+  {
+   "en": "Search…",
+   "zh": "搜索…",
+   "keys": [
+    "command:search.placeholder"
+   ]
+  },
+  {
+   "en": "Second",
+   "zh": "秒",
+   "keys": [
+    "schedule.manager:timing.second"
+   ]
+  },
+  {
+   "en": "Select all",
+   "zh": "全选",
+   "keys": [
+    "settings.models:fetchSelectAll"
+   ]
+  },
+  {
+   "en": "Select model",
+   "zh": "请选择模型",
+   "keys": [
+    "model:trigger.fallback",
+    "model:trigger.selectAria"
+   ]
+  },
+  {
+   "en": "Select model, current {model}",
+   "zh": "选择模型，当前 {model}",
+   "keys": [
+    "model:trigger.aria"
+   ]
+  },
+  {
+   "en": "Select model, current {model}, reasoning effort {effort}",
+   "zh": "选择模型，当前 {model}，推理等级 {effort}",
+   "keys": [
+    "model:trigger.ariaEffort"
+   ]
+  },
+  {
+   "en": "Select the model for this conversation",
+   "zh": "选择本会话使用的模型",
+   "keys": [
+    "model:command.description"
+   ]
+  },
+  {
+   "en": "Session history is unavailable",
+   "zh": "无法读取会话历史",
+   "keys": [
+    "plan:preview.historyUnavailable"
+   ]
+  },
+  {
+   "en": "Set or view the goal for a long-running task",
+   "zh": "设置或查看长期任务目标",
+   "keys": [
+    "command:description.goal"
+   ]
+  },
+  {
+   "en": "shapes",
+   "zh": "形状",
+   "keys": [
+    "sidebarExcel:shapes"
+   ]
+  },
+  {
+   "en": "Show all {count} changed files",
+   "zh": "展开全部 {count} 个改动文件",
+   "keys": [
+    "deliverables:changes.expandAria"
+   ]
+  },
+  {
+   "en": "Show all {count} delivered files",
+   "zh": "展开全部 {count} 个交付文件",
+   "keys": [
+    "deliverables:presented.expandAria"
+   ]
+  },
+  {
+   "en": "Showing in file manager…",
+   "zh": "正在文件管理器中显示…",
+   "keys": [
+    "deliverables:presented.revealing"
+   ]
+  },
+  {
+   "en": "Showing the first {count} lines",
+   "zh": "只显示前 {count} 行",
+   "keys": [
+    "deliverables:diff.truncated"
+   ]
+  },
+  {
+   "en": "Signed in",
+   "zh": "已登录",
+   "keys": [
+    "settings.models:accountSignedIn"
+   ]
+  },
+  {
+   "en": "Skip",
+   "zh": "跳过",
+   "keys": [
+    "common:skip",
+    "question:action.skip"
+   ]
+  },
+  {
+   "en": "Someone else changed these settings while this card was open. Close it and reopen to edit the current values.",
+   "zh": "这张卡片打开期间，这些设置已被其他地方改动。请关闭后重新打开，在当前值上编辑。",
+   "keys": [
+    "settings.models:conflict"
+   ]
+  },
+  {
+   "en": "Split view",
+   "zh": "左右对比",
+   "keys": [
+    "deliverables:review.splitAria"
+   ]
+  },
+  {
+   "en": "Spreadsheet",
+   "zh": "表格",
+   "keys": [
+    "sidebarExcel:title"
+   ]
+  },
+  {
+   "en": "Start with a lowercase letter; then lowercase letters, digits, and dashes.",
+   "zh": "需以小写字母开头，之后可用小写字母、数字和短横线。",
+   "keys": [
+    "settings.models:customRouteInvalid"
+   ]
+  },
+  {
+   "en": "Subagent sessions",
+   "zh": "子智能体会话",
+   "keys": [
+    "subagent:tree.aria"
+   ]
+  },
+  {
+   "en": "Submit",
+   "zh": "提交",
+   "keys": [
+    "common:submit"
+   ]
+  },
+  {
+   "en": "Submitting…",
+   "zh": "正在提交…",
+   "keys": [
+    "common:submitting"
+   ]
+  },
+  {
+   "en": "Switch subagent: {title}",
+   "zh": "切换子智能体：{title}",
+   "keys": [
+    "subagent:switcher.aria"
+   ]
+  },
+  {
+   "en": "Switch the permission preset (sandbox mode + approval policy)",
+   "zh": "切换权限预设（沙箱模式与审批策略）",
+   "keys": [
+    "command:description.permission"
+   ]
+  },
+  {
+   "en": "Switch to split view",
+   "zh": "切换为左右对比",
+   "keys": [
+    "deliverables:review.split"
+   ]
+  },
+  {
+   "en": "Switch to unified view",
+   "zh": "切换为单栏对比",
+   "keys": [
+    "deliverables:review.unified"
+   ]
+  },
+  {
+   "en": "Task catalog",
+   "zh": "任务列表",
+   "keys": [
+    "schedule.manager:list.label"
+   ]
+  },
+  {
+   "en": "Task deleted.",
+   "zh": "任务已删除",
+   "keys": [
+    "schedule.manager:toast.deleted"
+   ]
+  },
+  {
+   "en": "Task detail views",
+   "zh": "任务详情视图",
+   "keys": [
+    "schedule.manager:detail.tabs"
+   ]
+  },
+  {
+   "en": "Task details",
+   "zh": "任务详情",
+   "keys": [
+    "schedule.manager:detail.label"
+   ]
+  },
+  {
+   "en": "Task ID",
+   "zh": "任务 ID",
+   "keys": [
+    "schedule.manager:detail.id"
+   ]
+  },
+  {
+   "en": "Task status",
+   "zh": "任务状态",
+   "keys": [
+    "schedule.manager:statusFilter.label"
+   ]
+  },
+  {
+   "en": "Task unavailable. It may have been deleted.",
+   "zh": "任务已不可用，可能已被删除",
+   "keys": [
+    "schedule.manager:detail.missing"
+   ]
+  },
+  {
+   "en": "Text",
+   "zh": "文本",
+   "keys": [
+    "settings.models:modelInputText"
+   ]
+  },
+  {
+   "en": "The acknowledgement could not be saved. Please try again.",
+   "zh": "暂时无法保存确认状态，请重试。",
+   "keys": [
+    "settings.models:welcomeError"
+   ]
+  },
+  {
+   "en": "The API value is sent in the request's reasoning-effort field, such as OpenAI's reasoning_effort. It defaults to the level name; where the model provider's API documentation specifies a different value, follow it. Off turns reasoning off and needs no value; a value already written in the configuration is kept and sent.",
+   "zh": "API 参数值会写入请求的推理强度字段（如 OpenAI 的 reasoning_effort），默认与档位名相同；如有不同，以模型提供商的 API 文档为准。Off 表示关闭思考，不需要填写参数值；配置中已写入的值会保留并发送。",
+   "keys": [
+    "settings.models:modelReasoningHelpText"
+   ]
+  },
+  {
+   "en": "The contents of this turn’s changes are no longer available",
+   "zh": "这轮改动的内容已不可用",
+   "keys": [
+    "deliverables:diff.missing"
+   ]
+  },
+  {
+   "en": "The original session is archived.",
+   "zh": "原会话已归档",
+   "keys": [
+    "schedule.manager:detail.sessionArchived"
+   ]
+  },
+  {
+   "en": "The original session is unavailable.",
+   "zh": "原会话当前不可用",
+   "keys": [
+    "schedule.manager:detail.sessionUnavailable"
+   ]
+  },
+  {
+   "en": "The parent session is offline; reopen it to continue sending messages.",
+   "zh": "父会话当前不在线，重新打开父会话后即可继续发送消息。",
+   "keys": [
+    "subagent:readonly.body"
+   ]
+  },
+  {
+   "en": "The PDF rendering process could not continue. Please retry.",
+   "zh": "PDF 渲染进程无法继续，请重试",
+   "keys": [
+    "sidebarPdf:workerFailed"
+   ]
+  },
+  {
+   "en": "The provider listed no models. Add them by hand.",
+   "zh": "该提供商没有列出任何模型，请手动添加。",
+   "keys": [
+    "settings.models:fetchEmpty"
+   ]
+  },
+  {
+   "en": "The settings document is read-only in this deployment.",
+   "zh": "当前部署的设置文档为只读。",
+   "keys": [
+    "settings.models:readOnly"
+   ]
+  },
+  {
+   "en": "These are the models this provider has available. Choose the ones to add.",
+   "zh": "以下是模型提供商的可用模型，勾选要添加的模型。",
+   "keys": [
+    "settings.models:fetchDescription"
+   ]
+  },
+  {
+   "en": "Third-party model provider",
+   "zh": "第三方模型提供商",
+   "keys": [
+    "settings.models:addCatalog"
+   ]
+  },
+  {
+   "en": "This API key is not in a valid format. Please check it.",
+   "zh": "该 API 密钥格式错误，请检查。",
+   "keys": [
+    "settings.models:keyIllegalCharacters"
+   ]
+  },
+  {
+   "en": "This file has no available Host path. Preview it in the sidebar.",
+   "zh": "此文件没有可用的主机路径，请在侧边栏预览",
+   "keys": [
+    "deliverables:presented.nativeUnavailable"
+   ]
+  },
+  {
+   "en": "This Host has no desktop available to open files or folders in external apps. Files can still be previewed in the sidebar.",
+   "zh": "此主机没有可用的桌面，无法使用外部程序打开文件或文件夹；文件仍可在侧边栏预览",
+   "keys": [
+    "deliverables:presented.unavailable"
+   ]
+  },
+  {
+   "en": "This model provides no reasoning effort levels.",
+   "zh": "当前模型未提供推理等级。",
+   "keys": [
+    "model:empty.efforts"
+   ]
+  },
+  {
+   "en": "This PDF requires a password; password-protected previews are not supported.",
+   "zh": "此 PDF 需要密码，暂不支持预览",
+   "keys": [
+    "sidebarPdf:password"
+   ]
+  },
+  {
+   "en": "This plan was not found",
+   "zh": "未找到这份计划",
+   "keys": [
+    "plan:preview.notFound"
+   ]
+  },
+  {
+   "en": "This preview does not support {features} in this workbook. Open it in a system application for the full experience.",
+   "zh": "当前预览不支持此工作簿中的{features}。请使用系统应用打开，以获得完整体验。",
+   "keys": [
+    "sidebarExcel:unsupportedNotice"
+   ]
+  },
+  {
+   "en": "This session belongs to a sub-agent, which never receives delivered reminders.",
+   "zh": "此会话属于子 agent，永远不会收到投递的提醒",
+   "keys": [
+    "schedule.manager:timing.subagentSession"
+   ]
+  },
+  {
+   "en": "This spreadsheet could not be opened. Check its format, contents, or password protection.",
+   "zh": "无法打开此表格。请检查文件格式、内容或密码保护。",
+   "keys": [
+    "sidebarExcel:invalid"
+   ]
+  },
+  {
+   "en": "This stops the task from triggering and deletes it together with its saved delivery records. The original session and its messages remain; queued messages are not withdrawn.",
+   "zh": "任务将停止触发，并连同其已保存的任务运行记录一并删除。原会话及其消息仍然保留；已排队的消息不会被撤回。",
+   "keys": [
+    "schedule.manager:delete.description"
+   ]
+  },
+  {
+   "en": "This subagent is read-only for now",
+   "zh": "此子智能体暂时只读",
+   "keys": [
+    "subagent:readonly.title"
+   ]
+  },
+  {
+   "en": "This task changed before the update was saved. The row shows the saved rule; try again.",
+   "zh": "任务在保存前已发生变化。当前显示已保存的规则，请重试",
+   "keys": [
+    "schedule.manager:rule.error.conflict"
+   ]
+  },
+  {
+   "en": "This task changed while you were editing. Your draft is retained. Cancel and reopen after refresh to edit the latest rule.",
+   "zh": "编辑期间任务已变化，草稿已保留。请在刷新后取消并重新打开编辑器，以修改最新规则",
+   "keys": [
+    "schedule.manager:timing.conflict"
+   ]
+  },
+  {
+   "en": "This task is no longer available.",
+   "zh": "任务已不可用",
+   "keys": [
+    "schedule.manager:delivery.notFound",
+    "schedule.manager:rule.error.notFound"
+   ]
+  },
+  {
+   "en": "This task is no longer available. Your draft is retained; cancel to close the editor.",
+   "zh": "此任务当前不可用，草稿已保留。请取消以关闭编辑器",
+   "keys": [
+    "schedule.manager:timing.notFound"
+   ]
+  },
+  {
+   "en": "This temporary plan preview has expired. Reopen it from the pending review card.",
+   "zh": "临时计划预览已失效，请从仍在等待审批的卡片重新打开。",
+   "keys": [
+    "plan:preview.expired"
+   ]
+  },
+  {
+   "en": "This text encoding could not be read. Save the file as UTF-8 or UTF-16 with a BOM and retry.",
+   "zh": "无法识别此文本文件的编码。请另存为 UTF-8 或带 BOM 的 UTF-16 后重试。",
+   "keys": [
+    "sidebarExcel:encoding"
+   ]
+  },
+  {
+   "en": "This workbook contains formulas. Displayed results may be missing or inaccurate.",
+   "zh": "此工作簿包含公式，显示结果可能缺失或不准确。",
+   "keys": [
+    "sidebarExcel:formulaWarning"
+   ]
+  },
+  {
+   "en": "This workbook exceeds the preview size limit.",
+   "zh": "此表格超过预览大小限制。",
+   "keys": [
+    "sidebarExcel:tooLarge"
+   ]
+  },
+  {
+   "en": "Time zone",
+   "zh": "时区",
+   "keys": [
+    "schedule.manager:timing.zone"
+   ]
+  },
+  {
+   "en": "too large",
+   "zh": "过大",
+   "keys": [
+    "deliverables:changes.oversized"
+   ]
+  },
+  {
+   "en": "Total active duration: {duration}",
+   "zh": "总活跃耗时：{duration}",
+   "keys": [
+    "subagent:duration.exactTitle"
+   ]
+  },
+  {
+   "en": "Truncated",
+   "zh": "已截断",
+   "keys": [
+    "common:truncated"
+   ]
+  },
+  {
+   "en": "Turns reasoning off",
+   "zh": "关闭思考",
+   "keys": [
+    "settings.models:modelReasoningOffValuePlaceholder"
+   ]
+  },
+  {
+   "en": "Unable to load subagents",
+   "zh": "无法加载子智能体",
+   "keys": [
+    "subagent:load.error"
+   ]
+  },
+  {
+   "en": "Unknown",
+   "zh": "未知",
+   "keys": [
+    "common:unknown",
+    "settings:hostRelease.unknown"
+   ]
+  },
+  {
+   "en": "unknown mode",
+   "zh": "模式未知",
+   "keys": [
+    "subagent:mode.unknown"
+   ]
+  },
+  {
+   "en": "unresolvable settings path",
+   "zh": "无法解析设置路径",
+   "keys": [
+    "settings.models:settingsPathUnresolvable"
+   ]
+  },
+  {
+   "en": "Unsaved changes",
+   "zh": "有未保存的修改",
+   "keys": [
+    "schedule.manager:rule.unsaved"
+   ]
+  },
+  {
+   "en": "Use an API endpoint compatible with Anthropic Messages.",
+   "zh": "请填写兼容 Anthropic Messages 协议的 API 地址。",
+   "keys": [
+    "settings.models:deepSeekEndpointHint"
+   ]
+  },
+  {
+   "en": "Uses the model ID when empty",
+   "zh": "留空时使用模型 ID",
+   "keys": [
+    "settings.models:modelNamePlaceholder"
+   ]
+  },
+  {
+   "en": "Uses the provider default",
+   "zh": "使用提供商默认值",
+   "keys": [
+    "settings.models:contextWindowPlaceholder",
+    "settings.models:maxTokensPlaceholder"
+   ]
+  },
+  {
+   "en": "Using the adapter defaults",
+   "zh": "正在使用适配器默认模型",
+   "keys": [
+    "settings.models:modelsInherited"
+   ]
+  },
+  {
+   "en": "View changes to {name}",
+   "zh": "查看 {name} 的改动",
+   "keys": [
+    "deliverables:changes.viewDiff"
+   ]
+  },
+  {
+   "en": "View full plan",
+   "zh": "查看全文",
+   "keys": [
+    "plan:preview.full"
+   ]
+  },
+  {
+   "en": "Weekday",
+   "zh": "星期",
+   "keys": [
+    "schedule.manager:rule.weekday"
+   ]
+  },
+  {
+   "en": "Weekday {weekday}",
+   "zh": "星期{weekday}",
+   "keys": [
+    "schedule.manager:rule.weekdayOption"
+   ]
+  },
+  {
+   "en": "Weekly",
+   "zh": "每周",
+   "keys": [
+    "schedule.manager:rule.weekly",
+    "schedule.manager:cronForm.weekly"
+   ]
+  },
+  {
+   "en": "When a new record is saved, older records outside these limits are cleared automatically. Clearing records does not stop the task.",
+   "zh": "产生新记录时，超出范围的旧记录会自动清理。清理记录不影响任务继续运行。",
+   "keys": [
+    "schedule.manager:delivery.retentionExplanation"
+   ]
+  },
+  {
+   "en": "Wrap lines",
+   "zh": "自动换行",
+   "keys": [
+    "common:codeBlock.wrap",
+    "trajectory:record.wrapLines"
+   ]
+  }
+ ]
+}

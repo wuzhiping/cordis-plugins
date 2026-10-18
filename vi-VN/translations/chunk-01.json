@@ -1,0 +1,3095 @@
+{
+ "chunk": "01",
+ "count": 429,
+ "namespaces": [
+  "approval",
+  "conversation",
+  "documentHtml",
+  "documentMarkdown",
+  "reference",
+  "settings.agentLoop",
+  "settings.theme",
+  "sidebarDocumentPreview",
+  "sidebarRight"
+ ],
+ "entries": [
+  {
+   "en": "… {count} more lines",
+   "zh": "… 其余 {count} 行",
+   "keys": [
+    "conversation:diff.expandRest",
+    "conversation:read.expandRest"
+   ]
+  },
+  {
+   "en": "… {n} more lines",
+   "zh": "… 其余 {n} 行",
+   "keys": [
+    "conversation:terminal.expandRest",
+    "pluginManager:terminalExpand"
+   ]
+  },
+  {
+   "en": "(no cwd)",
+   "zh": "（无工作目录）",
+   "keys": [
+    "reference:candidate.noCwd"
+   ]
+  },
+  {
+   "en": "(send input)",
+   "zh": "（发送输入）",
+   "keys": [
+    "conversation:terminal.sendInput"
+   ]
+  },
+  {
+   "en": "{active} in progress",
+   "zh": "{active} 进行中",
+   "keys": [
+    "conversation:todo.progress.active"
+   ]
+  },
+  {
+   "en": "{answered}/{total} answered",
+   "zh": "{answered}/{total} 已回答",
+   "keys": [
+    "conversation:ask.answered"
+   ]
+  },
+  {
+   "en": "{count} agents",
+   "zh": "{count} 个智能体",
+   "keys": [
+    "conversation:detail.agents.count"
+   ]
+  },
+  {
+   "en": "{count} background jobs",
+   "zh": "{count} 个后台任务",
+   "keys": [
+    "conversation:detail.jobs.count",
+    "job:count.idle.other"
+   ]
+  },
+  {
+   "en": "{count} d",
+   "zh": "{count} 天",
+   "keys": [
+    "conversation:detail.days"
+   ]
+  },
+  {
+   "en": "{count} dynamic plugins",
+   "zh": "{count} 个动态插件",
+   "keys": [
+    "conversation:detail.plugins.count"
+   ]
+  },
+  {
+   "en": "{count} h",
+   "zh": "{count} 小时",
+   "keys": [
+    "conversation:detail.hours"
+   ]
+  },
+  {
+   "en": "{count} inspect providers",
+   "zh": "{count} 个检查提供方",
+   "keys": [
+    "conversation:detail.providers.count"
+   ]
+  },
+  {
+   "en": "{count} locations",
+   "zh": "{count} 个位置",
+   "keys": [
+    "conversation:detail.locations.count"
+   ]
+  },
+  {
+   "en": "{count} matches",
+   "zh": "{count} 条匹配",
+   "keys": [
+    "conversation:detail.matches.count"
+   ]
+  },
+  {
+   "en": "{count} min",
+   "zh": "{count} 分钟",
+   "keys": [
+    "conversation:detail.minutes"
+   ]
+  },
+  {
+   "en": "{count} more items available in Inspect",
+   "zh": "另有 {count} 项，可在「查看」中读取",
+   "keys": [
+    "conversation:detail.moreInInspect"
+   ]
+  },
+  {
+   "en": "{count} reminders",
+   "zh": "{count} 个定时任务",
+   "keys": [
+    "conversation:detail.schedule.count",
+    "schedule.catalog:trigger.other"
+   ]
+  },
+  {
+   "en": "{count} s",
+   "zh": "{count} 秒",
+   "keys": [
+    "conversation:detail.seconds"
+   ]
+  },
+  {
+   "en": "{count} team tasks",
+   "zh": "{count} 个团队任务",
+   "keys": [
+    "conversation:detail.tasks.count"
+   ]
+  },
+  {
+   "en": "{count} terminals",
+   "zh": "{count} 个终端",
+   "keys": [
+    "conversation:detail.terminals.count"
+   ]
+  },
+  {
+   "en": "{count} unchanged",
+   "zh": "{count} 项未变化",
+   "keys": [
+    "conversation:todo.diff.unchanged"
+   ]
+  },
+  {
+   "en": "{count} updated",
+   "zh": "更新 {count}",
+   "keys": [
+    "conversation:todo.diff.updated"
+   ]
+  },
+  {
+   "en": "{done} completed",
+   "zh": "{done} 已完成",
+   "keys": [
+    "conversation:todo.progress.done"
+   ]
+  },
+  {
+   "en": "{done}/{total} completed",
+   "zh": "{done}/{total} 已完成",
+   "keys": [
+    "conversation:todo.completed"
+   ]
+  },
+  {
+   "en": "{kilobytes}KB",
+   "zh": "{kilobytes}KB",
+   "keys": [
+    "conversation:tool.preparing.content"
+   ]
+  },
+  {
+   "en": "{label}, click to view original",
+   "zh": "{label}，点击查看原图",
+   "keys": [
+    "conversation:image.openOriginalLabel"
+   ]
+  },
+  {
+   "en": "{n} queued messages",
+   "zh": "{n} 条排队消息",
+   "keys": [
+    "conversation:queue.count"
+   ]
+  },
+  {
+   "en": "{n}d",
+   "zh": "{n}天",
+   "keys": [
+    "reference:time.days",
+    "workspace:time.days"
+   ]
+  },
+  {
+   "en": "{n}h",
+   "zh": "{n}小时",
+   "keys": [
+    "reference:time.hours",
+    "workspace:time.hours"
+   ]
+  },
+  {
+   "en": "{n}min",
+   "zh": "{n}分钟",
+   "keys": [
+    "reference:time.minutes",
+    "workspace:time.minutes"
+   ]
+  },
+  {
+   "en": "{n}mo",
+   "zh": "{n}个月",
+   "keys": [
+    "reference:time.months",
+    "workspace:time.months"
+   ]
+  },
+  {
+   "en": "{n}y",
+   "zh": "{n}年",
+   "keys": [
+    "reference:time.years",
+    "workspace:time.years"
+   ]
+  },
+  {
+   "en": "{pending} pending",
+   "zh": "{pending} 待处理",
+   "keys": [
+    "conversation:todo.progress.pending"
+   ]
+  },
+  {
+   "en": "{percent} of context used",
+   "zh": "上下文已用 {percent}",
+   "keys": [
+    "conversation:context.aria"
+   ]
+  },
+  {
+   "en": "{shown} matches · {files} files",
+   "zh": "{shown} 处匹配 · {files} 个文件",
+   "keys": [
+    "conversation:search.matches"
+   ]
+  },
+  {
+   "en": "{shown} paths",
+   "zh": "{shown} 个路径",
+   "keys": [
+    "conversation:search.paths"
+   ]
+  },
+  {
+   "en": "{width}x{height}px (downscaled from {originalWidth}x{originalHeight}px), {bytes} bytes",
+   "zh": "{width}x{height}px（由 {originalWidth}x{originalHeight}px 缩小），{bytes} 字节",
+   "keys": [
+    "conversation:row.imageSizeDownscaled"
+   ]
+  },
+  {
+   "en": "{width}x{height}px, {bytes} bytes",
+   "zh": "{width}x{height}px，{bytes} 字节",
+   "keys": [
+    "conversation:row.imageSize"
+   ]
+  },
+  {
+   "en": "A message can include up to {count} images",
+   "zh": "一条消息最多添加 {count} 张图片",
+   "keys": [
+    "conversation:image.tooMany"
+   ]
+  },
+  {
+   "en": "Accepted",
+   "zh": "已接收",
+   "keys": [
+    "conversation:detail.status.accepted"
+   ]
+  },
+  {
+   "en": "Active",
+   "zh": "进行中",
+   "keys": [
+    "conversation:detail.goal.active"
+   ]
+  },
+  {
+   "en": "Add bottom split",
+   "zh": "下分栏",
+   "keys": [
+    "sidebarRight:dock.drop.bottom"
+   ]
+  },
+  {
+   "en": "Add files or run commands",
+   "zh": "添加文件或调用指令",
+   "keys": [
+    "conversation:input.commands"
+   ]
+  },
+  {
+   "en": "Add left split",
+   "zh": "左分栏",
+   "keys": [
+    "sidebarRight:dock.drop.left"
+   ]
+  },
+  {
+   "en": "Add right split",
+   "zh": "右分栏",
+   "keys": [
+    "sidebarRight:dock.drop.right"
+   ]
+  },
+  {
+   "en": "Add top split",
+   "zh": "上分栏",
+   "keys": [
+    "sidebarRight:dock.drop.top"
+   ]
+  },
+  {
+   "en": "Added",
+   "zh": "新增",
+   "keys": [
+    "conversation:todo.diff.addedItem"
+   ]
+  },
+  {
+   "en": "Agent ID",
+   "zh": "智能体 ID",
+   "keys": [
+    "conversation:detail.field.agent"
+   ]
+  },
+  {
+   "en": "Agent loop",
+   "zh": "Agent 循环",
+   "keys": [
+    "settings.agentLoop:title"
+   ]
+  },
+  {
+   "en": "Agent response",
+   "zh": "智能体回复",
+   "keys": [
+    "conversation:detail.agent.reply"
+   ]
+  },
+  {
+   "en": "Agents started",
+   "zh": "启动智能体数",
+   "keys": [
+    "conversation:detail.field.agents"
+   ]
+  },
+  {
+   "en": "Allow once",
+   "zh": "允许一次",
+   "keys": [
+    "approval:allowOnce"
+   ]
+  },
+  {
+   "en": "Already finished",
+   "zh": "任务已结束",
+   "keys": [
+    "conversation:detail.receipt.alreadyFinished"
+   ]
+  },
+  {
+   "en": "Ancestor sessions",
+   "zh": "祖先会话",
+   "keys": [
+    "conversation:detail.trace.ancestors"
+   ]
+  },
+  {
+   "en": "Answer",
+   "zh": "回答",
+   "keys": [
+    "conversation:ask.reopen",
+    "workspace:status.compact.answer"
+   ]
+  },
+  {
+   "en": "Appearance",
+   "zh": "外观",
+   "keys": [
+    "settings.theme:appearance.title"
+   ]
+  },
+  {
+   "en": "Approval details",
+   "zh": "审批详情",
+   "keys": [
+    "approval:detail.aria"
+   ]
+  },
+  {
+   "en": "Ask question",
+   "zh": "提问",
+   "keys": [
+    "conversation:ask.rowTitle"
+   ]
+  },
+  {
+   "en": "Auto refresh",
+   "zh": "自动刷新",
+   "keys": [
+    "sidebarDocumentPreview:autoRefresh",
+    "sidebarFiles:autoRefresh"
+   ]
+  },
+  {
+   "en": "Auto review did not authorize this action",
+   "zh": "Auto review 未授权此次操作",
+   "keys": [
+    "conversation:tool.autoReviewReasonFallback"
+   ]
+  },
+  {
+   "en": "Availability",
+   "zh": "可用状态",
+   "keys": [
+    "conversation:detail.field.availability"
+   ]
+  },
+  {
+   "en": "Available models",
+   "zh": "可用模型",
+   "keys": [
+    "conversation:detail.models.title"
+   ]
+  },
+  {
+   "en": "Awaiting continuation",
+   "zh": "等待继续",
+   "keys": [
+    "conversation:detail.goal.disarmed"
+   ]
+  },
+  {
+   "en": "Bash",
+   "zh": "运行命令",
+   "keys": [
+    "conversation:tool.title.bash"
+   ]
+  },
+  {
+   "en": "Best match",
+   "zh": "最相关事件",
+   "keys": [
+    "conversation:detail.field.bestMatch"
+   ]
+  },
+  {
+   "en": "Blocked",
+   "zh": "受阻",
+   "keys": [
+    "conversation:detail.goal.blocked"
+   ]
+  },
+  {
+   "en": "Blocker",
+   "zh": "受阻原因",
+   "keys": [
+    "conversation:detail.goal.reason"
+   ]
+  },
+  {
+   "en": "Call ID",
+   "zh": "调用 ID",
+   "keys": [
+    "conversation:detail.field.callId"
+   ]
+  },
+  {
+   "en": "Cancel background job",
+   "zh": "取消后台任务",
+   "keys": [
+    "conversation:tool.title.killJob"
+   ]
+  },
+  {
+   "en": "Cancel editing",
+   "zh": "取消编辑",
+   "keys": [
+    "conversation:queue.cancelEdit"
+   ]
+  },
+  {
+   "en": "Cancellation requested",
+   "zh": "已请求取消",
+   "keys": [
+    "conversation:detail.receipt.cancel"
+   ]
+  },
+  {
+   "en": "cancelled",
+   "zh": "已取消",
+   "keys": [
+    "conversation:ask.cancelled",
+    "job:status.killed"
+   ]
+  },
+  {
+   "en": "Cancelled",
+   "zh": "已取消",
+   "keys": [
+    "conversation:detail.status.killed",
+    "pluginManager:installCancelledShort"
+   ]
+  },
+  {
+   "en": "Change detected",
+   "zh": "检测到变化",
+   "keys": [
+    "conversation:detail.wait.changed"
+   ]
+  },
+  {
+   "en": "Changes since the previous list",
+   "zh": "与上次清单相比",
+   "keys": [
+    "conversation:todo.diff.compare"
+   ]
+  },
+  {
+   "en": "Choose a workspace to start",
+   "zh": "选择一个工作区开始",
+   "keys": [
+    "conversation:placeholder.workspace"
+   ]
+  },
+  {
+   "en": "Choose workspace",
+   "zh": "选择工作区",
+   "keys": [
+    "conversation:hero.chooseWorkspace"
+   ]
+  },
+  {
+   "en": "Close current page or window",
+   "zh": "关闭当前页面／窗口",
+   "keys": [
+    "sidebarRight:command.close"
+   ]
+  },
+  {
+   "en": "Close original image preview",
+   "zh": "关闭原图预览",
+   "keys": [
+    "conversation:image.closePreview"
+   ]
+  },
+  {
+   "en": "Close terminal",
+   "zh": "关闭终端",
+   "keys": [
+    "conversation:tool.title.closeTerminal"
+   ]
+  },
+  {
+   "en": "closed",
+   "zh": "已结束",
+   "keys": [
+    "conversation:ask.closed"
+   ]
+  },
+  {
+   "en": "Closed",
+   "zh": "已关闭",
+   "keys": [
+    "conversation:detail.receipt.closed"
+   ]
+  },
+  {
+   "en": "Closing",
+   "zh": "关闭中",
+   "keys": [
+    "conversation:detail.receipt.closing"
+   ]
+  },
+  {
+   "en": "Cmd/Ctrl+Enter steers all queued messages",
+   "zh": "Cmd/Ctrl+Enter 插话发送全部排队消息",
+   "keys": [
+    "conversation:placeholder.steerQueue"
+   ]
+  },
+  {
+   "en": "Code",
+   "zh": "代码",
+   "keys": [
+    "conversation:tool.title.code",
+    "sidebarCodePreview:title"
+   ]
+  },
+  {
+   "en": "Code font",
+   "zh": "代码字体",
+   "keys": [
+    "settings.theme:fontFamily.code.title"
+   ]
+  },
+  {
+   "en": "Code font size",
+   "zh": "代码字号",
+   "keys": [
+    "settings.theme:fontSize.code.title"
+   ]
+  },
+  {
+   "en": "Collapse content",
+   "zh": "收起内容",
+   "keys": [
+    "conversation:read.collapseAria"
+   ]
+  },
+  {
+   "en": "Collapse diff",
+   "zh": "收起差异",
+   "keys": [
+    "conversation:diff.collapseAria"
+   ]
+  },
+  {
+   "en": "Collapse output",
+   "zh": "收起输出",
+   "keys": [
+    "conversation:terminal.collapseAria",
+    "job:terminal.collapseAria"
+   ]
+  },
+  {
+   "en": "Collapse results",
+   "zh": "收起结果",
+   "keys": [
+    "conversation:search.collapseAria"
+   ]
+  },
+  {
+   "en": "Collapse right sidebar",
+   "zh": "收起右侧边栏",
+   "keys": [
+    "sidebarRight:chrome.collapseAria"
+   ]
+  },
+  {
+   "en": "Command arguments",
+   "zh": "命令参数",
+   "keys": [
+    "conversation:row.commandArguments"
+   ]
+  },
+  {
+   "en": "Command line {n}",
+   "zh": "命令第 {n} 行",
+   "keys": [
+    "conversation:terminal.commandLine",
+    "job:terminal.commandLine"
+   ]
+  },
+  {
+   "en": "Contains non-text content; editing is not supported yet",
+   "zh": "包含非文本内容，暂不支持编辑",
+   "keys": [
+    "conversation:queue.edit.unsupported"
+   ]
+  },
+  {
+   "en": "Content",
+   "zh": "内容",
+   "keys": [
+    "conversation:detail.field.content",
+    "trajectory:usage.content"
+   ]
+  },
+  {
+   "en": "Content truncated",
+   "zh": "内容已截断",
+   "keys": [
+    "conversation:web.contentTruncated"
+   ]
+  },
+  {
+   "en": "Context",
+   "zh": "上下文",
+   "keys": [
+    "conversation:detail.field.context"
+   ]
+  },
+  {
+   "en": "continued; answer still available",
+   "zh": "已继续工作，仍可回答",
+   "keys": [
+    "conversation:ask.pending"
+   ]
+  },
+  {
+   "en": "Control how the Agent dispatches tool calls.",
+   "zh": "控制 Agent 派发工具调用的方式。",
+   "keys": [
+    "settings.agentLoop:description"
+   ]
+  },
+  {
+   "en": "Could not obtain the folder path; drag it in again",
+   "zh": "无法获取文件夹路径，请重新拖入",
+   "keys": [
+    "conversation:attachment.pathUnavailable"
+   ]
+  },
+  {
+   "en": "Couldn’t open “{path}”. Try again or close this message.",
+   "zh": "无法打开“{path}”，请重试或关闭此提示",
+   "keys": [
+    "reference:fileOpen.failed"
+   ]
+  },
+  {
+   "en": "Create goal",
+   "zh": "创建目标",
+   "keys": [
+    "conversation:tool.title.createGoal"
+   ]
+  },
+  {
+   "en": "Create reminder",
+   "zh": "创建定时任务",
+   "keys": [
+    "conversation:tool.title.createSchedule"
+   ]
+  },
+  {
+   "en": "Create subagent",
+   "zh": "创建子智能体",
+   "keys": [
+    "conversation:tool.title.subagent"
+   ]
+  },
+  {
+   "en": "Create team task",
+   "zh": "创建团队任务",
+   "keys": [
+    "conversation:tool.title.createTeamTask"
+   ]
+  },
+  {
+   "en": "Create teammate",
+   "zh": "创建队友",
+   "keys": [
+    "conversation:tool.title.spawnTeammate"
+   ]
+  },
+  {
+   "en": "Cron {expression} ({zone})",
+   "zh": "Cron {expression}（{zone}）",
+   "keys": [
+    "conversation:detail.schedule.cron"
+   ]
+  },
+  {
+   "en": "Current package",
+   "zh": "当前包",
+   "keys": [
+    "conversation:detail.field.currentPackage"
+   ]
+  },
+  {
+   "en": "Dark",
+   "zh": "深色",
+   "keys": [
+    "settings.theme:appearance.dark"
+   ]
+  },
+  {
+   "en": "Data",
+   "zh": "数据",
+   "keys": [
+    "conversation:detail.field.data",
+    "session-inspector:table.data"
+   ]
+  },
+  {
+   "en": "Decrease code font size",
+   "zh": "减小代码字号",
+   "keys": [
+    "settings.theme:fontSize.code.decrease"
+   ]
+  },
+  {
+   "en": "Decrease font size",
+   "zh": "减小字号",
+   "keys": [
+    "settings.theme:fontSize.text.decrease"
+   ]
+  },
+  {
+   "en": "Decrease terminal font size",
+   "zh": "减小终端字号",
+   "keys": [
+    "settings.theme:fontSize.terminal.decrease"
+   ]
+  },
+  {
+   "en": "Delete reminder",
+   "zh": "删除定时任务",
+   "keys": [
+    "conversation:tool.title.deleteSchedule"
+   ]
+  },
+  {
+   "en": "Deleted",
+   "zh": "已删除",
+   "keys": [
+    "conversation:detail.schedule.deleted",
+    "conversation:detail.status.deleted"
+   ]
+  },
+  {
+   "en": "Dependencies",
+   "zh": "前置任务",
+   "keys": [
+    "conversation:detail.field.dependencies"
+   ]
+  },
+  {
+   "en": "Depth",
+   "zh": "层级",
+   "keys": [
+    "conversation:detail.field.depth"
+   ]
+  },
+  {
+   "en": "Derived events",
+   "zh": "派生事件",
+   "keys": [
+    "conversation:detail.trace.derived"
+   ]
+  },
+  {
+   "en": "Descendant sessions",
+   "zh": "后代会话",
+   "keys": [
+    "conversation:detail.trace.descendants"
+   ]
+  },
+  {
+   "en": "describe the objective for a long-running task",
+   "zh": "输入目标，智能体将持续执行",
+   "keys": [
+    "conversation:hint.goal"
+   ]
+  },
+  {
+   "en": "Describe what you want to build, / commands, @ files or sessions",
+   "zh": "描述你想要构建的内容, / 调用指令, @ 文件或对话",
+   "keys": [
+    "conversation:placeholder.hero"
+   ]
+  },
+  {
+   "en": "describe your task to generate plan",
+   "zh": "描述你的任务以生成计划",
+   "keys": [
+    "conversation:hint.plan",
+    "conversation:placeholder.plan"
+   ]
+  },
+  {
+   "en": "Diagnostics",
+   "zh": "诊断",
+   "keys": [
+    "conversation:detail.field.diagnostics"
+   ]
+  },
+  {
+   "en": "Disable auto refresh",
+   "zh": "关闭自动刷新",
+   "keys": [
+    "sidebarDocumentPreview:autoRefresh.disable",
+    "sidebarFiles:autoRefresh.disable"
+   ]
+  },
+  {
+   "en": "Done",
+   "zh": "已完成",
+   "keys": [
+    "conversation:terminal.done",
+    "pluginManager:terminalDone"
+   ]
+  },
+  {
+   "en": "Drag files or images here to add them",
+   "zh": "文件或图片拖动到此处即可添加",
+   "keys": [
+    "conversation:attachment.dropTitle"
+   ]
+  },
+  {
+   "en": "Each image must be smaller than {size}",
+   "zh": "单张图片不能超过 {size}",
+   "keys": [
+    "conversation:image.fileTooLarge"
+   ]
+  },
+  {
+   "en": "Edit failed: this message may have already started sending.",
+   "zh": "编辑失败：这条消息可能已经开始发送。",
+   "keys": [
+    "conversation:queue.editFailed"
+   ]
+  },
+  {
+   "en": "Edit queued message",
+   "zh": "编辑排队消息",
+   "keys": [
+    "conversation:queue.edit"
+   ]
+  },
+  {
+   "en": "Empty pane",
+   "zh": "空面板",
+   "keys": [
+    "sidebarRight:dock.emptyPane"
+   ]
+  },
+  {
+   "en": "Enable auto refresh",
+   "zh": "开启自动刷新",
+   "keys": [
+    "sidebarDocumentPreview:autoRefresh.enable",
+    "sidebarFiles:autoRefresh.enable"
+   ]
+  },
+  {
+   "en": "Enter a number, or leave blank to use the default.",
+   "zh": "请填数字；留空表示使用默认值。",
+   "keys": [
+    "settings.agentLoop:invalidNumber",
+    "settings.shell:invalidNumber"
+   ]
+  },
+  {
+   "en": "Event sequence",
+   "zh": "事件序号",
+   "keys": [
+    "conversation:detail.field.seq"
+   ]
+  },
+  {
+   "en": "Every {interval}",
+   "zh": "每 {interval}",
+   "keys": [
+    "conversation:detail.schedule.every"
+   ]
+  },
+  {
+   "en": "Every day at {time} ({zone})",
+   "zh": "每天 {time}（{zone}）",
+   "keys": [
+    "conversation:detail.schedule.daily"
+   ]
+  },
+  {
+   "en": "Exit code",
+   "zh": "退出码",
+   "keys": [
+    "conversation:detail.field.exitCode"
+   ]
+  },
+  {
+   "en": "exit code {code}",
+   "zh": "退出码 {code}",
+   "keys": [
+    "conversation:terminal.exitCode",
+    "pluginManager:terminalExitCode"
+   ]
+  },
+  {
+   "en": "Exit fullscreen",
+   "zh": "退出全屏",
+   "keys": [
+    "sidebarRight:chrome.exitFullscreen"
+   ]
+  },
+  {
+   "en": "Exited",
+   "zh": "已退出",
+   "keys": [
+    "conversation:detail.status.exited"
+   ]
+  },
+  {
+   "en": "Expand {count} more diff lines",
+   "zh": "展开其余 {count} 行差异",
+   "keys": [
+    "conversation:diff.expandAria"
+   ]
+  },
+  {
+   "en": "Expand {count} more lines",
+   "zh": "展开其余 {count} 行",
+   "keys": [
+    "conversation:read.expandAria"
+   ]
+  },
+  {
+   "en": "Expand {count} more result lines",
+   "zh": "展开其余 {count} 行结果",
+   "keys": [
+    "conversation:search.expandAria"
+   ]
+  },
+  {
+   "en": "Expand the remaining {n} output lines",
+   "zh": "展开其余 {n} 行输出",
+   "keys": [
+    "conversation:terminal.expandAria",
+    "pluginManager:terminalExpandAria"
+   ]
+  },
+  {
+   "en": "Expand the right sidebar first",
+   "zh": "请先展开右侧栏",
+   "keys": [
+    "sidebarRight:command.collapsed"
+   ]
+  },
+  {
+   "en": "Fetch",
+   "zh": "网页获取",
+   "keys": [
+    "conversation:tool.title.webFetch"
+   ]
+  },
+  {
+   "en": "File",
+   "zh": "文件",
+   "keys": [
+    "conversation:input.file",
+    "conversation:file.label"
+   ]
+  },
+  {
+   "en": "File not found. It may have been moved or deleted.",
+   "zh": "文件不存在，可能已被移动或删除",
+   "keys": [
+    "sidebarDocumentPreview:error.notFound"
+   ]
+  },
+  {
+   "en": "Files & folders",
+   "zh": "文件与文件夹",
+   "keys": [
+    "reference:section.files"
+   ]
+  },
+  {
+   "en": "Files and images cannot be added right now",
+   "zh": "当前无法添加文件或图片",
+   "keys": [
+    "conversation:attachment.dropBlocked"
+   ]
+  },
+  {
+   "en": "Files are still uploading; send after they finish",
+   "zh": "文件还在上传，请等待上传完成后发送",
+   "keys": [
+    "conversation:file.stillUploading"
+   ]
+  },
+  {
+   "en": "Find definition",
+   "zh": "查找定义",
+   "keys": [
+    "conversation:tool.title.findDefinition"
+   ]
+  },
+  {
+   "en": "Find implementation",
+   "zh": "查找实现",
+   "keys": [
+    "conversation:tool.title.findImplementation"
+   ]
+  },
+  {
+   "en": "Find references",
+   "zh": "查找引用",
+   "keys": [
+    "conversation:tool.title.findReferences"
+   ]
+  },
+  {
+   "en": "Focus a right sidebar pane first",
+   "zh": "请先聚焦右侧面板",
+   "keys": [
+    "sidebarRight:command.noFocus"
+   ]
+  },
+  {
+   "en": "Folders can only be added in the desktop app; add individual files in the browser",
+   "zh": "只有桌面端支持添加文件夹，浏览器里请添加单个文件",
+   "keys": [
+    "conversation:attachment.directoryDesktopOnly"
+   ]
+  },
+  {
+   "en": "Font size",
+   "zh": "字号大小",
+   "keys": [
+    "settings.theme:fontSize.text.title"
+   ]
+  },
+  {
+   "en": "Fri",
+   "zh": "周五",
+   "keys": [
+    "conversation:detail.weekday.5",
+    "schedule.catalog:frequency.weekday.5"
+   ]
+  },
+  {
+   "en": "Fullscreen",
+   "zh": "全屏",
+   "keys": [
+    "sidebarRight:chrome.toFullscreen"
+   ]
+  },
+  {
+   "en": "Glob",
+   "zh": "查找文件",
+   "keys": [
+    "conversation:tool.title.glob"
+   ]
+  },
+  {
+   "en": "goal active — edit / pause / resume / clear",
+   "zh": "当前目标进行中。可输入 edit 修改 / pause 暂停 / resume 继续 / clear 清除",
+   "keys": [
+    "conversation:hint.goal.active"
+   ]
+  },
+  {
+   "en": "Grep",
+   "zh": "搜索文件内容",
+   "keys": [
+    "conversation:tool.title.grep"
+   ]
+  },
+  {
+   "en": "HTML",
+   "zh": "HTML",
+   "keys": [
+    "documentHtml:title"
+   ]
+  },
+  {
+   "en": "HTML document preview",
+   "zh": "HTML 文档预览",
+   "keys": [
+    "documentHtml:frame"
+   ]
+  },
+  {
+   "en": "HTTP",
+   "zh": "HTTP",
+   "keys": [
+    "conversation:web.http"
+   ]
+  },
+  {
+   "en": "ID",
+   "zh": "ID",
+   "keys": [
+    "conversation:detail.field.id"
+   ]
+  },
+  {
+   "en": "Idle",
+   "zh": "空闲",
+   "keys": [
+    "conversation:detail.status.idle",
+    "workspace:status.idle"
+   ]
+  },
+  {
+   "en": "Image",
+   "zh": "图片",
+   "keys": [
+    "conversation:image.label",
+    "settings.models:modelInputImage"
+   ]
+  },
+  {
+   "en": "Image failed to load; click to retry",
+   "zh": "图片加载失败，点击重试",
+   "keys": [
+    "conversation:image.loadFailed"
+   ]
+  },
+  {
+   "en": "Image limit: up to {count} images, {size} each",
+   "zh": "图片限制：最多 {count} 张，每张 {size}",
+   "keys": [
+    "conversation:attachment.dropDesc"
+   ]
+  },
+  {
+   "en": "Image resolution is too high; compress it and try again",
+   "zh": "图片分辨率过大，请压缩后重试",
+   "keys": [
+    "conversation:image.tooManyPixels"
+   ]
+  },
+  {
+   "en": "Image sides must be at most {size}px; downscale it and try again",
+   "zh": "图片宽高不能超过 {size}px，请缩小后重试",
+   "keys": [
+    "conversation:image.dimensionTooLarge"
+   ]
+  },
+  {
+   "en": "Images exceed {size} in total; remove some and try again",
+   "zh": "图片总大小超过 {size}，请移除部分图片",
+   "keys": [
+    "conversation:image.totalTooLarge"
+   ]
+  },
+  {
+   "en": "IN",
+   "zh": "输入",
+   "keys": [
+    "conversation:row.input"
+   ]
+  },
+  {
+   "en": "Increase code font size",
+   "zh": "增大代码字号",
+   "keys": [
+    "settings.theme:fontSize.code.increase"
+   ]
+  },
+  {
+   "en": "Increase font size",
+   "zh": "增大字号",
+   "keys": [
+    "settings.theme:fontSize.text.increase"
+   ]
+  },
+  {
+   "en": "Increase terminal font size",
+   "zh": "增大终端字号",
+   "keys": [
+    "settings.theme:fontSize.terminal.increase"
+   ]
+  },
+  {
+   "en": "Initial list",
+   "zh": "首次记录",
+   "keys": [
+    "conversation:todo.diff.initial"
+   ]
+  },
+  {
+   "en": "Input schema",
+   "zh": "输入 Schema",
+   "keys": [
+    "conversation:detail.field.inputSchema"
+   ]
+  },
+  {
+   "en": "Inspect",
+   "zh": "查看",
+   "keys": [
+    "conversation:row.inspect",
+    "cordis:action.inspect"
+   ]
+  },
+  {
+   "en": "Inspect plugins",
+   "zh": "检查动态插件",
+   "keys": [
+    "conversation:tool.title.inspectPlugins"
+   ]
+  },
+  {
+   "en": "Inspect providers",
+   "zh": "检查提供方",
+   "keys": [
+    "conversation:tool.title.inspectProviders"
+   ]
+  },
+  {
+   "en": "Inspect symbol",
+   "zh": "查看符号信息",
+   "keys": [
+    "conversation:tool.title.hoverSymbol"
+   ]
+  },
+  {
+   "en": "Interrupt agent",
+   "zh": "中断智能体",
+   "keys": [
+    "conversation:tool.title.interruptAgent"
+   ]
+  },
+  {
+   "en": "Interrupt requested",
+   "zh": "已请求中断",
+   "keys": [
+    "conversation:detail.receipt.interrupt"
+   ]
+  },
+  {
+   "en": "interrupted",
+   "zh": "已中断",
+   "keys": [
+    "conversation:ask.interrupted"
+   ]
+  },
+  {
+   "en": "Into the Unknown",
+   "zh": "探索未至之境",
+   "keys": [
+    "conversation:hero.headline"
+   ]
+  },
+  {
+   "en": "Job ID",
+   "zh": "任务 ID",
+   "keys": [
+    "conversation:detail.field.job"
+   ]
+  },
+  {
+   "en": "Latest run",
+   "zh": "最近运行",
+   "keys": [
+    "conversation:detail.field.latestRun"
+   ]
+  },
+  {
+   "en": "Light",
+   "zh": "浅色",
+   "keys": [
+    "settings.theme:appearance.light"
+   ]
+  },
+  {
+   "en": "Line {line}, column {column}",
+   "zh": "第 {line} 行，第 {column} 列",
+   "keys": [
+    "conversation:detail.location"
+   ]
+  },
+  {
+   "en": "Lines {begin}–{end} of {total}",
+   "zh": "第 {begin}–{end} 行，共 {total} 行",
+   "keys": [
+    "conversation:detail.output.lines"
+   ]
+  },
+  {
+   "en": "List background jobs",
+   "zh": "查看后台任务",
+   "keys": [
+    "conversation:tool.title.listJobs"
+   ]
+  },
+  {
+   "en": "List models",
+   "zh": "查看可用模型",
+   "keys": [
+    "conversation:tool.title.listModels"
+   ]
+  },
+  {
+   "en": "List reminders",
+   "zh": "查看定时任务",
+   "keys": [
+    "conversation:tool.title.listSchedules"
+   ]
+  },
+  {
+   "en": "List subagents",
+   "zh": "查看子智能体",
+   "keys": [
+    "conversation:tool.title.listAgents"
+   ]
+  },
+  {
+   "en": "List team tasks",
+   "zh": "查看团队任务",
+   "keys": [
+    "conversation:tool.title.listTeamTasks"
+   ]
+  },
+  {
+   "en": "List terminals",
+   "zh": "查看终端",
+   "keys": [
+    "conversation:tool.title.listTerminals"
+   ]
+  },
+  {
+   "en": "Markdown",
+   "zh": "Markdown",
+   "keys": [
+    "documentMarkdown:viewer.label"
+   ]
+  },
+  {
+   "en": "Message",
+   "zh": "消息",
+   "keys": [
+    "conversation:detail.field.message",
+    "trajectory:kind.message"
+   ]
+  },
+  {
+   "en": "Message delivered",
+   "zh": "消息已送达",
+   "keys": [
+    "conversation:detail.receipt.delivered"
+   ]
+  },
+  {
+   "en": "Message ID",
+   "zh": "消息 ID",
+   "keys": [
+    "conversation:detail.field.messageId"
+   ]
+  },
+  {
+   "en": "Message or run a task, / commands, @ files or sessions",
+   "zh": "发消息或创建任务, / 调用指令, @ 文件或对话",
+   "keys": [
+    "conversation:placeholder.default"
+   ]
+  },
+  {
+   "en": "Messages",
+   "zh": "对话消息",
+   "keys": [
+    "conversation:context.messages"
+   ]
+  },
+  {
+   "en": "Methods",
+   "zh": "方法",
+   "keys": [
+    "conversation:detail.field.methods"
+   ]
+  },
+  {
+   "en": "Mon",
+   "zh": "周一",
+   "keys": [
+    "conversation:detail.weekday.1",
+    "schedule.catalog:frequency.weekday.1"
+   ]
+  },
+  {
+   "en": "More font settings",
+   "zh": "更多字体设置",
+   "keys": [
+    "settings.theme:fontSize.more"
+   ]
+  },
+  {
+   "en": "More tasks available; next cursor is {cursor}",
+   "zh": "后面还有任务；下一页位置为 {cursor}",
+   "keys": [
+    "conversation:detail.tasks.nextPage"
+   ]
+  },
+  {
+   "en": "Move here",
+   "zh": "移到这里",
+   "keys": [
+    "sidebarRight:dock.drop.center"
+   ]
+  },
+  {
+   "en": "New line",
+   "zh": "换行",
+   "keys": [
+    "conversation:shortcut.newline"
+   ]
+  },
+  {
+   "en": "New tab",
+   "zh": "新标签页",
+   "keys": [
+    "sidebarRight:dock.addTab"
+   ]
+  },
+  {
+   "en": "Next package",
+   "zh": "待运行的包",
+   "keys": [
+    "conversation:detail.field.nextPackage"
+   ]
+  },
+  {
+   "en": "No",
+   "zh": "否",
+   "keys": [
+    "conversation:detail.no"
+   ]
+  },
+  {
+   "en": "No active subagents",
+   "zh": "没有正在运行的子智能体",
+   "keys": [
+    "conversation:detail.wait.noProgress"
+   ]
+  },
+  {
+   "en": "No changes to the list",
+   "zh": "清单没有变化",
+   "keys": [
+    "conversation:todo.diff.noChanges"
+   ]
+  },
+  {
+   "en": "no exit code",
+   "zh": "未正常退出",
+   "keys": [
+    "conversation:terminal.noExitCode",
+    "job:terminal.noExitCode"
+   ]
+  },
+  {
+   "en": "No goal",
+   "zh": "没有目标",
+   "keys": [
+    "conversation:detail.goal.empty"
+   ]
+  },
+  {
+   "en": "No output",
+   "zh": "无输出",
+   "keys": [
+    "conversation:terminal.noOutput",
+    "pluginManager:terminalNoOutput"
+   ]
+  },
+  {
+   "en": "No reminders",
+   "zh": "没有定时任务",
+   "keys": [
+    "conversation:detail.schedule.empty"
+   ]
+  },
+  {
+   "en": "No results",
+   "zh": "暂无结果",
+   "keys": [
+    "conversation:detail.empty",
+    "conversation:search.noResults"
+   ]
+  },
+  {
+   "en": "No results found",
+   "zh": "未找到结果",
+   "keys": [
+    "conversation:web.noResults"
+   ]
+  },
+  {
+   "en": "Not a regular file, nothing to display.",
+   "zh": "该路径不是普通文件，没有可显示的内容",
+   "keys": [
+    "sidebarDocumentPreview:error.notRegularFile"
+   ]
+  },
+  {
+   "en": "Not answered",
+   "zh": "未回答",
+   "keys": [
+    "conversation:ask.skipped"
+   ]
+  },
+  {
+   "en": "Not enough width to split, widen the sidebar",
+   "zh": "栏宽不足，拖宽侧边栏后再分栏",
+   "keys": [
+    "sidebarRight:command.width",
+    "sidebarRight:dock.splitPaneNarrow"
+   ]
+  },
+  {
+   "en": "Nothing here can view this kind of content yet.",
+   "zh": "这类内容还没有可用的查看方式。",
+   "keys": [
+    "sidebarRight:tab.unavailable"
+   ]
+  },
+  {
+   "en": "now",
+   "zh": "刚刚",
+   "keys": [
+    "reference:time.now",
+    "workspace:time.now"
+   ]
+  },
+  {
+   "en": "of context used",
+   "zh": "上下文已用",
+   "keys": [
+    "conversation:context.used"
+   ]
+  },
+  {
+   "en": "Once",
+   "zh": "单次",
+   "keys": [
+    "conversation:detail.schedule.once",
+    "schedule.catalog:frequency.once"
+   ]
+  },
+  {
+   "en": "Only affects conversation content",
+   "zh": "仅影响会话内容的字号",
+   "keys": [
+    "settings.theme:fontSize.text.description"
+   ]
+  },
+  {
+   "en": "Only PNG, JPG, WebP, and GIF images are supported",
+   "zh": "仅支持 PNG、JPG、WebP、GIF 格式的图片",
+   "keys": [
+    "conversation:image.unsupportedType"
+   ]
+  },
+  {
+   "en": "Open a page first",
+   "zh": "请先打开页面",
+   "keys": [
+    "sidebarRight:command.empty"
+   ]
+  },
+  {
+   "en": "Open command menu",
+   "zh": "打开命令菜单",
+   "keys": [
+    "conversation:shortcut.slash"
+   ]
+  },
+  {
+   "en": "Open reference menu",
+   "zh": "打开引用菜单",
+   "keys": [
+    "conversation:shortcut.mention"
+   ]
+  },
+  {
+   "en": "Open right sidebar",
+   "zh": "打开右侧边栏",
+   "keys": [
+    "sidebarRight:chrome.expandAria"
+   ]
+  },
+  {
+   "en": "Open terminal",
+   "zh": "创建终端",
+   "keys": [
+    "conversation:tool.title.openTerminal"
+   ]
+  },
+  {
+   "en": "Open with",
+   "zh": "打开方式",
+   "keys": [
+    "sidebarDocumentPreview:openWith"
+   ]
+  },
+  {
+   "en": "Original image",
+   "zh": "原图",
+   "keys": [
+    "conversation:image.original"
+   ]
+  },
+  {
+   "en": "Original image preview",
+   "zh": "原图预览",
+   "keys": [
+    "conversation:image.preview"
+   ]
+  },
+  {
+   "en": "OUT",
+   "zh": "输出",
+   "keys": [
+    "conversation:row.output"
+   ]
+  },
+  {
+   "en": "Output schema",
+   "zh": "输出 Schema",
+   "keys": [
+    "conversation:detail.field.outputSchema"
+   ]
+  },
+  {
+   "en": "Output truncated",
+   "zh": "输出已截断",
+   "keys": [
+    "conversation:detail.output.truncated"
+   ]
+  },
+  {
+   "en": "Overdue, awaiting session resume",
+   "zh": "已到期，等待会话恢复",
+   "keys": [
+    "conversation:detail.schedule.overdue"
+   ]
+  },
+  {
+   "en": "Overridden",
+   "zh": "已覆盖",
+   "keys": [
+    "settings.agentLoop:overridden",
+    "settings.shell:overridden"
+   ]
+  },
+  {
+   "en": "Packages",
+   "zh": "版本包",
+   "keys": [
+    "conversation:detail.field.packages"
+   ]
+  },
+  {
+   "en": "Parallel tool calls",
+   "zh": "并行工具调用数",
+   "keys": [
+    "settings.agentLoop:maxParallel"
+   ]
+  },
+  {
+   "en": "Parent",
+   "zh": "父级",
+   "keys": [
+    "conversation:detail.field.parent"
+   ]
+  },
+  {
+   "en": "Parent session offline; sending is unavailable but you can still stop the run",
+   "zh": "父会话已离线，无法继续发送；仍可停止当前运行",
+   "keys": [
+    "conversation:placeholder.parentOffline"
+   ]
+  },
+  {
+   "en": "Paused",
+   "zh": "已暂停",
+   "keys": [
+    "conversation:detail.goal.paused"
+   ]
+  },
+  {
+   "en": "Pending attachments",
+   "zh": "待发送附件",
+   "keys": [
+    "conversation:attachment.pending"
+   ]
+  },
+  {
+   "en": "Pending files",
+   "zh": "待发送文件",
+   "keys": [
+    "conversation:file.pending"
+   ]
+  },
+  {
+   "en": "Pending images",
+   "zh": "待发送图片",
+   "keys": [
+    "conversation:image.pending"
+   ]
+  },
+  {
+   "en": "Plain text",
+   "zh": "纯文本",
+   "keys": [
+    "sidebarDocumentPreview:viewer.text"
+   ]
+  },
+  {
+   "en": "Platform",
+   "zh": "平台",
+   "keys": [
+    "conversation:detail.field.platform"
+   ]
+  },
+  {
+   "en": "Preparing tool call",
+   "zh": "正在准备调用",
+   "keys": [
+    "conversation:row.preparing"
+   ]
+  },
+  {
+   "en": "Preview",
+   "zh": "预览版",
+   "keys": [
+    "conversation:hero.preview",
+    "trajectory:tab.preview"
+   ]
+  },
+  {
+   "en": "Preview is not available for this file type yet.",
+   "zh": "该格式文件暂时无法预览",
+   "keys": [
+    "sidebarDocumentPreview:unsupportedFile",
+    "sidebarDocumentPreview:error.notText"
+   ]
+  },
+  {
+   "en": "Previous list unavailable",
+   "zh": "旧清单不可用",
+   "keys": [
+    "conversation:todo.diff.unavailable"
+   ]
+  },
+  {
+   "en": "Previous status",
+   "zh": "中断前状态",
+   "keys": [
+    "conversation:detail.field.previousStatus"
+   ]
+  },
+  {
+   "en": "Process group",
+   "zh": "进程组",
+   "keys": [
+    "conversation:detail.field.processGroup"
+   ]
+  },
+  {
+   "en": "Process ID",
+   "zh": "进程 ID",
+   "keys": [
+    "conversation:detail.field.pid"
+   ]
+  },
+  {
+   "en": "Props",
+   "zh": "属性",
+   "keys": [
+    "conversation:detail.field.props"
+   ]
+  },
+  {
+   "en": "Provider",
+   "zh": "提供方",
+   "keys": [
+    "conversation:detail.field.provider",
+    "settings.models:provider"
+   ]
+  },
+  {
+   "en": "Pwsh",
+   "zh": "运行命令",
+   "keys": [
+    "conversation:tool.title.pwsh"
+   ]
+  },
+  {
+   "en": "px",
+   "zh": "px",
+   "keys": [
+    "settings.theme:fontSize.unit"
+   ]
+  },
+  {
+   "en": "Query code symbols",
+   "zh": "查询代码符号",
+   "keys": [
+    "conversation:tool.title.lsp"
+   ]
+  },
+  {
+   "en": "Query Cordis environment",
+   "zh": "查询 Cordis 环境",
+   "keys": [
+    "conversation:tool.title.inspect"
+   ]
+  },
+  {
+   "en": "Query runtime",
+   "zh": "查询运行时",
+   "keys": [
+    "conversation:tool.title.queryRuntime"
+   ]
+  },
+  {
+   "en": "Queue",
+   "zh": "排队发送",
+   "keys": [
+    "conversation:settings.enter.queue"
+   ]
+  },
+  {
+   "en": "Queue message",
+   "zh": "排队发送",
+   "keys": [
+    "conversation:input.send.queue"
+   ]
+  },
+  {
+   "en": "Queued",
+   "zh": "已入队",
+   "keys": [
+    "conversation:detail.status.queued"
+   ]
+  },
+  {
+   "en": "Queued file {name}",
+   "zh": "排队文件 {name}",
+   "keys": [
+    "conversation:queue.file"
+   ]
+  },
+  {
+   "en": "Queued message image",
+   "zh": "排队消息图片",
+   "keys": [
+    "conversation:queue.image"
+   ]
+  },
+  {
+   "en": "Read",
+   "zh": "读取",
+   "keys": [
+    "conversation:tool.title.read"
+   ]
+  },
+  {
+   "en": "Read event",
+   "zh": "读取事件",
+   "keys": [
+    "conversation:tool.title.readEvent"
+   ]
+  },
+  {
+   "en": "Read failed: {message}",
+   "zh": "读取失败：{message}",
+   "keys": [
+    "sidebarDocumentPreview:error.unavailable",
+    "sidebarFiles:error.unavailable"
+   ]
+  },
+  {
+   "en": "Read image",
+   "zh": "读取图片",
+   "keys": [
+    "conversation:tool.title.readImage"
+   ]
+  },
+  {
+   "en": "Read job output",
+   "zh": "读取任务输出",
+   "keys": [
+    "conversation:tool.title.readJob"
+   ]
+  },
+  {
+   "en": "Read team task",
+   "zh": "读取团队任务",
+   "keys": [
+    "conversation:tool.title.getTeamTask"
+   ]
+  },
+  {
+   "en": "Read terminal",
+   "zh": "读取终端",
+   "keys": [
+    "conversation:tool.title.readTerminal"
+   ]
+  },
+  {
+   "en": "Read the file again",
+   "zh": "重新读取文件",
+   "keys": [
+    "sidebarDocumentPreview:reload"
+   ]
+  },
+  {
+   "en": "Record status",
+   "zh": "记录状态",
+   "keys": [
+    "conversation:detail.field.surface"
+   ]
+  },
+  {
+   "en": "Recorded result",
+   "zh": "调用结果",
+   "keys": [
+    "conversation:detail.recordedResult"
+   ]
+  },
+  {
+   "en": "Refresh current page",
+   "zh": "刷新当前页面",
+   "keys": [
+    "sidebarRight:command.refresh"
+   ]
+  },
+  {
+   "en": "Registrations",
+   "zh": "注册项",
+   "keys": [
+    "conversation:detail.field.registrations"
+   ]
+  },
+  {
+   "en": "Reject",
+   "zh": "拒绝",
+   "keys": [
+    "approval:reject"
+   ]
+  },
+  {
+   "en": "Rejected by Auto review",
+   "zh": "Auto review 已拒绝",
+   "keys": [
+    "conversation:tool.autoReviewRejected"
+   ]
+  },
+  {
+   "en": "Remaining work",
+   "zh": "待完成事项",
+   "keys": [
+    "conversation:detail.report.nextSteps"
+   ]
+  },
+  {
+   "en": "Removal failed: this message may have already started sending.",
+   "zh": "删除失败：这条消息可能已经开始发送。",
+   "keys": [
+    "conversation:queue.removeFailed"
+   ]
+  },
+  {
+   "en": "Remove Cordis Plugin",
+   "zh": "移除 Cordis 插件",
+   "keys": [
+    "conversation:tool.title.removeCordis",
+    "cordis:row.removeTitle"
+   ]
+  },
+  {
+   "en": "Remove file {name}",
+   "zh": "移除文件 {name}",
+   "keys": [
+    "conversation:file.remove"
+   ]
+  },
+  {
+   "en": "Remove image {name}",
+   "zh": "移除图片 {name}",
+   "keys": [
+    "conversation:image.remove"
+   ]
+  },
+  {
+   "en": "Remove queued message",
+   "zh": "删除排队消息",
+   "keys": [
+    "conversation:queue.remove"
+   ]
+  },
+  {
+   "en": "Removed",
+   "zh": "移除",
+   "keys": [
+    "conversation:todo.diff.removedItem",
+    "cordis:status.removed"
+   ]
+  },
+  {
+   "en": "Rendering document...",
+   "zh": "文档渲染中...",
+   "keys": [
+    "documentHtml:loading",
+    "sidebarDocumentPreview:loading"
+   ]
+  },
+  {
+   "en": "Reordered",
+   "zh": "顺序调整",
+   "keys": [
+    "conversation:todo.diff.movedItem"
+   ]
+  },
+  {
+   "en": "Repeat",
+   "zh": "重复",
+   "keys": [
+    "conversation:detail.schedule.frequency",
+    "schedule.manager:rule.repeat"
+   ]
+  },
+  {
+   "en": "Replaced by",
+   "zh": "被替换为",
+   "keys": [
+    "conversation:detail.trace.replacedBy"
+   ]
+  },
+  {
+   "en": "Replaced events",
+   "zh": "替换的事件",
+   "keys": [
+    "conversation:detail.trace.replaces"
+   ]
+  },
+  {
+   "en": "Replacement chain",
+   "zh": "替换链",
+   "keys": [
+    "conversation:detail.trace.replacementChain"
+   ]
+  },
+  {
+   "en": "Reset to default",
+   "zh": "恢复默认",
+   "keys": [
+    "settings.agentLoop:reset",
+    "settings.shell:reset"
+   ]
+  },
+  {
+   "en": "Result",
+   "zh": "结果",
+   "keys": [
+    "conversation:detail.field.result",
+    "cordis:body.output"
+   ]
+  },
+  {
+   "en": "Result limit reached; narrow the search for more",
+   "zh": "已达到结果上限，可缩小搜索范围",
+   "keys": [
+    "conversation:detail.matches.capped"
+   ]
+  },
+  {
+   "en": "Retry uploading {name}",
+   "zh": "重试上传 {name}",
+   "keys": [
+    "conversation:file.retry"
+   ]
+  },
+  {
+   "en": "Revision",
+   "zh": "版本",
+   "keys": [
+    "conversation:detail.field.revision"
+   ]
+  },
+  {
+   "en": "Role",
+   "zh": "角色",
+   "keys": [
+    "conversation:detail.field.role"
+   ]
+  },
+  {
+   "en": "Root",
+   "zh": "根节点",
+   "keys": [
+    "conversation:detail.field.root"
+   ]
+  },
+  {
+   "en": "Round limit reached",
+   "zh": "已达到轮次上限",
+   "keys": [
+    "conversation:detail.ralph.limit"
+   ]
+  },
+  {
+   "en": "Rounds",
+   "zh": "执行轮次",
+   "keys": [
+    "conversation:detail.goal.rounds"
+   ]
+  },
+  {
+   "en": "Run Cordis Plugin",
+   "zh": "运行 Cordis 插件",
+   "keys": [
+    "conversation:tool.title.runCordis",
+    "cordis:row.runTitle"
+   ]
+  },
+  {
+   "en": "Run ralph loop",
+   "zh": "运行循环工作流",
+   "keys": [
+    "conversation:tool.title.ralph"
+   ]
+  },
+  {
+   "en": "Run workflow",
+   "zh": "运行工作流",
+   "keys": [
+    "conversation:tool.title.workflow"
+   ]
+  },
+  {
+   "en": "Sat",
+   "zh": "周六",
+   "keys": [
+    "conversation:detail.weekday.6",
+    "schedule.catalog:frequency.weekday.6"
+   ]
+  },
+  {
+   "en": "Save queued message",
+   "zh": "保存排队消息",
+   "keys": [
+    "conversation:queue.save"
+   ]
+  },
+  {
+   "en": "Scheduled",
+   "zh": "等待触发",
+   "keys": [
+    "conversation:detail.schedule.scheduled"
+   ]
+  },
+  {
+   "en": "Scheduled for",
+   "zh": "计划时间",
+   "keys": [
+    "conversation:detail.schedule.when"
+   ]
+  },
+  {
+   "en": "Scroll attachments left",
+   "zh": "向左滚动附件",
+   "keys": [
+    "conversation:attachment.scrollLeft"
+   ]
+  },
+  {
+   "en": "Scroll attachments right",
+   "zh": "向右滚动附件",
+   "keys": [
+    "conversation:attachment.scrollRight"
+   ]
+  },
+  {
+   "en": "Search events",
+   "zh": "搜索事件",
+   "keys": [
+    "conversation:tool.title.searchEvents"
+   ]
+  },
+  {
+   "en": "Search sessions",
+   "zh": "搜索会话",
+   "keys": [
+    "conversation:tool.title.searchSessions",
+    "workspace:search.sessions.aria"
+   ]
+  },
+  {
+   "en": "Send back to the sidebar",
+   "zh": "收回到侧边栏",
+   "keys": [
+    "sidebarRight:dock.dockFloat"
+   ]
+  },
+  {
+   "en": "Send behavior while busy",
+   "zh": "繁忙时的发送行为",
+   "keys": [
+    "conversation:settings.enter.title"
+   ]
+  },
+  {
+   "en": "Send message",
+   "zh": "发送消息",
+   "keys": [
+    "conversation:input.send",
+    "conversation:tool.title.sendMessage"
+   ]
+  },
+  {
+   "en": "Sending images failed ({reason}); re-add them and try again",
+   "zh": "图片发送失败（{reason}），请重新添加图片后再试",
+   "keys": [
+    "conversation:image.sendFailed"
+   ]
+  },
+  {
+   "en": "Sending…",
+   "zh": "发送中…",
+   "keys": [
+    "conversation:queue.sending"
+   ]
+  },
+  {
+   "en": "Session hierarchy",
+   "zh": "会话层级",
+   "keys": [
+    "conversation:session.hierarchy"
+   ]
+  },
+  {
+   "en": "Session unavailable",
+   "zh": "会话不可用",
+   "keys": [
+    "conversation:placeholder.unavailable"
+   ]
+  },
+  {
+   "en": "Session unavailable; files cannot be uploaded",
+   "zh": "会话不可用，无法上传文件",
+   "keys": [
+    "conversation:file.sessionUnavailable"
+   ]
+  },
+  {
+   "en": "Sessions",
+   "zh": "对话",
+   "keys": [
+    "reference:section.sessions",
+    "workspace:section.sessions"
+   ]
+  },
+  {
+   "en": "Showing {shown} of {total} lines",
+   "zh": "显示 {shown} / {total} 行",
+   "keys": [
+    "conversation:read.window"
+   ]
+  },
+  {
+   "en": "Showing {shown} of {total} matches · {files} files",
+   "zh": "显示 {shown} / 共 {total} 处匹配 · {files} 个文件",
+   "keys": [
+    "conversation:search.matches.truncated"
+   ]
+  },
+  {
+   "en": "Showing {shown} of {total} paths",
+   "zh": "显示 {shown} / 共 {total} 个路径",
+   "keys": [
+    "conversation:search.paths.truncated"
+   ]
+  },
+  {
+   "en": "Signal",
+   "zh": "信号",
+   "keys": [
+    "conversation:detail.field.signal"
+   ]
+  },
+  {
+   "en": "signal {signal}",
+   "zh": "信号 {signal}",
+   "keys": [
+    "conversation:terminal.signal",
+    "job:terminal.signal"
+   ]
+  },
+  {
+   "en": "Signal delivered",
+   "zh": "信号已发送",
+   "keys": [
+    "conversation:detail.receipt.signal"
+   ]
+  },
+  {
+   "en": "Signal terminal",
+   "zh": "发送终端信号",
+   "keys": [
+    "conversation:tool.title.signalTerminal"
+   ]
+  },
+  {
+   "en": "Source",
+   "zh": "来源",
+   "keys": [
+    "conversation:detail.field.source",
+    "pluginManager:sourceTitle"
+   ]
+  },
+  {
+   "en": "Source events",
+   "zh": "引用来源",
+   "keys": [
+    "conversation:detail.trace.sources"
+   ]
+  },
+  {
+   "en": "Source list truncated",
+   "zh": "来源列表已截断",
+   "keys": [
+    "conversation:web.sourcesTruncated"
+   ]
+  },
+  {
+   "en": "Split",
+   "zh": "分栏",
+   "keys": [
+    "sidebarRight:dock.splitPane"
+   ]
+  },
+  {
+   "en": "Start",
+   "zh": "开始",
+   "keys": [
+    "sidebarRight:tab.guide.title"
+   ]
+  },
+  {
+   "en": "Started",
+   "zh": "已启动",
+   "keys": [
+    "conversation:detail.receipt.started",
+    "trajectory:timing.started"
+   ]
+  },
+  {
+   "en": "Status",
+   "zh": "状态",
+   "keys": [
+    "conversation:detail.state",
+    "schedule.manager:detail.status"
+   ]
+  },
+  {
+   "en": "Status changed",
+   "zh": "状态变化",
+   "keys": [
+    "conversation:todo.diff.updatedItem"
+   ]
+  },
+  {
+   "en": "Steer",
+   "zh": "插话发送",
+   "keys": [
+    "conversation:settings.enter.steer"
+   ]
+  },
+  {
+   "en": "Steer message",
+   "zh": "插话发送",
+   "keys": [
+    "conversation:input.send.steer"
+   ]
+  },
+  {
+   "en": "Steer queued message",
+   "zh": "插话发送",
+   "keys": [
+    "conversation:queue.steer"
+   ]
+  },
+  {
+   "en": "Steering failed. Try again.",
+   "zh": "插话发送失败，请重试。",
+   "keys": [
+    "conversation:queue.steerFailed"
+   ]
+  },
+  {
+   "en": "Steering is available only while the agent is running",
+   "zh": "仅运行中可插话发送",
+   "keys": [
+    "conversation:queue.steer.unavailable"
+   ]
+  },
+  {
+   "en": "Step",
+   "zh": "步骤",
+   "keys": [
+    "conversation:detail.field.step",
+    "session-inspector:object.step"
+   ]
+  },
+  {
+   "en": "Stop Cordis Plugin",
+   "zh": "停止 Cordis 插件",
+   "keys": [
+    "conversation:tool.title.stopCordis",
+    "cordis:row.stopTitle"
+   ]
+  },
+  {
+   "en": "Stop generating",
+   "zh": "停止生成",
+   "keys": [
+    "conversation:input.stop"
+   ]
+  },
+  {
+   "en": "Subagent activity",
+   "zh": "子智能体状态",
+   "keys": [
+    "conversation:detail.wait.title"
+   ]
+  },
+  {
+   "en": "Subagents",
+   "zh": "子智能体",
+   "keys": [
+    "reference:section.subagents",
+    "slash.menu:subagent"
+   ]
+  },
+  {
+   "en": "Sun",
+   "zh": "周日",
+   "keys": [
+    "conversation:detail.weekday.7",
+    "schedule.catalog:frequency.weekday.7"
+   ]
+  },
+  {
+   "en": "Surrounding events",
+   "zh": "前后事件",
+   "keys": [
+    "conversation:detail.event.neighbors"
+   ]
+  },
+  {
+   "en": "System",
+   "zh": "跟随系统",
+   "keys": [
+    "settings.theme:appearance.system"
+   ]
+  },
+  {
+   "en": "Target event",
+   "zh": "目标事件",
+   "keys": [
+    "conversation:detail.field.target"
+   ]
+  },
+  {
+   "en": "Task",
+   "zh": "任务内容",
+   "keys": [
+    "conversation:detail.field.task"
+   ]
+  },
+  {
+   "en": "Terminal {sessionId}",
+   "zh": "终端 {sessionId}",
+   "keys": [
+    "conversation:terminal.session"
+   ]
+  },
+  {
+   "en": "Terminal font",
+   "zh": "终端字体",
+   "keys": [
+    "settings.theme:fontFamily.terminal.title"
+   ]
+  },
+  {
+   "en": "Terminal font size",
+   "zh": "终端字号",
+   "keys": [
+    "settings.theme:fontSize.terminal.title"
+   ]
+  },
+  {
+   "en": "Text font",
+   "zh": "正文字体",
+   "keys": [
+    "settings.theme:fontFamily.text.title"
+   ]
+  },
+  {
+   "en": "The {name} preview is unavailable.",
+   "zh": "预览器 {name} 不可用",
+   "keys": [
+    "sidebarDocumentPreview:rendererUnavailable"
+   ]
+  },
+  {
+   "en": "The current model does not support images; switch to a model that does",
+   "zh": "当前模型不支持图片，请切换支持图片的模型",
+   "keys": [
+    "conversation:image.modelUnsupported"
+   ]
+  },
+  {
+   "en": "The deployment did not accept these values; they were left for you to correct.",
+   "zh": "本部署没有接受这些值，已保留供你修改。",
+   "keys": [
+    "settings.agentLoop:saveFailed",
+    "settings.shell:saveFailed"
+   ]
+  },
+  {
+   "en": "The file has changed, showing the previous content.",
+   "zh": "文件已更新，当前显示为旧内容",
+   "keys": [
+    "sidebarDocumentPreview:changed"
+   ]
+  },
+  {
+   "en": "The file has not finished uploading; re-add it and try again",
+   "zh": "文件尚未上传成功，请重新添加后再试",
+   "keys": [
+    "conversation:file.notStaged"
+   ]
+  },
+  {
+   "en": "The file resource service is unavailable.",
+   "zh": "文件资源服务不可用",
+   "keys": [
+    "sidebarDocumentPreview:resourceUnavailable"
+   ]
+  },
+  {
+   "en": "The page changed; focus it again",
+   "zh": "页面已切换，请重新聚焦",
+   "keys": [
+    "sidebarRight:command.stale"
+   ]
+  },
+  {
+   "en": "The path contains characters a reference cannot carry; rename it and try again",
+   "zh": "路径含有无法引用的字符，请改名后再试",
+   "keys": [
+    "conversation:attachment.pathUnsupported"
+   ]
+  },
+  {
+   "en": "The to-do list is empty",
+   "zh": "任务清单为空",
+   "keys": [
+    "conversation:detail.todo.empty"
+   ]
+  },
+  {
+   "en": "These pending questions remain answerable from the composer.",
+   "zh": "等待中的问题仍可在输入框中回答",
+   "keys": [
+    "conversation:ask.pendingDetail"
+   ]
+  },
+  {
+   "en": "This action is unavailable in a floating panel",
+   "zh": "浮动面板不支持此操作",
+   "keys": [
+    "sidebarRight:command.float"
+   ]
+  },
+  {
+   "en": "This deployment stores settings read-only.",
+   "zh": "本部署的设置为只读。",
+   "keys": [
+    "settings.agentLoop:readOnly",
+    "settings.shell:readOnly"
+   ]
+  },
+  {
+   "en": "This HTML document could not be previewed.",
+   "zh": "无法预览这份 HTML 文档",
+   "keys": [
+    "documentHtml:failed"
+   ]
+  },
+  {
+   "en": "This page cannot be refreshed",
+   "zh": "当前页面不支持刷新",
+   "keys": [
+    "sidebarRight:command.noRefresh"
+   ]
+  },
+  {
+   "en": "This page exceeds the {limit} limit and cannot be read.",
+   "zh": "单页内容超过 {limit} 上限，无法读取",
+   "keys": [
+    "sidebarDocumentPreview:error.tooLarge"
+   ]
+  },
+  {
+   "en": "This plugin is not loaded, so it cannot be configured right now.",
+   "zh": "该插件当前未加载，暂时无法配置。",
+   "keys": [
+    "settings.agentLoop:unavailable",
+    "settings.shell:unavailable"
+   ]
+  },
+  {
+   "en": "This question is closed; its outcome is in the conversation below.",
+   "zh": "该问题已结束，结果见下方对话",
+   "keys": [
+    "conversation:ask.closedDetail"
+   ]
+  },
+  {
+   "en": "This question set was cancelled before answers were submitted.",
+   "zh": "本轮已取消，未提交回答",
+   "keys": [
+    "conversation:ask.cancelledDetail"
+   ]
+  },
+  {
+   "en": "This question set was interrupted before answers were submitted.",
+   "zh": "本轮已中断，未提交回答",
+   "keys": [
+    "conversation:ask.interruptedDetail"
+   ]
+  },
+  {
+   "en": "This session is already in use, possibly by another running DSH instance (such as dsh web or the desktop app). Quit other running DSH instances and try again.",
+   "zh": "当前会话已被占用，可能是其他正在运行的 DSH 导致的（如其他 dsh web、桌面端），请退出其他正在运行的 DSH 后重试。",
+   "keys": [
+    "conversation:error.sessionInUse",
+    "model:error.sessionInUse"
+   ]
+  },
+  {
+   "en": "Thu",
+   "zh": "周四",
+   "keys": [
+    "conversation:detail.weekday.4",
+    "schedule.catalog:frequency.weekday.4"
+   ]
+  },
+  {
+   "en": "Time",
+   "zh": "时间",
+   "keys": [
+    "conversation:detail.field.time",
+    "schedule.manager:timing.time"
+   ]
+  },
+  {
+   "en": "To-dos",
+   "zh": "任务",
+   "keys": [
+    "conversation:todo.title"
+   ]
+  },
+  {
+   "en": "Toggle panel fullscreen",
+   "zh": "面板全屏／退出全屏",
+   "keys": [
+    "sidebarRight:command.fullscreen"
+   ]
+  },
+  {
+   "en": "Toggle right sidebar",
+   "zh": "展开／收起右侧栏",
+   "keys": [
+    "sidebarRight:command.toggle"
+   ]
+  },
+  {
+   "en": "Tool {toolName} requests privileged execution",
+   "zh": "工具 {toolName} 请求越权执行",
+   "keys": [
+    "approval:escalation"
+   ]
+  },
+  {
+   "en": "Tool call",
+   "zh": "工具调用",
+   "keys": [
+    "conversation:tool.title.generic"
+   ]
+  },
+  {
+   "en": "Tool definitions",
+   "zh": "工具定义",
+   "keys": [
+    "conversation:context.tools"
+   ]
+  },
+  {
+   "en": "Tool was not executed. Reason: {reason}",
+   "zh": "工具未执行。原因：{reason}",
+   "keys": [
+    "conversation:tool.autoReviewNotExecuted"
+   ]
+  },
+  {
+   "en": "Trace event",
+   "zh": "追踪事件",
+   "keys": [
+    "conversation:tool.title.traceEvent"
+   ]
+  },
+  {
+   "en": "Trace session",
+   "zh": "追踪会话",
+   "keys": [
+    "conversation:tool.title.traceSession"
+   ]
+  },
+  {
+   "en": "Tue",
+   "zh": "周二",
+   "keys": [
+    "conversation:detail.weekday.2",
+    "schedule.catalog:frequency.weekday.2"
+   ]
+  },
+  {
+   "en": "Turn",
+   "zh": "轮次",
+   "keys": [
+    "conversation:detail.field.turn",
+    "session-inspector:object.turn"
+   ]
+  },
+  {
+   "en": "Turn off line wrap",
+   "zh": "取消换行",
+   "keys": [
+    "sidebarDocumentPreview:wrap.disable"
+   ]
+  },
+  {
+   "en": "Turn on line wrap",
+   "zh": "自动换行",
+   "keys": [
+    "sidebarDocumentPreview:wrap.enable"
+   ]
+  },
+  {
+   "en": "Two panes is the limit",
+   "zh": "已达两格上限",
+   "keys": [
+    "sidebarRight:command.budget",
+    "sidebarRight:dock.splitPaneDisabled"
+   ]
+  },
+  {
+   "en": "Type",
+   "zh": "类型",
+   "keys": [
+    "conversation:detail.field.type",
+    "session-inspector:table.type"
+   ]
+  },
+  {
+   "en": "Update goal",
+   "zh": "更新目标",
+   "keys": [
+    "conversation:tool.title.updateGoal"
+   ]
+  },
+  {
+   "en": "Update reminder",
+   "zh": "修改定时任务",
+   "keys": [
+    "conversation:tool.title.updateSchedule"
+   ]
+  },
+  {
+   "en": "Update team task",
+   "zh": "更新团队任务",
+   "keys": [
+    "conversation:tool.title.updateTeamTask"
+   ]
+  },
+  {
+   "en": "Update to-do list",
+   "zh": "更新任务清单",
+   "keys": [
+    "conversation:todo.rowTitle"
+   ]
+  },
+  {
+   "en": "Upload failed; click to retry",
+   "zh": "上传失败，点击重试",
+   "keys": [
+    "conversation:file.uploadFailed"
+   ]
+  },
+  {
+   "en": "Uploading…",
+   "zh": "上传中…",
+   "keys": [
+    "conversation:file.uploading"
+   ]
+  },
+  {
+   "en": "Upper bound on parallel-safe calls running at once within one step.",
+   "zh": "同一步内最多同时运行多少个可并行的调用。",
+   "keys": [
+    "settings.agentLoop:maxParallelHint"
+   ]
+  },
+  {
+   "en": "Use the complementary Queue / Steer action",
+   "zh": "使用互补的 Queue／Steer 方式",
+   "keys": [
+    "conversation:shortcut.complementary"
+   ]
+  },
+  {
+   "en": "Used for code blocks, inline code, and tool output",
+   "zh": "用于代码块、行内代码与工具输出",
+   "keys": [
+    "settings.theme:fontSize.code.description"
+   ]
+  },
+  {
+   "en": "Used for code blocks, inline code, and tool output. Separate fonts with commas; leave empty for the default",
+   "zh": "用于代码块、行内代码与工具输出。多个字体用逗号分隔，留空使用默认字体",
+   "keys": [
+    "settings.theme:fontFamily.code.description"
+   ]
+  },
+  {
+   "en": "Used for the interface and conversation text. Separate fonts with commas; leave empty for the default",
+   "zh": "用于界面与会话正文。多个字体用逗号分隔，留空使用默认字体",
+   "keys": [
+    "settings.theme:fontFamily.text.description"
+   ]
+  },
+  {
+   "en": "Used for the sidebar terminal",
+   "zh": "用于侧栏终端",
+   "keys": [
+    "settings.theme:fontSize.terminal.description"
+   ]
+  },
+  {
+   "en": "Used for the sidebar terminal. Separate fonts with commas; leave empty for the default",
+   "zh": "用于侧栏终端。多个字体用逗号分隔，留空使用默认字体",
+   "keys": [
+    "settings.theme:fontFamily.terminal.description"
+   ]
+  },
+  {
+   "en": "View answers",
+   "zh": "查看回答",
+   "keys": [
+    "conversation:ask.review"
+   ]
+  },
+  {
+   "en": "View goal",
+   "zh": "查看目标",
+   "keys": [
+    "conversation:tool.title.getGoal"
+   ]
+  },
+  {
+   "en": "View original",
+   "zh": "查看原图",
+   "keys": [
+    "conversation:image.openOriginal"
+   ]
+  },
+  {
+   "en": "Wait for subagent",
+   "zh": "等待子智能体",
+   "keys": [
+    "conversation:tool.title.waitAgent"
+   ]
+  },
+  {
+   "en": "Wait timed out",
+   "zh": "等待超时",
+   "keys": [
+    "conversation:detail.wait.timeout"
+   ]
+  },
+  {
+   "en": "waiting",
+   "zh": "等待回答",
+   "keys": [
+    "conversation:ask.waiting"
+   ]
+  },
+  {
+   "en": "Waiting for approval",
+   "zh": "等待审批",
+   "keys": [
+    "approval:waiting",
+    "workspace:status.waitingApproval"
+   ]
+  },
+  {
+   "en": "Warnings",
+   "zh": "提示",
+   "keys": [
+    "conversation:detail.field.warnings"
+   ]
+  },
+  {
+   "en": "Wed",
+   "zh": "周三",
+   "keys": [
+    "conversation:detail.weekday.3",
+    "schedule.catalog:frequency.weekday.3"
+   ]
+  },
+  {
+   "en": "Weekly on {days} at {time} ({zone})",
+   "zh": "每周 {days} {time}（{zone}）",
+   "keys": [
+    "conversation:detail.schedule.weekly"
+   ]
+  },
+  {
+   "en": "What Enter and the Send button do while the agent is running; Cmd/Ctrl+Enter uses the other behavior",
+   "zh": "智能体运行时 Enter 键和发送按钮的行为；Cmd/Ctrl+Enter 使用另一行为",
+   "keys": [
+    "conversation:settings.enter.description"
+   ]
+  },
+  {
+   "en": "Worker reported a blocker",
+   "zh": "智能体报告受阻",
+   "keys": [
+    "conversation:detail.ralph.reportedBlocker"
+   ]
+  },
+  {
+   "en": "Worker reported completion",
+   "zh": "智能体报告完成",
+   "keys": [
+    "conversation:detail.ralph.reportedComplete"
+   ]
+  },
+  {
+   "en": "Workflow script",
+   "zh": "工作流脚本",
+   "keys": [
+    "conversation:detail.workflow.script"
+   ]
+  },
+  {
+   "en": "Workspace",
+   "zh": "工作区",
+   "keys": [
+    "reference:crumb.root"
+   ]
+  },
+  {
+   "en": "Write",
+   "zh": "写入",
+   "keys": [
+    "conversation:tool.title.write"
+   ]
+  },
+  {
+   "en": "Yes",
+   "zh": "是",
+   "keys": [
+    "conversation:detail.yes"
+   ]
+  }
+ ]
+}

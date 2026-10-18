@@ -1,0 +1,3040 @@
+{
+ "chunk": "04",
+ "count": 429,
+ "namespaces": [
+  "deepseek-model-label-1017",
+  "feedback",
+  "job",
+  "session-log-download",
+  "settings",
+  "settings.sessionLog",
+  "settings.shell",
+  "settings.subagent",
+  "shortcuts",
+  "shortcuts.layout",
+  "sidebarOffice",
+  "trajectory",
+  "workspace"
+ ],
+ "entries": [
+  {
+   "en": " or ",
+   "zh": "或",
+   "keys": [
+    "workspace:toast.archivedOr"
+   ]
+  },
+  {
+   "en": "… earlier output dropped …",
+   "zh": "……较早的输出已丢弃……",
+   "keys": [
+    "job:output.gap"
+   ]
+  },
+  {
+   "en": "“{title}” still has work in progress. Archiving stops it first; you can restore the session later from the “All conversations (show archived)” filter in the sidebar, and the stopped work will not resume on its own.",
+   "zh": "“{title}”仍有正在进行的工作。归档会先停止这些工作；之后可在侧栏筛选“全部对话（显示已归档）”中恢复会话，被停止的工作不会自动继续。",
+   "keys": [
+    "workspace:archive.confirm.desc"
+   ]
+  },
+  {
+   "en": "(no output)",
+   "zh": "（无输出）",
+   "keys": [
+    "job:terminal.noOutput"
+   ]
+  },
+  {
+   "en": "(tool call only)",
+   "zh": "（仅工具调用）",
+   "keys": [
+    "trajectory:record.toolCallOnly"
+   ]
+  },
+  {
+   "en": "{count} background job",
+   "zh": "{count} 个后台任务",
+   "keys": [
+    "job:count.idle.one"
+   ]
+  },
+  {
+   "en": "{count} background job running",
+   "zh": "{count} 个后台任务运行中",
+   "keys": [
+    "job:count.live.one"
+   ]
+  },
+  {
+   "en": "{count} background jobs running",
+   "zh": "{count} 个后台任务运行中",
+   "keys": [
+    "job:count.live.other"
+   ]
+  },
+  {
+   "en": "{count} customized",
+   "zh": "{count} 项已自定义",
+   "keys": [
+    "shortcuts:modified-count"
+   ]
+  },
+  {
+   "en": "{count} step",
+   "zh": "{count} 个步骤",
+   "keys": [
+    "trajectory:summary.steps.one"
+   ]
+  },
+  {
+   "en": "{count} steps",
+   "zh": "{count} 个步骤",
+   "keys": [
+    "trajectory:summary.steps.other"
+   ]
+  },
+  {
+   "en": "{hours}h {minutes}m",
+   "zh": "{hours}小时{minutes}分",
+   "keys": [
+    "job:duration.hours"
+   ]
+  },
+  {
+   "en": "{label}: {version}",
+   "zh": "{label}：{version}",
+   "keys": [
+    "settings:desktop.update.versionDetail"
+   ]
+  },
+  {
+   "en": "{minutes}m {seconds}s",
+   "zh": "{minutes}分{seconds}秒",
+   "keys": [
+    "job:duration.minutes",
+    "subagent:duration.minutes"
+   ]
+  },
+  {
+   "en": "{n} background job: {names}",
+   "zh": "{n} 个后台任务：{names}",
+   "keys": [
+    "workspace:archive.confirm.jobs.one"
+   ]
+  },
+  {
+   "en": "{n} background jobs: {names}",
+   "zh": "{n} 个后台任务：{names}",
+   "keys": [
+    "workspace:archive.confirm.jobs.other"
+   ]
+  },
+  {
+   "en": "{n} other item of work ({kind})",
+   "zh": "{n} 项其他工作（{kind}）",
+   "keys": [
+    "workspace:archive.confirm.other.one"
+   ]
+  },
+  {
+   "en": "{n} other items of work ({kind})",
+   "zh": "{n} 项其他工作（{kind}）",
+   "keys": [
+    "workspace:archive.confirm.other.other"
+   ]
+  },
+  {
+   "en": "{n} running subagent: {names}",
+   "zh": "{n} 个运行中的子智能体：{names}",
+   "keys": [
+    "workspace:archive.confirm.subagents.one"
+   ]
+  },
+  {
+   "en": "{n} running subagents: {names}",
+   "zh": "{n} 个运行中的子智能体：{names}",
+   "keys": [
+    "workspace:archive.confirm.subagents.other"
+   ]
+  },
+  {
+   "en": "{n} scheduled reminder: {names}",
+   "zh": "{n} 条定时提醒：{names}",
+   "keys": [
+    "workspace:archive.confirm.schedules.one"
+   ]
+  },
+  {
+   "en": "{n} scheduled reminders: {names}",
+   "zh": "{n} 条定时提醒：{names}",
+   "keys": [
+    "workspace:archive.confirm.schedules.other"
+   ]
+  },
+  {
+   "en": "{n} session",
+   "zh": "{n} 个会话",
+   "keys": [
+    "workspace:sessions.count.one"
+   ]
+  },
+  {
+   "en": "{n} sessions",
+   "zh": "{n} 个会话",
+   "keys": [
+    "workspace:sessions.count.other"
+   ]
+  },
+  {
+   "en": "{n} subagent running",
+   "zh": "{n} 个子智能体运行中",
+   "keys": [
+    "workspace:status.subagentsRunning.one"
+   ]
+  },
+  {
+   "en": "{n} subagents running",
+   "zh": "{n} 个子智能体运行中",
+   "keys": [
+    "workspace:status.subagentsRunning.other"
+   ]
+  },
+  {
+   "en": "{name} parameters JSON",
+   "zh": "{name} 参数 JSON",
+   "keys": [
+    "trajectory:record.namedParametersJson"
+   ]
+  },
+  {
+   "en": "{percent}%",
+   "zh": "{percent}%",
+   "keys": [
+    "settings:desktop.update.progress",
+    "sidebarImage:zoomValue"
+   ]
+  },
+  {
+   "en": "{request}{kind}, {content}",
+   "zh": "{request}{kind}，{content}",
+   "keys": [
+    "trajectory:request.rowAria"
+   ]
+  },
+  {
+   "en": "{retry} of {maximum}",
+   "zh": "{retry}/{maximum}",
+   "keys": [
+    "trajectory:request.retryProgress"
+   ]
+  },
+  {
+   "en": "{t} ago",
+   "zh": "{t}前",
+   "keys": [
+    "workspace:time.ago"
+   ]
+  },
+  {
+   "en": "{value} ms",
+   "zh": "{value} 毫秒",
+   "keys": [
+    "trajectory:unit.milliseconds"
+   ]
+  },
+  {
+   "en": "{value} s",
+   "zh": "{value} 秒",
+   "keys": [
+    "trajectory:unit.seconds"
+   ]
+  },
+  {
+   "en": "{value} tok/s",
+   "zh": "{value} tok/s",
+   "keys": [
+    "trajectory:unit.tokensPerSecond"
+   ]
+  },
+  {
+   "en": "1017",
+   "zh": "1017",
+   "keys": [
+    "deepseek-model-label-1017:badge.label"
+   ]
+  },
+  {
+   "en": "A workspace named “{name}” already exists.",
+   "zh": "已存在名为“{name}”的工作区。",
+   "keys": [
+    "workspace:conflict.named"
+   ]
+  },
+  {
+   "en": "About maximum recursion depth",
+   "zh": "最大递归深度说明",
+   "keys": [
+    "settings.subagent:subagentDepthHelpLabel"
+   ]
+  },
+  {
+   "en": "About the Subagent parallelism limit",
+   "zh": "子智能体并行数量上限说明",
+   "keys": [
+    "settings.subagent:subagentCapacityHelpLabel"
+   ]
+  },
+  {
+   "en": "Actual time",
+   "zh": "实际时间",
+   "keys": [
+    "trajectory:toolbar.actualTime"
+   ]
+  },
+  {
+   "en": "Add details to help us improve. Your submission will include the current conversation log.",
+   "zh": "填写详情以帮助我们改进体验，提交内容会包括当前对话的日志",
+   "keys": [
+    "feedback:dialog.hint"
+   ]
+  },
+  {
+   "en": "Add workspace",
+   "zh": "添加工作区",
+   "keys": [
+    "workspace:workspace.add"
+   ]
+  },
+  {
+   "en": "Add workspace…",
+   "zh": "添加工作区…",
+   "keys": [
+    "workspace:menu.addWorkspace"
+   ]
+  },
+  {
+   "en": "All conversations (show archived)",
+   "zh": "全部对话（显示已归档）",
+   "keys": [
+    "workspace:viewOptions.showArchived"
+   ]
+  },
+  {
+   "en": "Allow agents to choose models for Subagents",
+   "zh": "允许 Agent 为子智能体选择模型",
+   "keys": [
+    "settings.subagent:subagentModelSelectionToggle"
+   ]
+  },
+  {
+   "en": "Already used by “{commands}”",
+   "zh": "已被「{commands}」占用",
+   "keys": [
+    "shortcuts:conflict"
+   ]
+  },
+  {
+   "en": "Application",
+   "zh": "应用操作",
+   "keys": [
+    "shortcuts:application"
+   ]
+  },
+  {
+   "en": "Approval",
+   "zh": "待审批",
+   "keys": [
+    "workspace:status.compact.approval"
+   ]
+  },
+  {
+   "en": "Approval area",
+   "zh": "审批区域",
+   "keys": [
+    "shortcuts:approval"
+   ]
+  },
+  {
+   "en": "Archive",
+   "zh": "归档会话",
+   "keys": [
+    "workspace:actions.archive"
+   ]
+  },
+  {
+   "en": "Archive session",
+   "zh": "归档会话",
+   "keys": [
+    "workspace:menu.archiveSession"
+   ]
+  },
+  {
+   "en": "Archived",
+   "zh": "已归档",
+   "keys": [
+    "workspace:row.archived"
+   ]
+  },
+  {
+   "en": "Archived only",
+   "zh": "仅显示已归档",
+   "keys": [
+    "workspace:viewOptions.onlyArchived"
+   ]
+  },
+  {
+   "en": "Archived sessions cannot be opened. Unarchive it to view.",
+   "zh": "已归档对话暂时无法查看，请取消归档后查看",
+   "keys": [
+    "workspace:toast.archivedNotOpenable"
+   ]
+  },
+  {
+   "en": "assistant",
+   "zh": "助手",
+   "keys": [
+    "trajectory:request.collapsedAssistant"
+   ]
+  },
+  {
+   "en": "ASSISTANT",
+   "zh": "助手",
+   "keys": [
+    "trajectory:kind.assistant"
+   ]
+  },
+  {
+   "en": "Assistant Message",
+   "zh": "助手消息",
+   "keys": [
+    "trajectory:details.assistantMessage"
+   ]
+  },
+  {
+   "en": "Attachments",
+   "zh": "附件",
+   "keys": [
+    "trajectory:attachment.list"
+   ]
+  },
+  {
+   "en": "Background jobs",
+   "zh": "后台任务",
+   "keys": [
+    "job:list.aria"
+   ]
+  },
+  {
+   "en": "Bad response",
+   "zh": "有问题的回答",
+   "keys": [
+    "feedback:action.dislike"
+   ]
+  },
+  {
+   "en": "Between turns",
+   "zh": "轮次之间",
+   "keys": [
+    "trajectory:section.betweenTurns"
+   ]
+  },
+  {
+   "en": "Block #{index} {type}",
+   "zh": "块 #{index} {type}",
+   "keys": [
+    "trajectory:block.label"
+   ]
+  },
+  {
+   "en": "Browser combinations: Mod+/, Mod+Shift+,, Mod+Shift+.. Mod is Command on Mac and Ctrl elsewhere.",
+   "zh": "浏览器可用组合：Mod+/、Mod+Shift+,、Mod+Shift+.。Mod 在 Mac 上为 Command，其他系统为 Ctrl。",
+   "keys": [
+    "shortcuts:web-help"
+   ]
+  },
+  {
+   "en": "Cache created",
+   "zh": "缓存写入",
+   "keys": [
+    "trajectory:usage.cacheCreated"
+   ]
+  },
+  {
+   "en": "Cached",
+   "zh": "缓存读取",
+   "keys": [
+    "trajectory:usage.cached"
+   ]
+  },
+  {
+   "en": "Calls",
+   "zh": "调用",
+   "keys": [
+    "trajectory:toolbar.calls"
+   ]
+  },
+  {
+   "en": "Checking for updates…",
+   "zh": "正在检查更新…",
+   "keys": [
+    "settings:desktop.update.checking"
+   ]
+  },
+  {
+   "en": "Choose a workspace first.",
+   "zh": "请先选择工作区",
+   "keys": [
+    "workspace:draft.workspaceRequired"
+   ]
+  },
+  {
+   "en": "Choose again",
+   "zh": "重新选择",
+   "keys": [
+    "workspace:folderError.retry"
+   ]
+  },
+  {
+   "en": "Clear",
+   "zh": "清空",
+   "keys": [
+    "job:section.clear",
+    "session-inspector:filter.clear"
+   ]
+  },
+  {
+   "en": "Click again to confirm",
+   "zh": "再次点击确认停止",
+   "keys": [
+    "job:kill.confirm"
+   ]
+  },
+  {
+   "en": "Click to load earlier history",
+   "zh": "点击加载更早的历史",
+   "keys": [
+    "trajectory:history.clickToLoadEarlier"
+   ]
+  },
+  {
+   "en": "Close confirmation",
+   "zh": "关闭确认",
+   "keys": [
+    "shortcuts:close-confirmation"
+   ]
+  },
+  {
+   "en": "Close font details",
+   "zh": "关闭字体详情",
+   "keys": [
+    "sidebarOffice:closeDetails"
+   ]
+  },
+  {
+   "en": "Close keyboard shortcuts",
+   "zh": "关闭快捷键",
+   "keys": [
+    "shortcuts:close"
+   ]
+  },
+  {
+   "en": "Close menu or top dialog",
+   "zh": "关闭菜单或顶层弹窗",
+   "keys": [
+    "shortcuts:dismiss"
+   ]
+  },
+  {
+   "en": "Collapse calls",
+   "zh": "收起所有调用",
+   "keys": [
+    "trajectory:toolbar.collapseCalls"
+   ]
+  },
+  {
+   "en": "Collapse turns",
+   "zh": "收起所有轮次",
+   "keys": [
+    "trajectory:toolbar.collapseTurns"
+   ]
+  },
+  {
+   "en": "Collapsed {kind} summary, {summary}",
+   "zh": "已收起的{kind}概述，{summary}",
+   "keys": [
+    "trajectory:request.collapsedSummary"
+   ]
+  },
+  {
+   "en": "Command timeout (ms)",
+   "zh": "命令超时（毫秒）",
+   "keys": [
+    "settings.shell:timeoutMs"
+   ]
+  },
+  {
+   "en": "Compacted",
+   "zh": "已压缩",
+   "keys": [
+    "trajectory:details.compacted"
+   ]
+  },
+  {
+   "en": "COMPACTED",
+   "zh": "已压缩",
+   "keys": [
+    "trajectory:kind.compacted"
+   ]
+  },
+  {
+   "en": "Compaction",
+   "zh": "压缩",
+   "keys": [
+    "trajectory:request.compactionPurpose"
+   ]
+  },
+  {
+   "en": "Compaction · {section}",
+   "zh": "压缩 · {section}",
+   "keys": [
+    "trajectory:request.compaction"
+   ]
+  },
+  {
+   "en": "Compaction {seq}",
+   "zh": "压缩 {seq}",
+   "keys": [
+    "trajectory:group.compaction"
+   ]
+  },
+  {
+   "en": "Compaction failed",
+   "zh": "上下文压缩失败",
+   "keys": [
+    "trajectory:layout.compactionFailed"
+   ]
+  },
+  {
+   "en": "Compaction was interrupted before completion.",
+   "zh": "上下文压缩在完成前被中断。",
+   "keys": [
+    "trajectory:layout.compactionInterrupted"
+   ]
+  },
+  {
+   "en": "completed",
+   "zh": "已完成",
+   "keys": [
+    "job:status.completed",
+    "subagent:activity.completed"
+   ]
+  },
+  {
+   "en": "Confirm stop",
+   "zh": "确认停止",
+   "keys": [
+    "job:kill.confirmAction"
+   ]
+  },
+  {
+   "en": "Connected",
+   "zh": "连接成功",
+   "keys": [
+    "settings:connection.connected"
+   ]
+  },
+  {
+   "en": "CONTEXT",
+   "zh": "上下文",
+   "keys": [
+    "trajectory:kind.context"
+   ]
+  },
+  {
+   "en": "Copy code",
+   "zh": "复制代码",
+   "keys": [
+    "trajectory:code.copySource"
+   ]
+  },
+  {
+   "en": "Copy failed. Try again.",
+   "zh": "复制失败，请重试",
+   "keys": [
+    "workspace:toast.sessionIdCopyFailed"
+   ]
+  },
+  {
+   "en": "Copy output",
+   "zh": "复制输出",
+   "keys": [
+    "trajectory:code.copyOutput"
+   ]
+  },
+  {
+   "en": "Copy Session ID",
+   "zh": "复制 Session ID",
+   "keys": [
+    "workspace:menu.sessionId"
+   ]
+  },
+  {
+   "en": "Could not check for updates. Check your connection and try again.",
+   "zh": "检查更新失败，请检查网络连接后重试。",
+   "keys": [
+    "settings:desktop.update.checkNetworkFailed"
+   ]
+  },
+  {
+   "en": "Could not check for updates. Please try again later.",
+   "zh": "检查更新失败，请稍后重试。",
+   "keys": [
+    "settings:desktop.update.checkFailed"
+   ]
+  },
+  {
+   "en": "Could not download the update. Check your connection and try again.",
+   "zh": "下载更新失败，请检查网络连接后重试。",
+   "keys": [
+    "settings:desktop.update.downloadNetworkFailed"
+   ]
+  },
+  {
+   "en": "Could not download the update. Please try again.",
+   "zh": "下载更新失败，请重试。",
+   "keys": [
+    "settings:desktop.update.downloadFailed"
+   ]
+  },
+  {
+   "en": "Could not fill the draft. Please try again shortly.",
+   "zh": "暂时无法填入草稿，请稍后重试",
+   "keys": [
+    "workspace:draft.initializationFailed"
+   ]
+  },
+  {
+   "en": "Could not fork the session. Try again.",
+   "zh": "无法分叉会话，请重试",
+   "keys": [
+    "workspace:shortcut.forkFailed"
+   ]
+  },
+  {
+   "en": "Could not install the update. Check your connection and try again.",
+   "zh": "安装更新失败，请检查网络连接后重试。",
+   "keys": [
+    "settings:desktop.update.installNetworkFailed"
+   ]
+  },
+  {
+   "en": "Could not install the update. Please try again later.",
+   "zh": "安装更新失败，请稍后重试。",
+   "keys": [
+    "settings:desktop.update.installFailed"
+   ]
+  },
+  {
+   "en": "Could not load feedback",
+   "zh": "反馈状态加载失败",
+   "keys": [
+    "feedback:error.load"
+   ]
+  },
+  {
+   "en": "Could not open configuration file",
+   "zh": "无法打开配置文件",
+   "keys": [
+    "settings:openDocument.error"
+   ]
+  },
+  {
+   "en": "Could not protect desktop key recording. Exit recording and try again.",
+   "zh": "无法启用桌面录键保护，请关闭后重试。",
+   "keys": [
+    "shortcuts:native-failed"
+   ]
+  },
+  {
+   "en": "Could not read {location}. Check access permissions, then {reload}.",
+   "zh": "无法读取 {location}。请检查访问权限后{reload}。",
+   "keys": [
+    "shortcuts:read"
+   ]
+  },
+  {
+   "en": "Could not restore defaults. Your shortcuts are unchanged. Please retry.",
+   "zh": "恢复默认失败。原快捷键已保留，请重试。",
+   "keys": [
+    "shortcuts:reset-failed"
+   ]
+  },
+  {
+   "en": "Could not safely stop the tasks. The update has not been installed. Please try again later.",
+   "zh": "未能安全停止任务，更新尚未安装，请稍后重试。",
+   "keys": [
+    "settings:desktop.update.stopFailed"
+   ]
+  },
+  {
+   "en": "Could not save feedback",
+   "zh": "反馈保存失败",
+   "keys": [
+    "feedback:error.generic"
+   ]
+  },
+  {
+   "en": "Could not save preference",
+   "zh": "无法保存设置",
+   "keys": [
+    "settings.sessionLog:failed"
+   ]
+  },
+  {
+   "en": "Could not save. Please try again.",
+   "zh": "保存失败，请重试",
+   "keys": [
+    "settings:developerTools.error"
+   ]
+  },
+  {
+   "en": "Could not save. Your previous shortcuts and current draft are preserved. Please retry.",
+   "zh": "保存失败。原快捷键和当前草稿已保留，请重试。",
+   "keys": [
+    "shortcuts:write-failed"
+   ]
+  },
+  {
+   "en": "Could not start the Session export.",
+   "zh": "无法启动 Session 导出。",
+   "keys": [
+    "session-log-download:dialog.commandFailed"
+   ]
+  },
+  {
+   "en": "Couldn’t open folder",
+   "zh": "无法打开文件夹",
+   "keys": [
+    "workspace:folderError.title"
+   ]
+  },
+  {
+   "en": "Created {time}",
+   "zh": "创建于 {time}",
+   "keys": [
+    "workspace:hover.created"
+   ]
+  },
+  {
+   "en": "Current version: {version}",
+   "zh": "当前版本：{version}",
+   "keys": [
+    "settings:general.currentVersion"
+   ]
+  },
+  {
+   "en": "Currently unavailable",
+   "zh": "当前不可用",
+   "keys": [
+    "settings.subagent:subagentModelSelectionUnavailable"
+   ]
+  },
+  {
+   "en": "Default bindings are active.",
+   "zh": "当前使用默认键位。",
+   "keys": [
+    "shortcuts:using-defaults"
+   ]
+  },
+  {
+   "en": "Default shortcuts restored",
+   "zh": "已恢复默认快捷键",
+   "keys": [
+    "shortcuts:reset-saved"
+   ]
+  },
+  {
+   "en": "Delete workspace",
+   "zh": "删除工作区",
+   "keys": [
+    "workspace:delete.workspace"
+   ]
+  },
+  {
+   "en": "Deleting workspace…",
+   "zh": "正在删除工作区…",
+   "keys": [
+    "workspace:delete.pending"
+   ]
+  },
+  {
+   "en": "Diff",
+   "zh": "差异",
+   "keys": [
+    "trajectory:tab.diff"
+   ]
+  },
+  {
+   "en": "Directory picker unavailable",
+   "zh": "目录选择器不可用",
+   "keys": [
+    "workspace:shortcut.noPicker"
+   ]
+  },
+  {
+   "en": "Disable Subagents",
+   "zh": "禁用子智能体",
+   "keys": [
+    "settings.subagent:subagentDepthZero"
+   ]
+  },
+  {
+   "en": "Disconnected",
+   "zh": "连接异常，刷新重试",
+   "keys": [
+    "settings:connection.error"
+   ]
+  },
+  {
+   "en": "Disconnected, reconnect now",
+   "zh": "连接异常，点击立即重连",
+   "keys": [
+    "settings:connection.reconnect"
+   ]
+  },
+  {
+   "en": "done",
+   "zh": "已完成",
+   "keys": [
+    "job:terminal.done"
+   ]
+  },
+  {
+   "en": "Download session log",
+   "zh": "下载 Session 日志",
+   "keys": [
+    "session-log-download:menu.download"
+   ]
+  },
+  {
+   "en": "Downloading update: {percent}%\nTarget version: {version}",
+   "zh": "正在下载更新：{percent}%\n目标版本：{version}",
+   "keys": [
+    "settings:desktop.update.downloadDetail"
+   ]
+  },
+  {
+   "en": "Drag to resize. Double-click to reset.",
+   "zh": "拖动调整大小；双击恢复默认值。",
+   "keys": [
+    "trajectory:details.resizeTitle"
+   ]
+  },
+  {
+   "en": "Duration",
+   "zh": "时长",
+   "keys": [
+    "trajectory:toolbar.duration",
+    "trajectory:timing.duration"
+   ]
+  },
+  {
+   "en": "Duration too short",
+   "zh": "时长过短",
+   "keys": [
+    "trajectory:timing.durationTooShort"
+   ]
+  },
+  {
+   "en": "Edit shortcut for {command}",
+   "zh": "修改{command}快捷键",
+   "keys": [
+    "shortcuts:edit-label"
+   ]
+  },
+  {
+   "en": "Edit shortcuts",
+   "zh": "编辑快捷键",
+   "keys": [
+    "shortcuts:view"
+   ]
+  },
+  {
+   "en": "Enter a whole number of 0 or more.",
+   "zh": "请输入不小于 0 的整数。",
+   "keys": [
+    "settings.subagent:subagentDepthInvalid"
+   ]
+  },
+  {
+   "en": "Enter a whole number of 1 or more.",
+   "zh": "请输入不小于 1 的整数。",
+   "keys": [
+    "settings.subagent:subagentCapacityInvalid"
+   ]
+  },
+  {
+   "en": "Error",
+   "zh": "错误",
+   "keys": [
+    "trajectory:details.error"
+   ]
+  },
+  {
+   "en": "Event details",
+   "zh": "事件详情",
+   "keys": [
+    "trajectory:details.event"
+   ]
+  },
+  {
+   "en": "exit {code}",
+   "zh": "退出码 {code}",
+   "keys": [
+    "job:terminal.exitCode"
+   ]
+  },
+  {
+   "en": "Expand {n} collapsed output lines",
+   "zh": "展开被折叠的 {n} 行输出",
+   "keys": [
+    "job:terminal.expandAria"
+   ]
+  },
+  {
+   "en": "Expand calls",
+   "zh": "展开所有调用",
+   "keys": [
+    "trajectory:toolbar.expandCalls"
+   ]
+  },
+  {
+   "en": "Expand turns",
+   "zh": "展开所有轮次",
+   "keys": [
+    "trajectory:toolbar.expandTurns"
+   ]
+  },
+  {
+   "en": "Exporting Session",
+   "zh": "正在导出 Session",
+   "keys": [
+    "session-log-download:dialog.preparingTitle"
+   ]
+  },
+  {
+   "en": "failed",
+   "zh": "已失败",
+   "keys": [
+    "job:status.failed",
+    "job:terminal.failed"
+   ]
+  },
+  {
+   "en": "Feedback category",
+   "zh": "反馈分类",
+   "keys": [
+    "feedback:dialog.categories"
+   ]
+  },
+  {
+   "en": "Feedback details",
+   "zh": "反馈详情",
+   "keys": [
+    "feedback:dialog.detail"
+   ]
+  },
+  {
+   "en": "Files ×{count}",
+   "zh": "文件 ×{count}",
+   "keys": [
+    "trajectory:layout.fileAttachments"
+   ]
+  },
+  {
+   "en": "filter archived sessions",
+   "zh": "筛选已归档会话",
+   "keys": [
+    "workspace:toast.archivedFilter"
+   ]
+  },
+  {
+   "en": "Filter sessions",
+   "zh": "筛选会话",
+   "keys": [
+    "workspace:filterBy.label"
+   ]
+  },
+  {
+   "en": "Finished {count}",
+   "zh": "已结束 {count}",
+   "keys": [
+    "job:section.settledCount"
+   ]
+  },
+  {
+   "en": "First token unavailable",
+   "zh": "首 token 时间不可用",
+   "keys": [
+    "trajectory:timing.firstTokenUnavailable"
+   ]
+  },
+  {
+   "en": "Fonts: {count}",
+   "zh": "{count} 种字体",
+   "keys": [
+    "sidebarOffice:missingFontsCount"
+   ]
+  },
+  {
+   "en": "Fork session",
+   "zh": "分叉会话",
+   "keys": [
+    "workspace:menu.fork"
+   ]
+  },
+  {
+   "en": "General",
+   "zh": "通用设置",
+   "keys": [
+    "settings:general.nav"
+   ]
+  },
+  {
+   "en": "Generation",
+   "zh": "生成",
+   "keys": [
+    "trajectory:timing.generation"
+   ]
+  },
+  {
+   "en": "Goal · Round {round}",
+   "zh": "目标 · Round {round}",
+   "keys": [
+    "trajectory:source.goalRound"
+   ]
+  },
+  {
+   "en": "Good response",
+   "zh": "好的回答",
+   "keys": [
+    "feedback:action.like"
+   ]
+  },
+  {
+   "en": "Group by",
+   "zh": "分组方式",
+   "keys": [
+    "workspace:groupBy.label"
+   ]
+  },
+  {
+   "en": "Help improve DeepSeek models and products.",
+   "zh": "帮助改进 DeepSeek 模型与产品",
+   "keys": [
+    "settings.sessionLog:description"
+   ]
+  },
+  {
+   "en": "Hide archived",
+   "zh": "隐藏已归档",
+   "keys": [
+    "workspace:viewOptions.hideArchived"
+   ]
+  },
+  {
+   "en": "Hide live output of {label}",
+   "zh": "收起 {label} 的实时输出",
+   "keys": [
+    "job:row.collapseAria"
+   ]
+  },
+  {
+   "en": "Hierarchy",
+   "zh": "层级",
+   "keys": [
+    "trajectory:details.hierarchy"
+   ]
+  },
+  {
+   "en": "Hold at most two non-modifier keys. Release the keys to try again.",
+   "zh": "最多同时按下两个非修饰键。请松开后重试。",
+   "keys": [
+    "shortcuts:too-many-keys"
+   ]
+  },
+  {
+   "en": "How long one command may run before it is terminated.",
+   "zh": "单条命令允许运行多久，超时即终止。",
+   "keys": [
+    "settings.shell:timeoutMsHint"
+   ]
+  },
+  {
+   "en": "I have reviewed the latest configuration",
+   "zh": "已核对最新配置",
+   "keys": [
+    "shortcuts:review"
+   ]
+  },
+  {
+   "en": "If a tool defines its own maximum recursion depth, that setting takes precedence.",
+   "zh": "如果某个工具单独设置了最大递归深度，以该工具的设置为准。",
+   "keys": [
+    "settings.subagent:subagentDepthOverride"
+   ]
+  },
+  {
+   "en": "Image {index}",
+   "zh": "图片 {index}",
+   "keys": [
+    "trajectory:attachment.imageName"
+   ]
+  },
+  {
+   "en": "Images ×{count}",
+   "zh": "图片 ×{count}",
+   "keys": [
+    "trajectory:layout.imageCount"
+   ]
+  },
+  {
+   "en": "In one list",
+   "zh": "单列表",
+   "keys": [
+    "workspace:groupBy.flat"
+   ]
+  },
+  {
+   "en": "Include Command, Ctrl, or Alt in the combination.",
+   "zh": "请同时按下 Command、Ctrl 或 Alt 修饰键。",
+   "keys": [
+    "shortcuts:modifier-required"
+   ]
+  },
+  {
+   "en": "Initial System Prompt",
+   "zh": "初始系统提示词",
+   "keys": [
+    "trajectory:layout.initialSystemPrompt"
+   ]
+  },
+  {
+   "en": "Input",
+   "zh": "输入",
+   "keys": [
+    "trajectory:column.input",
+    "trajectory:usage.input"
+   ]
+  },
+  {
+   "en": "Install and Restart",
+   "zh": "安装并重启",
+   "keys": [
+    "settings:desktop.update.ready"
+   ]
+  },
+  {
+   "en": "Instruction understanding and following",
+   "zh": "指令理解与遵循",
+   "keys": [
+    "feedback:category.instruction-following"
+   ]
+  },
+  {
+   "en": "Keyboard shortcuts",
+   "zh": "快捷键",
+   "keys": [
+    "shortcuts:title",
+    "shortcuts:settings"
+   ]
+  },
+  {
+   "en": "Last attempt error",
+   "zh": "上次尝试错误",
+   "keys": [
+    "trajectory:details.lastAttemptError"
+   ]
+  },
+  {
+   "en": "Last updated",
+   "zh": "最近更新",
+   "keys": [
+    "workspace:orderBy.updated"
+   ]
+  },
+  {
+   "en": "Limit how long each command may run and how much it may output.",
+   "zh": "限制每条命令最多能跑多久、最多输出多少内容。",
+   "keys": [
+    "settings.shell:description"
+   ]
+  },
+  {
+   "en": "Limits",
+   "zh": "运行限制",
+   "keys": [
+    "settings.subagent:subagentLimitsTitle"
+   ]
+  },
+  {
+   "en": "Limits how many levels of Subagents an Agent can create.",
+   "zh": "限制 Agent 创建子智能体的递归层级。",
+   "keys": [
+    "settings.subagent:subagentDepthHelp"
+   ]
+  },
+  {
+   "en": "live output stream interrupted: {error}",
+   "zh": "实时输出流中断：{error}",
+   "keys": [
+    "job:output.error"
+   ]
+  },
+  {
+   "en": "Load earlier history",
+   "zh": "加载更早的历史",
+   "keys": [
+    "trajectory:history.loadEarlier"
+   ]
+  },
+  {
+   "en": "Loading earlier history…",
+   "zh": "正在加载更早的历史…",
+   "keys": [
+    "trajectory:history.loadingEarlier",
+    "trajectory:history.loadingEarlierAria"
+   ]
+  },
+  {
+   "en": "Loading trajectory…",
+   "zh": "正在加载轨迹…",
+   "keys": [
+    "trajectory:history.loadingTrajectory"
+   ]
+  },
+  {
+   "en": "Loading workspaces…",
+   "zh": "正在加载工作区…",
+   "keys": [
+    "workspace:picker.loading"
+   ]
+  },
+  {
+   "en": "Manual",
+   "zh": "手动排序",
+   "keys": [
+    "workspace:orderBy.manual"
+   ]
+  },
+  {
+   "en": "Maximum recursion depth",
+   "zh": "最大递归深度",
+   "keys": [
+    "settings.subagent:subagentMaxDepth"
+   ]
+  },
+  {
+   "en": "Menus and dialogs",
+   "zh": "菜单与弹层",
+   "keys": [
+    "shortcuts:menus"
+   ]
+  },
+  {
+   "en": "Message input",
+   "zh": "消息输入",
+   "keys": [
+    "shortcuts:input"
+   ]
+  },
+  {
+   "en": "Message source JSON",
+   "zh": "消息来源 JSON",
+   "keys": [
+    "trajectory:source.messageJson"
+   ]
+  },
+  {
+   "en": "Missing fonts",
+   "zh": "缺失的字体",
+   "keys": [
+    "sidebarOffice:missingFontsTitle"
+   ]
+  },
+  {
+   "en": "Missing fonts: {count}. Click to view.",
+   "zh": "缺失 {count} 种字体，点击查看",
+   "keys": [
+    "sidebarOffice:viewMissingFonts"
+   ]
+  },
+  {
+   "en": "Model selection",
+   "zh": "模型选择",
+   "keys": [
+    "settings.subagent:subagentModelSelectionTitle"
+   ]
+  },
+  {
+   "en": "Models agents may choose",
+   "zh": "Agent 可选择的模型",
+   "keys": [
+    "settings.subagent:subagentModelSelectionAllowed"
+   ]
+  },
+  {
+   "en": "Models could not be loaded.",
+   "zh": "无法加载模型。",
+   "keys": [
+    "settings.subagent:subagentModelSelectionLoadFailed"
+   ]
+  },
+  {
+   "en": "Modified",
+   "zh": "已修改",
+   "keys": [
+    "shortcuts:saved"
+   ]
+  },
+  {
+   "en": "More actions",
+   "zh": "更多操作",
+   "keys": [
+    "session-log-download:header.more"
+   ]
+  },
+  {
+   "en": "Move menu selection",
+   "zh": "移动菜单选择",
+   "keys": [
+    "shortcuts:move"
+   ]
+  },
+  {
+   "en": "New session failed: {message}",
+   "zh": "新建会话失败：{message}",
+   "keys": [
+    "workspace:toast.createFailed"
+   ]
+  },
+  {
+   "en": "New session in {name}",
+   "zh": "在“{name}”中新建会话",
+   "keys": [
+    "workspace:actions.newSession.aria"
+   ]
+  },
+  {
+   "en": "New tasks have started. Confirm again to stop the tasks and update.",
+   "zh": "有新任务开始运行，请重新确认是否停止任务并更新。",
+   "keys": [
+    "settings:desktop.update.tasksChanged"
+   ]
+  },
+  {
+   "en": "No archived sessions yet",
+   "zh": "暂无已归档会话",
+   "keys": [
+    "workspace:empty.noneArchived"
+   ]
+  },
+  {
+   "en": "no content",
+   "zh": "无内容",
+   "keys": [
+    "trajectory:request.noContent"
+   ]
+  },
+  {
+   "en": "No content",
+   "zh": "无内容",
+   "keys": [
+    "trajectory:record.noContent"
+   ]
+  },
+  {
+   "en": "No matches",
+   "zh": "无匹配结果",
+   "keys": [
+    "workspace:empty.noMatches"
+   ]
+  },
+  {
+   "en": "No matching sessions",
+   "zh": "无匹配会话",
+   "keys": [
+    "workspace:search.noMatches"
+   ]
+  },
+  {
+   "en": "No matching shortcuts",
+   "zh": "没有匹配的快捷键",
+   "keys": [
+    "shortcuts:empty"
+   ]
+  },
+  {
+   "en": "No model provider currently advertises a model.",
+   "zh": "当前没有模型提供方公布模型。",
+   "keys": [
+    "settings.subagent:subagentModelSelectionEmpty"
+   ]
+  },
+  {
+   "en": "No payload captured",
+   "zh": "未捕获参数",
+   "keys": [
+    "trajectory:record.noPayload"
+   ]
+  },
+  {
+   "en": "No result captured",
+   "zh": "未捕获结果",
+   "keys": [
+    "trajectory:record.noResult"
+   ]
+  },
+  {
+   "en": "No sessions yet",
+   "zh": "暂无会话",
+   "keys": [
+    "workspace:empty.none"
+   ]
+  },
+  {
+   "en": "No shortcut",
+   "zh": "暂无快捷键",
+   "keys": [
+    "shortcuts:unbound"
+   ]
+  },
+  {
+   "en": "No system prompt in this request",
+   "zh": "本次请求没有系统提示词",
+   "keys": [
+    "trajectory:record.systemPromptMissing"
+   ]
+  },
+  {
+   "en": "No timing data",
+   "zh": "无计时数据",
+   "keys": [
+    "trajectory:timeline.noTimingData"
+   ]
+  },
+  {
+   "en": "No tools in this request",
+   "zh": "本次请求没有工具",
+   "keys": [
+    "trajectory:record.toolsMissing"
+   ]
+  },
+  {
+   "en": "Not available",
+   "zh": "不可用",
+   "keys": [
+    "trajectory:timing.notAvailable"
+   ]
+  },
+  {
+   "en": "Not now",
+   "zh": "暂不刷新",
+   "keys": [
+    "settings:hostRelease.later"
+   ]
+  },
+  {
+   "en": "Not recorded",
+   "zh": "未记录",
+   "keys": [
+    "trajectory:timing.notRecorded"
+   ]
+  },
+  {
+   "en": "Office conversion did not produce a usable PDF. Check the file and try again.",
+   "zh": "Office 转换失败，未生成可用的 PDF。请检查该文件后重试。",
+   "keys": [
+    "sidebarOffice:failed"
+   ]
+  },
+  {
+   "en": "Office conversion timed out. Try again.",
+   "zh": "Office 转换超时，请重试。",
+   "keys": [
+    "sidebarOffice:timeout"
+   ]
+  },
+  {
+   "en": "Office document",
+   "zh": "Office 文档",
+   "keys": [
+    "sidebarOffice:title"
+   ]
+  },
+  {
+   "en": "Office preview is busy. Try again shortly.",
+   "zh": "Office 预览任务较多，请稍后重试。",
+   "keys": [
+    "sidebarOffice:busy"
+   ]
+  },
+  {
+   "en": "Office previews are unavailable. Enable the document preview service on the computer running DeepSeek Harness.",
+   "zh": "Office 预览不可用。请在运行 DeepSeek Harness 的主机上启用文档预览服务。",
+   "keys": [
+    "sidebarOffice:unavailable"
+   ]
+  },
+  {
+   "en": "Only the main Agent can create Subagents",
+   "zh": "仅允许主 Agent 创建子智能体",
+   "keys": [
+    "settings.subagent:subagentDepthOne"
+   ]
+  },
+  {
+   "en": "Open Block #{index} tool call summary",
+   "zh": "打开第 {index} 个块的工具调用概述",
+   "keys": [
+    "trajectory:block.openSummary"
+   ]
+  },
+  {
+   "en": "Open configuration file",
+   "zh": "打开配置文件",
+   "keys": [
+    "settings:openDocument"
+   ]
+  },
+  {
+   "en": "Open from anywhere",
+   "zh": "全局唤起查看",
+   "keys": [
+    "shortcuts:global-hint"
+   ]
+  },
+  {
+   "en": "Open keyboard shortcuts",
+   "zh": "快捷键速查",
+   "keys": [
+    "shortcuts:open"
+   ]
+  },
+  {
+   "en": "Open original session",
+   "zh": "打开原会话",
+   "keys": [
+    "workspace:toast.openForkSource"
+   ]
+  },
+  {
+   "en": "Open settings",
+   "zh": "打开设置",
+   "keys": [
+    "settings:shortcut.open"
+   ]
+  },
+  {
+   "en": "Open the original session to complete migration before creating a branch.",
+   "zh": "请先打开原会话完成迁移，再创建分支",
+   "keys": [
+    "workspace:toast.forkRequiresOpen"
+   ]
+  },
+  {
+   "en": "Open tool call summary",
+   "zh": "打开工具调用概述",
+   "keys": [
+    "trajectory:block.openSummaryTitle"
+   ]
+  },
+  {
+   "en": "Options",
+   "zh": "选项",
+   "keys": [
+    "trajectory:tab.options"
+   ]
+  },
+  {
+   "en": "Options not recorded",
+   "zh": "未记录选项",
+   "keys": [
+    "trajectory:options.notRecorded"
+   ]
+  },
+  {
+   "en": "Order by",
+   "zh": "排序方式",
+   "keys": [
+    "workspace:orderBy.label"
+   ]
+  },
+  {
+   "en": "Original JSON",
+   "zh": "原始 JSON",
+   "keys": [
+    "trajectory:code.originalJson"
+   ]
+  },
+  {
+   "en": "Other",
+   "zh": "其他",
+   "keys": [
+    "feedback:category.other",
+    "trajectory:usage.other"
+   ]
+  },
+  {
+   "en": "Output beyond this spills to a temporary file rather than being lost.",
+   "zh": "超出部分会转存到临时文件，而不是被丢弃。",
+   "keys": [
+    "settings.shell:maxOutputBytesHint"
+   ]
+  },
+  {
+   "en": "Output cap per stream (bytes)",
+   "zh": "单流输出上限（字节）",
+   "keys": [
+    "settings.shell:maxOutputBytes"
+   ]
+  },
+  {
+   "en": "Output tokens unavailable",
+   "zh": "输出 token 数不可用",
+   "keys": [
+    "trajectory:timing.outputTokensUnavailable"
+   ]
+  },
+  {
+   "en": "Page",
+   "zh": "页面",
+   "keys": [
+    "settings:hostRelease.page"
+   ]
+  },
+  {
+   "en": "Parameters",
+   "zh": "参数",
+   "keys": [
+    "trajectory:record.parameters"
+   ]
+  },
+  {
+   "en": "parameters JSON",
+   "zh": "参数 JSON",
+   "keys": [
+    "trajectory:record.parametersJson"
+   ]
+  },
+  {
+   "en": "Payload",
+   "zh": "参数",
+   "keys": [
+    "trajectory:tab.payload"
+   ]
+  },
+  {
+   "en": "Payload JSON",
+   "zh": "参数 JSON",
+   "keys": [
+    "trajectory:record.payloadJson"
+   ]
+  },
+  {
+   "en": "Pin",
+   "zh": "置顶会话",
+   "keys": [
+    "workspace:actions.pin"
+   ]
+  },
+  {
+   "en": "Pin failed. Try again later.",
+   "zh": "置顶失败，请稍后重试",
+   "keys": [
+    "workspace:toast.pinFailed"
+   ]
+  },
+  {
+   "en": "Pin session",
+   "zh": "置顶会话",
+   "keys": [
+    "workspace:menu.pinSession"
+   ]
+  },
+  {
+   "en": "Pinned",
+   "zh": "已置顶",
+   "keys": [
+    "workspace:row.pinned"
+   ]
+  },
+  {
+   "en": "Plan awaiting review",
+   "zh": "计划待审",
+   "keys": [
+    "workspace:status.planReview"
+   ]
+  },
+  {
+   "en": "Plugin",
+   "zh": "插件",
+   "keys": [
+    "trajectory:source.plugin"
+   ]
+  },
+  {
+   "en": "Plugin · {plugin}",
+   "zh": "插件 · {plugin}",
+   "keys": [
+    "trajectory:source.pluginNamed"
+   ]
+  },
+  {
+   "en": "Preference saved",
+   "zh": "设置已保存",
+   "keys": [
+    "settings.sessionLog:saved"
+   ]
+  },
+  {
+   "en": "Preparing a ZIP containing this Session, its sub-Sessions, and attachments.",
+   "zh": "正在准备包含当前 Session、子 Session 和附件的 ZIP 文件。",
+   "keys": [
+    "session-log-download:dialog.preparingDescription"
+   ]
+  },
+  {
+   "en": "Preparing to restart…",
+   "zh": "正在准备重启…",
+   "keys": [
+    "settings:desktop.update.installing"
+   ]
+  },
+  {
+   "en": "Press a shortcut",
+   "zh": "按下快捷键",
+   "keys": [
+    "shortcuts:record"
+   ]
+  },
+  {
+   "en": "Product features and interaction",
+   "zh": "产品功能与交互",
+   "keys": [
+    "feedback:category.product-interaction"
+   ]
+  },
+  {
+   "en": "Purpose",
+   "zh": "用途",
+   "keys": [
+    "trajectory:details.purpose"
+   ]
+  },
+  {
+   "en": "Raw",
+   "zh": "原始内容",
+   "keys": [
+    "trajectory:tab.raw"
+   ]
+  },
+  {
+   "en": "Raw Output",
+   "zh": "原始输出",
+   "keys": [
+    "trajectory:tab.rawOutput"
+   ]
+  },
+  {
+   "en": "Reasoning",
+   "zh": "推理",
+   "keys": [
+    "trajectory:usage.reasoning"
+   ]
+  },
+  {
+   "en": "Reconnecting",
+   "zh": "重新连接中",
+   "keys": [
+    "settings:connection.connecting"
+   ]
+  },
+  {
+   "en": "Reconnecting, reconnect now",
+   "zh": "连接中断，正在重试，点击立即重连",
+   "keys": [
+    "settings:connection.restart"
+   ]
+  },
+  {
+   "en": "Release the keys to save. Tab moves between actions; Esc cancels.",
+   "zh": "松开组合键即保存。Tab 切换操作，Esc 退出录键。",
+   "keys": [
+    "shortcuts:record-help"
+   ]
+  },
+  {
+   "en": "reload the page",
+   "zh": "刷新页面",
+   "keys": [
+    "shortcuts:web-reload"
+   ]
+  },
+  {
+   "en": "Reload to load the new version",
+   "zh": "刷新以加载新版本",
+   "keys": [
+    "settings:hostRelease.reload"
+   ]
+  },
+  {
+   "en": "Remove rating",
+   "zh": "取消标记",
+   "keys": [
+    "feedback:action.likeActive",
+    "feedback:action.dislikeActive"
+   ]
+  },
+  {
+   "en": "Rename",
+   "zh": "重命名",
+   "keys": [
+    "workspace:rename"
+   ]
+  },
+  {
+   "en": "Rename session",
+   "zh": "重命名会话",
+   "keys": [
+    "workspace:rename.session.title"
+   ]
+  },
+  {
+   "en": "Rename workspace",
+   "zh": "重命名工作区",
+   "keys": [
+    "workspace:rename.workspace.title"
+   ]
+  },
+  {
+   "en": "Request {request}, ",
+   "zh": "请求 {request}，",
+   "keys": [
+    "trajectory:request.rowPrefix"
+   ]
+  },
+  {
+   "en": "Request {request}, compaction",
+   "zh": "请求 {request}，压缩",
+   "keys": [
+    "trajectory:request.rowAriaCompaction"
+   ]
+  },
+  {
+   "en": "Request #{request}",
+   "zh": "请求 #{request}",
+   "keys": [
+    "trajectory:request.label"
+   ]
+  },
+  {
+   "en": "Request #{request} · Compaction",
+   "zh": "请求 #{request} · 压缩",
+   "keys": [
+    "trajectory:request.labelCompaction"
+   ]
+  },
+  {
+   "en": "Request options JSON",
+   "zh": "请求选项 JSON",
+   "keys": [
+    "trajectory:options.json"
+   ]
+  },
+  {
+   "en": "Request Timing",
+   "zh": "请求计时",
+   "keys": [
+    "trajectory:timing.request"
+   ]
+  },
+  {
+   "en": "Resize event details",
+   "zh": "调整事件详情宽度",
+   "keys": [
+    "trajectory:details.resize"
+   ]
+  },
+  {
+   "en": "Resource usage and cost",
+   "zh": "资源使用与费用",
+   "keys": [
+    "feedback:category.resource-cost"
+   ]
+  },
+  {
+   "en": "restart Harness",
+   "zh": "重新启动 Harness",
+   "keys": [
+    "shortcuts:desktop-reload"
+   ]
+  },
+  {
+   "en": "Restore all default shortcuts?",
+   "zh": "恢复全部默认快捷键？",
+   "keys": [
+    "shortcuts:reset-title"
+   ]
+  },
+  {
+   "en": "Restore all defaults",
+   "zh": "恢复全部默认",
+   "keys": [
+    "shortcuts:reset-all"
+   ]
+  },
+  {
+   "en": "Restore default",
+   "zh": "恢复默认",
+   "keys": [
+    "shortcuts:reset"
+   ]
+  },
+  {
+   "en": "Restore the default shortcuts for this platform. All modified or removed shortcuts will be restored. Other platforms are unaffected.",
+   "zh": "将恢复当前平台的默认快捷键。你修改或移除的快捷键都会恢复，其他平台不受影响。",
+   "keys": [
+    "shortcuts:reset-description"
+   ]
+  },
+  {
+   "en": "Result JSON",
+   "zh": "结果 JSON",
+   "keys": [
+    "trajectory:record.resultJson",
+    "trajectory:record.outputJson"
+   ]
+  },
+  {
+   "en": "Retry delay",
+   "zh": "重试延迟",
+   "keys": [
+    "trajectory:details.retryDelay"
+   ]
+  },
+  {
+   "en": "Retry save",
+   "zh": "重试保存",
+   "keys": [
+    "shortcuts:retry-save"
+   ]
+  },
+  {
+   "en": "Retry update",
+   "zh": "重试更新",
+   "keys": [
+    "settings:desktop.update.retry"
+   ]
+  },
+  {
+   "en": "running",
+   "zh": "运行中",
+   "keys": [
+    "job:status.running",
+    "job:terminal.running"
+   ]
+  },
+  {
+   "en": "Running for {duration}",
+   "zh": "已运行 {duration}",
+   "keys": [
+    "job:duration.title.live"
+   ]
+  },
+  {
+   "en": "Saved but currently unavailable",
+   "zh": "已保存但当前不可用",
+   "keys": [
+    "settings.subagent:subagentModelSelectionUnavailableGroup"
+   ]
+  },
+  {
+   "en": "Schema",
+   "zh": "Schema",
+   "keys": [
+    "trajectory:tab.schema"
+   ]
+  },
+  {
+   "en": "Schema unavailable",
+   "zh": "Schema 不可用",
+   "keys": [
+    "trajectory:record.schemaUnavailable"
+   ]
+  },
+  {
+   "en": "Search results",
+   "zh": "搜索结果",
+   "keys": [
+    "workspace:search.results.aria"
+   ]
+  },
+  {
+   "en": "Search session names",
+   "zh": "搜索会话名称",
+   "keys": [
+    "workspace:search.placeholder"
+   ]
+  },
+  {
+   "en": "Search shortcuts",
+   "zh": "搜索快捷键",
+   "keys": [
+    "shortcuts:search"
+   ]
+  },
+  {
+   "en": "Search trajectory",
+   "zh": "搜索轨迹",
+   "keys": [
+    "trajectory:toolbar.search"
+   ]
+  },
+  {
+   "en": "Searching session history…",
+   "zh": "正在搜索会话历史…",
+   "keys": [
+    "workspace:search.pending"
+   ]
+  },
+  {
+   "en": "Security, privacy, and permissions",
+   "zh": "安全隐私与权限",
+   "keys": [
+    "feedback:category.security-privacy-permission"
+   ]
+  },
+  {
+   "en": "Select at least one model before saving.",
+   "zh": "保存前请至少选择一个模型。",
+   "keys": [
+    "settings.subagent:subagentModelSelectionRequired"
+   ]
+  },
+  {
+   "en": "Select menu item",
+   "zh": "选择菜单项",
+   "keys": [
+    "shortcuts:select"
+   ]
+  },
+  {
+   "en": "Selecting or adding a workspace",
+   "zh": "正在选择或添加工作区",
+   "keys": [
+    "workspace:shortcut.directoryBusy"
+   ]
+  },
+  {
+   "en": "Service",
+   "zh": "服务",
+   "keys": [
+    "settings:hostRelease.service"
+   ]
+  },
+  {
+   "en": "Service version changed",
+   "zh": "服务版本变化",
+   "keys": [
+    "settings:hostRelease.title"
+   ]
+  },
+  {
+   "en": "Session actions for {name}",
+   "zh": "会话“{name}”的操作",
+   "keys": [
+    "workspace:actions.session.aria"
+   ]
+  },
+  {
+   "en": "Session archived. You can ",
+   "zh": "会话已归档，可",
+   "keys": [
+    "workspace:toast.archived"
+   ]
+  },
+  {
+   "en": "Session cumulative",
+   "zh": "会话累计",
+   "keys": [
+    "trajectory:usage.sessionCumulative"
+   ]
+  },
+  {
+   "en": "Session download started",
+   "zh": "Session 导出已开始下载",
+   "keys": [
+    "session-log-download:dialog.successTitle"
+   ]
+  },
+  {
+   "en": "Session export failed",
+   "zh": "Session 导出失败",
+   "keys": [
+    "session-log-download:dialog.errorTitle"
+   ]
+  },
+  {
+   "en": "Session ID copied",
+   "zh": "Session ID 已复制",
+   "keys": [
+    "workspace:toast.sessionIdCopied"
+   ]
+  },
+  {
+   "en": "Session name",
+   "zh": "会话名称",
+   "keys": [
+    "workspace:field.sessionName"
+   ]
+  },
+  {
+   "en": "Session stopped and archived. You can ",
+   "zh": "已停止并归档，可",
+   "keys": [
+    "workspace:toast.stoppedAndArchived"
+   ]
+  },
+  {
+   "en": "Session timestamps",
+   "zh": "会话时间戳",
+   "keys": [
+    "trajectory:timing.sessionTimestamps"
+   ]
+  },
+  {
+   "en": "Session timestamps (running)",
+   "zh": "会话时间戳（运行中）",
+   "keys": [
+    "trajectory:timing.sessionTimestampsRunning"
+   ]
+  },
+  {
+   "en": "Set Subagent recursion depth, count, and models.",
+   "zh": "设置子智能体的递归层级、数量和模型。",
+   "keys": [
+    "settings.subagent:subagentDescription"
+   ]
+  },
+  {
+   "en": "Settings",
+   "zh": "设置",
+   "keys": [
+    "settings:trigger",
+    "settings:title"
+   ]
+  },
+  {
+   "en": "Settings changed elsewhere. Discard your draft and try again.",
+   "zh": "设置已在其他位置更新。请放弃修改后重试。",
+   "keys": [
+    "settings.subagent:subagentModelSelectionConflict"
+   ]
+  },
+  {
+   "en": "Shell",
+   "zh": "终端",
+   "keys": [
+    "settings.shell:title"
+   ]
+  },
+  {
+   "en": "Shortcut configuration in {location} is damaged. Back up and repair this configuration, then {reload}.",
+   "zh": "{location} 的快捷键配置内容损坏。请先备份并修复该配置，然后{reload}。",
+   "keys": [
+    "shortcuts:invalid"
+   ]
+  },
+  {
+   "en": "Shortcut configuration in {location} was created by a newer version. Upgrade Harness and try again.",
+   "zh": "{location} 的快捷键配置由更新版本创建。请升级 Harness 后重试。",
+   "keys": [
+    "shortcuts:future"
+   ]
+  },
+  {
+   "en": "Shortcut configuration or available commands changed. Review the latest bindings before saving.",
+   "zh": "快捷键配置或可用命令已更新。请核对最新键位后再保存。",
+   "keys": [
+    "shortcuts:stale"
+   ]
+  },
+  {
+   "en": "Shortcuts are not ready. Please try again.",
+   "zh": "快捷键尚未准备好，请稍后重试。",
+   "keys": [
+    "shortcuts:not-ready"
+   ]
+  },
+  {
+   "en": "Show {n} more lines",
+   "zh": "展开其余 {n} 行",
+   "keys": [
+    "job:terminal.expand"
+   ]
+  },
+  {
+   "en": "Show {n} more sessions",
+   "zh": "展开其余 {n} 个会话",
+   "keys": [
+    "workspace:sessions.expand"
+   ]
+  },
+  {
+   "en": "Show coding view",
+   "zh": "显示代码工作视图",
+   "keys": [
+    "settings:developerTools.title"
+   ]
+  },
+  {
+   "en": "Show live output of {label}",
+   "zh": "展开 {label} 的实时输出",
+   "keys": [
+    "job:row.expandAria"
+   ]
+  },
+  {
+   "en": "Show local time",
+   "zh": "显示本地时间",
+   "keys": [
+    "trajectory:timing.showLocalTime"
+   ]
+  },
+  {
+   "en": "Show Unix timestamp",
+   "zh": "显示 Unix 时间戳",
+   "keys": [
+    "trajectory:timing.showUnixTimestamp"
+   ]
+  },
+  {
+   "en": "Showing the first {n} results. Narrow your search.",
+   "zh": "仅显示前 {n} 条结果，请缩小搜索范围。",
+   "keys": [
+    "workspace:search.hasMore"
+   ]
+  },
+  {
+   "en": "Shows trajectory, code diffs, and all Agent presets",
+   "zh": "开启后，显示轨迹、本轮代码差异，可选择完整的 Agent 预设切换",
+   "keys": [
+    "settings:developerTools.description"
+   ]
+  },
+  {
+   "en": "Some model providers could not be loaded; saved choices remain removable.",
+   "zh": "部分模型提供方暂时无法加载；已保存的选择仍可移除。",
+   "keys": [
+    "settings.subagent:subagentModelSelectionPartial"
+   ]
+  },
+  {
+   "en": "Source not recorded",
+   "zh": "未记录来源",
+   "keys": [
+    "trajectory:source.notRecorded"
+   ]
+  },
+  {
+   "en": "Stability and speed",
+   "zh": "稳定性和速度",
+   "keys": [
+    "feedback:category.service-stability"
+   ]
+  },
+  {
+   "en": "Started {time}",
+   "zh": "开始于 {time}",
+   "keys": [
+    "trajectory:timeline.started"
+   ]
+  },
+  {
+   "en": "Step {step}",
+   "zh": "第 {step} 步",
+   "keys": [
+    "trajectory:group.step"
+   ]
+  },
+  {
+   "en": "Step start unavailable",
+   "zh": "步骤开始时间不可用",
+   "keys": [
+    "trajectory:timing.stepStartUnavailable"
+   ]
+  },
+  {
+   "en": "Stop and archive",
+   "zh": "停止并归档",
+   "keys": [
+    "workspace:archive.confirm.action"
+   ]
+  },
+  {
+   "en": "Stop and archive this session?",
+   "zh": "停止并归档此会话？",
+   "keys": [
+    "workspace:archive.confirm.title"
+   ]
+  },
+  {
+   "en": "Stop failed",
+   "zh": "停止失败",
+   "keys": [
+    "job:kill.failed"
+   ]
+  },
+  {
+   "en": "Stop task {label}",
+   "zh": "停止任务 {label}",
+   "keys": [
+    "job:kill.stop"
+   ]
+  },
+  {
+   "en": "stopping",
+   "zh": "正在停止",
+   "keys": [
+    "job:status.stopping"
+   ]
+  },
+  {
+   "en": "Stopping and archiving…",
+   "zh": "正在停止并归档…",
+   "keys": [
+    "workspace:archive.confirm.pending"
+   ]
+  },
+  {
+   "en": "Sub",
+   "zh": "子项",
+   "keys": [
+    "trajectory:kind.sub"
+   ]
+  },
+  {
+   "en": "Subagent",
+   "zh": "子智能体",
+   "keys": [
+    "settings.subagent:subagentTitle"
+   ]
+  },
+  {
+   "en": "Subagent parallelism limit",
+   "zh": "子智能体并行数量上限",
+   "keys": [
+    "settings.subagent:subagentMaxActive"
+   ]
+  },
+  {
+   "en": "Subagents use configured defaults or inherit the parent agent's model. Saved model choices are retained.",
+   "zh": "关闭后，子智能体使用配置的默认模型或继承父 Agent 的模型；已选模型会保留。",
+   "keys": [
+    "settings.subagent:subagentModelSelectionOff"
+   ]
+  },
+  {
+   "en": "Submit feedback",
+   "zh": "提交反馈",
+   "keys": [
+    "feedback:dialog.title"
+   ]
+  },
+  {
+   "en": "SUBTOOL",
+   "zh": "子工具",
+   "keys": [
+    "trajectory:kind.subtool"
+   ]
+  },
+  {
+   "en": "Subtool calls",
+   "zh": "子工具调用",
+   "keys": [
+    "trajectory:details.subtoolCalls"
+   ]
+  },
+  {
+   "en": "Summary",
+   "zh": "概述",
+   "keys": [
+    "trajectory:tab.summary"
+   ]
+  },
+  {
+   "en": "SYSTEM",
+   "zh": "系统",
+   "keys": [
+    "trajectory:kind.system"
+   ]
+  },
+  {
+   "en": "System Prompt",
+   "zh": "系统提示词",
+   "keys": [
+    "trajectory:tab.systemPrompt",
+    "trajectory:record.systemPrompt"
+   ]
+  },
+  {
+   "en": "System Prompt and Tools Updated",
+   "zh": "系统提示词和工具已更新",
+   "keys": [
+    "trajectory:layout.systemPromptAndToolsUpdated"
+   ]
+  },
+  {
+   "en": "System Prompt Updated",
+   "zh": "系统提示词已更新",
+   "keys": [
+    "trajectory:layout.systemPromptUpdated"
+   ]
+  },
+  {
+   "en": "Task result",
+   "zh": "任务结果",
+   "keys": [
+    "feedback:category.task-result"
+   ]
+  },
+  {
+   "en": "Task status is unavailable. Try updating again when the workspace is ready.",
+   "zh": "无法确认任务状态，请在工作区就绪后重试更新。",
+   "keys": [
+    "settings:desktop.update.tasksUnavailable"
+   ]
+  },
+  {
+   "en": "Thanks for your feedback",
+   "zh": "感谢你的反馈",
+   "keys": [
+    "feedback:toast.recorded"
+   ]
+  },
+  {
+   "en": "The browser is downloading the Session ZIP.",
+   "zh": "浏览器正在下载 Session ZIP 文件。",
+   "keys": [
+    "session-log-download:dialog.successDescription"
+   ]
+  },
+  {
+   "en": "The description is too long; shorten it and submit again",
+   "zh": "描述太长，请缩短后再提交",
+   "keys": [
+    "feedback:error.noteTooLarge"
+   ]
+  },
+  {
+   "en": "The file changed while being read. Reopen the preview.",
+   "zh": "文件在读取时已更改，请重新打开预览。",
+   "keys": [
+    "sidebarOffice:changed"
+   ]
+  },
+  {
+   "en": "The last successfully read bindings remain active.",
+   "zh": "当前继续使用上次读取成功的键位。",
+   "keys": [
+    "shortcuts:using-accepted"
+   ]
+  },
+  {
+   "en": "The Office file or converted PDF exceeds the preview size limit. Reduce the file size or adjust the preview configuration.",
+   "zh": "Office 文件或转换后的 PDF 超过预览大小上限，请缩小文件或调整预览配置。",
+   "keys": [
+    "sidebarOffice:tooLarge"
+   ]
+  },
+  {
+   "en": "The service version changed. This page paused live updates; reload to load the new version.",
+   "zh": "服务版本已变化，本页面已暂停热更新，刷新后加载新版本。",
+   "keys": [
+    "settings:hostRelease.description"
+   ]
+  },
+  {
+   "en": "The turn in progress",
+   "zh": "进行中的回合",
+   "keys": [
+    "workspace:archive.confirm.turn"
+   ]
+  },
+  {
+   "en": "These fonts are unavailable for this preview. Text and layout may differ from the original document.",
+   "zh": "本次预览无法使用以下字体，预览中的文字和排版可能与原文档不同。",
+   "keys": [
+    "sidebarOffice:missingFontsDescription"
+   ]
+  },
+  {
+   "en": "Thinking",
+   "zh": "思考",
+   "keys": [
+    "trajectory:record.thinking"
+   ]
+  },
+  {
+   "en": "This browser does not support this combination yet.",
+   "zh": "此浏览器暂不支持该组合。",
+   "keys": [
+    "shortcuts:unsupported-browser"
+   ]
+  },
+  {
+   "en": "This combination is reserved for system or text editing actions.",
+   "zh": "此组合由系统或文本编辑操作保留。",
+   "keys": [
+    "shortcuts:reserved"
+   ]
+  },
+  {
+   "en": "This feedback changed elsewhere; the latest state is shown",
+   "zh": "这条反馈已在别处改动，已显示最新状态",
+   "keys": [
+    "feedback:error.conflict"
+   ]
+  },
+  {
+   "en": "This key is not supported.",
+   "zh": "暂不支持这个按键。",
+   "keys": [
+    "shortcuts:unsupported-key"
+   ]
+  },
+  {
+   "en": "This Office file cannot be previewed. It may be damaged, password protected, or have the wrong extension.",
+   "zh": "无法预览此 Office 文件。文件可能已损坏、受密码保护，或与扩展名不符。",
+   "keys": [
+    "sidebarOffice:invalid"
+   ]
+  },
+  {
+   "en": "This removes “{name}” from the workspace list. The folder and session logs will be kept. Its sessions will appear under Ungrouped.",
+   "zh": "将把“{name}”从工作区列表中移除。文件夹与会话记录会保留，其会话将显示在“未分组”下。",
+   "keys": [
+    "workspace:delete.desc"
+   ]
+  },
+  {
+   "en": "This request",
+   "zh": "本次请求",
+   "keys": [
+    "trajectory:usage.thisRequest"
+   ]
+  },
+  {
+   "en": "This session has no completed turn",
+   "zh": "当前会话没有已结束的轮次",
+   "keys": [
+    "workspace:shortcut.noCompletedTurn"
+   ]
+  },
+  {
+   "en": "this site’s localStorage entry dsh.keybindings.v1",
+   "zh": "当前网站本地存储中的 dsh.keybindings.v1",
+   "keys": [
+    "shortcuts:web-document"
+   ]
+  },
+  {
+   "en": "Throughput",
+   "zh": "吞吐量",
+   "keys": [
+    "trajectory:timing.throughput"
+   ]
+  },
+  {
+   "en": "Timeline overview; drag horizontally to focus events",
+   "zh": "时间线概览；水平拖动可聚焦事件",
+   "keys": [
+    "trajectory:timeline.overviewAria"
+   ]
+  },
+  {
+   "en": "Timing",
+   "zh": "计时",
+   "keys": [
+    "trajectory:tab.timing"
+   ]
+  },
+  {
+   "en": "Timing source",
+   "zh": "计时来源",
+   "keys": [
+    "trajectory:timing.source"
+   ]
+  },
+  {
+   "en": "Toggle left sidebar",
+   "zh": "展开／收起左侧栏",
+   "keys": [
+    "shortcuts.layout:toggle"
+   ]
+  },
+  {
+   "en": "Tokens",
+   "zh": "Token",
+   "keys": [
+    "trajectory:usage.tokens"
+   ]
+  },
+  {
+   "en": "Took {duration}",
+   "zh": "耗时 {duration}",
+   "keys": [
+    "job:duration.title.done"
+   ]
+  },
+  {
+   "en": "TOOL",
+   "zh": "工具",
+   "keys": [
+    "trajectory:kind.tool"
+   ]
+  },
+  {
+   "en": "Tool Call",
+   "zh": "工具调用",
+   "keys": [
+    "trajectory:details.toolCall"
+   ]
+  },
+  {
+   "en": "Tool call only",
+   "zh": "仅工具调用",
+   "keys": [
+    "trajectory:layout.toolCallOnly"
+   ]
+  },
+  {
+   "en": "Tool calls",
+   "zh": "工具调用",
+   "keys": [
+    "trajectory:details.toolCalls"
+   ]
+  },
+  {
+   "en": "Tools",
+   "zh": "工具",
+   "keys": [
+    "trajectory:column.tools",
+    "trajectory:tab.tools"
+   ]
+  },
+  {
+   "en": "Tools Updated",
+   "zh": "工具已更新",
+   "keys": [
+    "trajectory:layout.toolsUpdated"
+   ]
+  },
+  {
+   "en": "Total {duration}",
+   "zh": "总计 {duration}",
+   "keys": [
+    "trajectory:timeline.total"
+   ]
+  },
+  {
+   "en": "Total duration",
+   "zh": "总时长",
+   "keys": [
+    "trajectory:timing.totalDuration"
+   ]
+  },
+  {
+   "en": "Total live Subagents under the same main Agent, across all recursion levels. The main Agent is excluded. New start requests are rejected when the limit is reached.",
+   "zh": "同一主 Agent 下，所有递归层级同时存活的子智能体总数，主 Agent 不计入。达到上限时，新的启动请求会被拒绝。",
+   "keys": [
+    "settings.subagent:subagentCapacityHelp"
+   ]
+  },
+  {
+   "en": "Trajectory",
+   "zh": "轨迹",
+   "keys": [
+    "trajectory:view.trajectory"
+   ]
+  },
+  {
+   "en": "Trajectory timeline",
+   "zh": "轨迹时间线",
+   "keys": [
+    "trajectory:timeline.aria"
+   ]
+  },
+  {
+   "en": "Trajectory toolbar",
+   "zh": "轨迹工具栏",
+   "keys": [
+    "trajectory:toolbar.aria"
+   ]
+  },
+  {
+   "en": "TTFT",
+   "zh": "首 token 延迟",
+   "keys": [
+    "trajectory:timing.ttft"
+   ]
+  },
+  {
+   "en": "TTFT {ttft} · Decoding {decoding}",
+   "zh": "首 token {ttft} · 解码 {decoding}",
+   "keys": [
+    "trajectory:timeline.ttftDecoding"
+   ]
+  },
+  {
+   "en": "turn",
+   "zh": "轮次",
+   "keys": [
+    "trajectory:request.collapsedTurn"
+   ]
+  },
+  {
+   "en": "Turns",
+   "zh": "轮次",
+   "keys": [
+    "trajectory:toolbar.turns"
+   ]
+  },
+  {
+   "en": "Unable to create default workspace. Use Choose workspace to select a folder.",
+   "zh": "无法创建默认工作区，请通过“选择工作区”选择文件夹",
+   "keys": [
+    "workspace:defaultWorkspace.failed"
+   ]
+  },
+  {
+   "en": "Unarchive",
+   "zh": "取消归档",
+   "keys": [
+    "workspace:actions.unarchive"
+   ]
+  },
+  {
+   "en": "Unarchive session",
+   "zh": "取消归档",
+   "keys": [
+    "workspace:menu.unarchiveSession"
+   ]
+  },
+  {
+   "en": "undo",
+   "zh": "撤销",
+   "keys": [
+    "workspace:toast.archivedUndo"
+   ]
+  },
+  {
+   "en": "Ungrouped",
+   "zh": "未分组",
+   "keys": [
+    "workspace:group.ungrouped"
+   ]
+  },
+  {
+   "en": "Unpin",
+   "zh": "取消置顶",
+   "keys": [
+    "workspace:actions.unpin"
+   ]
+  },
+  {
+   "en": "Unpin failed. Try again later.",
+   "zh": "取消置顶失败，请稍后重试",
+   "keys": [
+    "workspace:toast.unpinFailed"
+   ]
+  },
+  {
+   "en": "Unpin session",
+   "zh": "取消置顶",
+   "keys": [
+    "workspace:menu.unpinSession"
+   ]
+  },
+  {
+   "en": "Untitled",
+   "zh": "未命名",
+   "keys": [
+    "workspace:session.untitled"
+   ]
+  },
+  {
+   "en": "Upload Session Log when using the official model API",
+   "zh": "在使用官方模型 API 时上传 Session Log",
+   "keys": [
+    "settings.sessionLog:title"
+   ]
+  },
+  {
+   "en": "Usage",
+   "zh": "用量",
+   "keys": [
+    "trajectory:tab.usage"
+   ]
+  },
+  {
+   "en": "Usage not reported",
+   "zh": "未报告用量",
+   "keys": [
+    "trajectory:usage.notReported"
+   ]
+  },
+  {
+   "en": "Usage unavailable",
+   "zh": "用量不可用",
+   "keys": [
+    "trajectory:timing.usageUnavailable"
+   ]
+  },
+  {
+   "en": "Use actual duration",
+   "zh": "使用实际时长",
+   "keys": [
+    "trajectory:toolbar.useActualDuration"
+   ]
+  },
+  {
+   "en": "Use Command+/, Command+,, Command+Backslash, Control+Backquote, Command+Option+key, or Command+Shift+key. Combinations with three or four distinct modifiers are also supported. Browser or system shortcuts may not reach the page.",
+   "zh": "可设置 Command+/、Command+,、Command+反斜杠、Control+反引号、Command+Option+按键或 Command+Shift+按键。也支持三个或四个不同修饰键的组合。浏览器或系统占用的组合可能无法送达页面。",
+   "keys": [
+    "shortcuts:macos-web-help"
+   ]
+  },
+  {
+   "en": "Use Ctrl+/, Ctrl+,, Ctrl+Alt+key, or Ctrl+Shift+key. Combinations with three or four distinct modifiers are also supported. Browser or system shortcuts may not reach the page.",
+   "zh": "可设置 Ctrl+/、Ctrl+,、Ctrl+Alt+按键或 Ctrl+Shift+按键。也支持三个或四个不同修饰键的组合。浏览器或系统占用的组合可能无法送达页面。",
+   "keys": [
+    "shortcuts:windows-web-help"
+   ]
+  },
+  {
+   "en": "Use equal-width operations",
+   "zh": "使用等宽操作",
+   "keys": [
+    "trajectory:toolbar.useEqualWidth"
+   ]
+  },
+  {
+   "en": "User",
+   "zh": "用户",
+   "keys": [
+    "trajectory:source.user"
+   ]
+  },
+  {
+   "en": "USER",
+   "zh": "用户",
+   "keys": [
+    "trajectory:kind.user"
+   ]
+  },
+  {
+   "en": "userData/keybindings.json",
+   "zh": "userData/keybindings.json",
+   "keys": [
+    "shortcuts:desktop-document"
+   ]
+  },
+  {
+   "en": "Verifying update files…",
+   "zh": "正在校验更新文件…",
+   "keys": [
+    "settings:desktop.update.verifying"
+   ]
+  },
+  {
+   "en": "View and edit available shortcuts and input actions",
+   "zh": "查看和编辑当前可用的快捷键和输入操作",
+   "keys": [
+    "shortcuts:description"
+   ]
+  },
+  {
+   "en": "View options",
+   "zh": "视图选项",
+   "keys": [
+    "workspace:viewOptions.label"
+   ]
+  },
+  {
+   "en": "View other sessions",
+   "zh": "查看其他会话",
+   "keys": [
+    "workspace:empty.viewOthers"
+   ]
+  },
+  {
+   "en": "Waiting for answer",
+   "zh": "等待回答",
+   "keys": [
+    "workspace:status.waitingAnswer"
+   ]
+  },
+  {
+   "en": "When enabled, agents can choose a provider, model, and reasoning effort for each Subagent from the authorized models below. Applies only to new sessions.",
+   "zh": "开启后，Agent 可以从下方授权模型中，为每个子智能体选择提供方、模型和推理强度。仅影响新会话。",
+   "keys": [
+    "settings.subagent:subagentModelSelectionChoose"
+   ]
+  },
+  {
+   "en": "Work that will be stopped",
+   "zh": "将被停止的工作",
+   "keys": [
+    "workspace:archive.confirm.activity"
+   ]
+  },
+  {
+   "en": "WorkSpace",
+   "zh": "按工作区",
+   "keys": [
+    "workspace:groupBy.workspace"
+   ]
+  },
+  {
+   "en": "Workspace actions for {name}",
+   "zh": "工作区“{name}”的操作",
+   "keys": [
+    "workspace:actions.workspace.aria"
+   ]
+  },
+  {
+   "en": "Workspace name",
+   "zh": "工作区名称",
+   "keys": [
+    "workspace:field.workspaceName"
+   ]
+  },
+  {
+   "en": "Workspace Tree",
+   "zh": "按工作区树",
+   "keys": [
+    "workspace:groupBy.workspaceTree"
+   ]
+  },
+  {
+   "en": "Workspaces",
+   "zh": "工作区",
+   "keys": [
+    "workspace:section.workspaces"
+   ]
+  }
+ ]
+}

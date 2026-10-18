@@ -1,0 +1,1757 @@
+{
+ "chunk": "01",
+ "count": 249,
+ "entries": [
+  {
+   "zh": " 復盤",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": " 個），請先取消一個再新增。",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": " 個需要認證）",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": " 個主題",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": " 個主題（目前已有 ",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": " 個主題連線失敗",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": " 個主題連線失敗，",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": " 個主題連線失敗，請檢查伺服器位址或認證。",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": " 個主題未連線",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": " 個主題未連線，正在等待重連。",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": " 秒後重試",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": " 則未讀訊息。",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": " 則新訊息",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": " 字）→",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "，沒有未讀。",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "，請檢查網路與伺服器位址。",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "（無內文）",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "（這一天沒有訊息。）",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "）：此主題需要憑證，請在設定中填寫使用者名稱/密碼或存取權杖後重試。",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "）：請稍後再試。",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "## 當天訊息",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "% · 重置 ",
+   "kind": "fragment",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "` 的討論。",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "☀️ 上午好",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "🌃 晚上好",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "🌅 早安呀",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "🌆 傍晚啦",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "🌙 夜深啦",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "🌤️ 下午好",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "🍱 午飯時間",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "💰 用量",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "😴 小憩一下",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "① 登入沒有生效 —— 會話 cookie 是 SameSite=Lax，在跨站 iframe 裡可能不被接受；",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "② 這個頁面用 X-Frame-Options / frame-ancestors 擋了嵌入；",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "③ 那個位址本身回的內容不是可顯示的頁面。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "把 API Key 與登入路徑一起清掉，回到初始狀態（下一次開啟要重新設定）。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "把大任務切成小口，一口一口吃 🍰",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "把煩惱交給月亮，晚安 🌌",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "把今天的疲憊兌成明天的底氣 💪",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "把懶蟲按回去，衝鴨 🐣",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "白天沒白費，晚上好好獎勵自己 🍲",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "幫我復盤 **",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "別熬啦，夢裡也能開掛 ✨",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "別人在打盹，你在打怪 ⚔️",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "並行上限",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "不想現在登入？在倒數結束前按一下，就會停下來讓你設定 API Key 與路徑。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "晨光這麼好，適合幹大事 🌅",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "撐住，傍晚會給你獎勵 🌈",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "吃飽才有力氣說\"我可以\" ✨",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "吃飽喝足，難題全部退散 🥢",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "吃飽了才有力氣幹活 🍱",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "吃好這一頓，下午不認輸 💥",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "儲存並載入",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "儲存失敗",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "儲存中…",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "伺服器",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "伺服器回報自身不健康（healthy=false）",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "伺服器回應 404：主題或位址不存在，請檢查伺服器位址與主題名稱。",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "伺服器內部錯誤（HTTP ",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "伺服器位址為空",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "伺服器已結束推送",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "從遠端取回設定",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "打斷登入，先設定",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "登入端點限流（429）—— 等一下再試，或改用自己建立的 API Key。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "登入後開啟的路徑",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "登入後要開啟的路徑：",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "登入會在頂層分頁生效（同站 cookie 不受限）。iframe 嵌入被擋時用這個。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "等待重試",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "第一件事：把今天過漂亮 🌸",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "點我去看看完整時鐘頁～",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "點一下，換一條活力 slogan 💪",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "讀不到設定：",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "發生錯誤：",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "發生未知錯誤。",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "飯香一入口，戰鬥力翻倍 🍚",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "複製網址",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "該站台不允許 iframe 嵌入（推測是 SameSite cookie 限制），",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "幹飯人上線，幹活人更強 💪",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "更新",
+   "kind": "fragment",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "更新設定",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "更新中…",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "工作區",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "管線看板",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "還沒有訂閱任何 ntfy 主題。",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "好好休息，也是一種努力 🛏️",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "回應沒有 maskKey",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "回應沒有 res",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "或者 API Key 尚未生效。可以按「重新整理」再試一次。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "即將載入工作區…",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "即將重試",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "即時接收中",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "建立",
+   "kind": "fragment",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "角色",
+   "kind": "fragment",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "今天",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "今天到此為止，明天繼續贏 🌜",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "今天的坑都填平了，厲害 🕳️",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "今天的你，比昨天更能打 ⚡",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "今天你已經贏過了昨天的自己 🥇",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "今天辛苦了，你真的很能扛 🌆",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "今晚的安靜，是明天的馬力 🌠",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "進度 50%，氣勢 100% 💪",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "開工！今天也是閃閃發光的一天 ⭐",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "開啟工作區的方式",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "來杯咖啡，把下午點亮 ☕",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "連線宿主失敗：",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "連線已中斷",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "連線中",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "量測載入狀況",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "留空 API Key 就直接關閉這個視窗，不會清掉已儲存的金鑰。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "路燈亮了，你的努力也亮着 💡",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "慢慢走，穩穩贏 🚶",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "慢一點沒關係，別停就行 🐢",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "沒有 core",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "沒有 fetch 或 core",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "沒有時間",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "夢裡繼續通關，晚安 💫",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "明天的你，會謝謝今晚早睡的你 🙏",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "目前環境不支援串流讀取（response.body 無法使用）",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "難題只是還沒被你拆開而已 🔧",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "能量已補充，請繼續衝鋒 🚀",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "你比你想象的更有勁 💫",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "你認真起來的樣子真好看 🌟",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "你現在的努力，年底會替你還願 🎁",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "你一睜眼，今天就有救了 🌞",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "你已經比剛才的自己更厲害了 📈",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "努力了一天，值得一句\"幹得好\" 👏",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "起床就是勝利，今天穩贏 ✨",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "切換中…",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "清除失敗",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "清除已儲存的金鑰",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "請求過於頻繁（HTTP 429）：請稍後再試。",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "請求失敗（HTTP ",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "取回失敗",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "取回中…",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "取消",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web",
+    "dsh-minio-s3",
+    "dsh-file-share"
+   ]
+  },
+  {
+   "zh": "全部主題連線失敗",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "確定重置",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "認證失敗（HTTP ",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "認證失敗（HTTP 401）：憑證無效，請檢查使用者名稱/密碼或存取權杖是否正確。",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "仍然顯示",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "日  ",
+   "kind": "fragment",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "日 · ",
+   "kind": "fragment",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "如果該站台沒擋 iframe，iframe 可以保留 SPA 狀態（切面板不重整）。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "上面兩行是實測到的載入狀況，先看它有沒有送出請求。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "尚未訂閱主題",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "設定",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "身體醒了，夢想也醒了 🔥",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "深呼吸，今天由我承包 🚀",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "收工前，再漂亮地收個尾 🎬",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "收工睡覺，明天再戰 💪",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "收好今天的戰績，明天繼續 📋",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "手機放下，好運上線 🍀",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "手在動，夢在靠近 ✨",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "睡飽了，明天才有力氣囂張 💤",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "睡個好覺，明天繼續發光 ⭐",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "宿主回應 HTTP ",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "宿主回應無效",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "所以用「在新分頁開啟連結」取代。新分頁登入後，你照常用它；金鑰仍在這台機器上，",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "天黑之前，再贏一小局 🏆",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "貼上你的 API Key",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "團隊協同",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "晚餐加個雞腿，犒勞一下英雄 🍗",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "未連線",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "未知錯誤",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams",
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "胃暖了，心也熱了，幹活去 🔥",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "無法連線到 ntfy 伺服器",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "無法判斷遠端金鑰是否可用。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "無法與宿主連線（查詢路由沒有回應）。這個組合可能沒有掛載 web server。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "午飯是今天的第二次加油 ⛽",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "午後的我，電量滿格 🔋",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "夕陽給你打光，繼續發光 🌇",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "下班是另一種開工：好好生活 🛋️",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "下次想換設定就回來按「⚙ 設定」。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "下午的太陽也攔不住我 ☀️",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "先把胃喂飽，再把事辦成 🍜",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "先喝口水，再幹翻今天 ☀️",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "先設定 API Key",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "小憩一下，回來更猛 😴",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "歇五分鐘，再戰五小時 😤",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "新的一天，新的超能力 🌱",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "需要認證（HTTP 403）：此主題需要憑證，請在設定中填寫使用者名稱/密碼或存取權杖後重試。",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "訊息數：",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "要開啟的網址",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "夜裡也在努力的人，運氣不會差 🌙",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "夜深了，英雄也要下線休息 🦸",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "一口飯一口幹勁，絕配 😋",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "一口氣幹完，晚上才痛快 🎯",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "一直空白？可能的原因（依常見程度）：",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "一直空白？這個頁面可能不允許被 iframe 嵌入（X-Frame-Options / frame-ancestors），",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "已關閉",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "已開啟，關閉此分頁",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "已連線",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "已連線，有 ",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "已取消",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams",
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "已送出 {n} 個請求（最近一個 {last} 毫秒前）",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "已送出開啟請求。若新分頁沒出現，請用左邊「複製網址」自己貼到瀏覽器開啟。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "已重置：API Key 與路徑都回到初始狀態。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "用戶",
+   "kind": "fragment",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "用這台機器上已存的遮蔽金鑰，向遠端儲存端點換回 API Key（金鑰原文不出本機）。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "元氣時鐘",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "遠端回傳了這些候選值，點一個帶進上面的欄位：",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "遠端金鑰被拒絕（401 INVALID_API_KEY）—— 這把金鑰不屬於這個實例，請改填自己建立的 API Key。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "遠端金鑰被拒絕（403）—— 帶權限範圍的金鑰不能換工作階段，或該部署只允許管理員使用。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "遠端金鑰可以登入（登入端點回 302）。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "遠端沒有回傳可用的 API Key",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "遠端原始回應：",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "月亮在充電，你也是 🔋",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "允許模型",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "再堅持一下，進度條在動 ⏳",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "再推一把，今天不留遺憾 🏁",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "在 iframe 內嵌（原始方式）",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "在新分頁開啟（建議）",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "在新分頁開啟工作區",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "載入失敗",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock",
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "載入中…",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock",
+    "fdep-api-request-bundle"
+   ]
+  },
+  {
+   "zh": "早安！元氣已經加滿 100% 💪",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "早飯吃飽，天下我有 🍳",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "早睡是明天最強的外掛 😴",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "站內路徑，預設 /dashboard",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "這個 iframe 連一個請求都沒送出去",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "這個部署沒有開啟 API Key 登入（端點回 404）。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "這是登入用的單次連結，沒有狀態可以重看，按下「在新分頁開啟」即可。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "這一天",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "正在連線 ",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "正在量測這個 iframe 的載入狀況…",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "正在與 ntfy 建立連線…",
+   "kind": "exact",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "正在載入…",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "中場休息結束，繼續發光 🌟",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "重試",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "重新整理",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock",
+    "kaneo-web",
+    "dsh-minio-s3"
+   ]
+  },
+  {
+   "zh": "重置 ",
+   "kind": "fragment",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "重置管線設定",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "重置會清掉已儲存的 API Key 與路徑，確定嗎？",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "重置失敗",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "重置中…",
+   "kind": "exact",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "週二",
+   "kind": "fragment",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "週六",
+   "kind": "fragment",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "週日",
+   "kind": "fragment",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "週三",
+   "kind": "fragment",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "週四",
+   "kind": "fragment",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "週五",
+   "kind": "fragment",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "週一",
+   "kind": "fragment",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "主題名稱不能為空。",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "狀態有點困？那就更酷一點 😎",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "狀態在線，好運排隊進場 🍀",
+   "kind": "exact",
+   "plugins": [
+    "cute-clock"
+   ]
+  },
+  {
+   "zh": "最多只能訂閱 ",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "昨天",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  },
+  {
+   "zh": "API Key 只存在這台機器的宿主端，不會寫進瀏覽器儲存，也不會顯示在介面上。",
+   "kind": "fragment",
+   "plugins": [
+    "kaneo-web"
+   ]
+  },
+  {
+   "zh": "SSE 已連線，",
+   "kind": "fragment",
+   "plugins": [
+    "ntfy-teams"
+   ]
+  }
+ ]
+}
