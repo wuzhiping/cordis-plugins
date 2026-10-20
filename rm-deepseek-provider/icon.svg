@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="DeepSeek provider removed">
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#1f2937"/>
+  <g fill="none" stroke="#93a4bd" stroke-width="4" stroke-linecap="round">
+    <path d="M17 23h30"/>
+    <path d="M17 32h22"/>
+    <path d="M17 41h26"/>
+  </g>
+  <circle cx="44" cy="43" r="13" fill="#111827" stroke="#f05252" stroke-width="4"/>
+  <path d="M35.5 34.5l17 17" fill="none" stroke="#f05252" stroke-width="4" stroke-linecap="round"/>
+</svg>

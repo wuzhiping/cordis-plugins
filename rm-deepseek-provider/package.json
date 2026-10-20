@@ -1,0 +1,28 @@
+{
+  "name": "rm-deepseek-provider",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Keeps the DeepSeek LLM provider routes out of Settings → Models, the composer model menu, and the /model picker by disabling the rows that register them.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "icon.svg",
+    "locale/*.json",
+    "README.md"
+  ],
+  "icon": "./icon.svg",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

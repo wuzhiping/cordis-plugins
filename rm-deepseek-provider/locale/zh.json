@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "移除 DeepSeek 提供者",
+    "description": "停用 DeepSeek 的 LLM provider 路由：設定 → 模型頁面與輸入框／`/model` 選單都不再提供 DeepSeek。"
+  }
+}

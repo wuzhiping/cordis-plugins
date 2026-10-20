@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Remove DeepSeek Providers",
+    "description": "Disables the DeepSeek LLM provider routes, so Settings → Models and the composer /model picker no longer offer DeepSeek."
+  }
+}
