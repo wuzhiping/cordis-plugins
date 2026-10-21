@@ -76,11 +76,11 @@ ok('the patch supplies the owned route with every asserted field', () => {
   }
 });
 
-ok('the patch supplies exactly the MiniMax-M3 model', () => {
+ok('the patch supplies exactly the models this bundle owns', () => {
   const models = section.config.providers[MANAGED_PROVIDER].models;
   assert.ok(Array.isArray(models) && models.length > 0, 'models must be a non-empty array');
   for (const model of models) assert.equal(typeof model?.id, 'string');
-  assert.deepEqual(models.map((model) => model.id), ['MiniMax-M3']);
+  assert.deepEqual(models.map((model) => model.id), ['MiniMax-M3', 'MiniMax-M3.1-Flash']);
 });
 
 ok('the API key stays a reference, never a value', () => {

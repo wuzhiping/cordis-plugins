@@ -34,6 +34,11 @@
             input:
               - text
               - image
+          - id: MiniMax-M3.1-Flash
+            name: MiniMax-M3.1-Flash
+            input:
+              - text
+              - image
 - id: agent-default-model
   name: "@deepseek-ai/dsh-agent-default-model"
   config:
