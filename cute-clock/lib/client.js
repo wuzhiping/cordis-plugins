@@ -206,6 +206,58 @@ window.__ModuleLoader__.load({
       // 讓指針走得更流暢
       '.cute-clock-hand-minute,.cute-clock-hand-hour{transition:transform .25s cubic-bezier(.4,.0,.2,1)}',
 
+      // ====================== 浮層開關（視窗左下角）======================
+      // 只有一顆 46×26 的膠囊開關，沒有說明文字。
+      // 先以 `left:18px;bottom:18px` 定位在 `.cute-clock-page` 內；page 自帶 transform
+      // 會讓這個座標偏掉，所以元件掛載後用 `measurePageCompensation()` 量出實際
+      // 需要補的位移，再以 inline `transform` 把它釘回**視窗左下角** 18/18
+      // （不在 CSS 裡寫死補償值 —— 那會隨 DSH 版面變而失效）。
+      // 開關本體是原生 `<input type="checkbox">`（Tab / Space 可用，role=switch），
+      // 只把外觀用 `appearance:none` 重畫成膠囊。
+      '.cute-toggle{',
+      '  position:absolute;left:18px;bottom:18px;z-index:6;',
+      '  display:flex;align-items:center;',
+      '  padding:4px 6px;border-radius:999px;',
+      '  background:var(--dsw-alias-bg-layer-1,#ffffff);',
+      '  border:1px solid var(--dsw-alias-border-l1,rgba(0,0,0,.08));',
+      '  box-shadow:0 4px 16px rgba(15,23,42,.18);',
+      '  user-select:none;',
+      '  transition:box-shadow .2s ease,border-color .2s ease;',
+      '}',
+      '.cute-toggle:hover{',
+      '  border-color:var(--dsw-alias-border-l2,rgba(0,0,0,.18));',
+      '  box-shadow:0 6px 22px rgba(15,23,42,.28);',
+      '}',
+      '.cute-toggle__switch{position:relative;display:inline-flex;flex:none;width:46px;height:26px;cursor:pointer}',
+      '.cute-toggle__input{',
+      '  position:absolute;inset:0;width:100%;height:100%;margin:0;',
+      '  appearance:none;-webkit-appearance:none;',
+      '  background:var(--dsw-alias-bg-layer-2,#e6e9ef);',
+      '  border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,.18));',
+      '  border-radius:999px;cursor:pointer;outline:none;',
+      '  transition:background .22s ease,border-color .22s ease,box-shadow .22s ease;',
+      '}',
+      '.cute-toggle__input:checked{',
+      '  background:var(--dsw-alias-brand-primary,#4d6bfe);',
+      '  border-color:var(--dsw-alias-brand-primary,#4d6bfe);',
+      '}',
+      '.cute-toggle__input:focus-visible{box-shadow:0 0 0 3px rgba(77,107,254,.35)}',
+      '.cute-toggle__knob{',
+      '  position:absolute;top:3px;left:3px;',
+      '  width:18px;height:18px;border-radius:50%;',
+      // 滑塊顏色用「表面色」而不是固定白色：開啟時軌道是 brand-primary，
+      // 但這個 token 在深色主題解析成近白（#f9fafb）而不是藍色 —— 白色滑塊
+      // 會跟軌道融成一塊（實測 input/knob 都是 rgb(255,255,255)）。
+      // 改用 bg-layer-1（深色 #232324 / 淺色 #ffffff）就能在兩種主題下都拉開對比。
+      '  background:var(--dsw-alias-bg-layer-1,#ffffff);',
+      '  border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,.18));',
+      '  box-shadow:0 1px 3px rgba(0,0,0,.28);',
+      '  pointer-events:none;',
+      '  transition:transform .24s cubic-bezier(.34,1.56,.64,1),background .2s;',
+      '}',
+      '.cute-toggle__input:checked + .cute-toggle__knob{transform:translateX(20px)}',
+      '.cute-toggle__input:disabled{cursor:wait;opacity:.6}',
+
       // ====================== 用量小卡（cute-usage）======================
       // 位置：釘在**視窗**右上角。
       //
@@ -431,6 +483,92 @@ window.__ModuleLoader__.load({
     }
 
     var WEEKDAYS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+
+    // =========================================================================
+    // 2.5 浮層開關的共享狀態（全域、可持久化）
+    //
+    // 需求：「頁面 UI 裡加一個開關，能全域關閉右下角那塊浮動時鐘，預設開著」。
+    //
+    // 這裡刻意**不用 Context**：兩個消費者（`shell.overlay` 的浮動卡片、`main` 的
+    // 全局面板）是兩個互不相干的 slot，沒有共同祖先可以掛 Provider；而
+    // `React.createPortal` 在這個版本的 React 也不可用。所以用一個模組層級的
+    // 小 store + 訂閱，任何一個座位改了狀態，另一個立刻跟著變。
+    //
+    // 持久化：`localStorage`（跨工作階段、跨重載都記得；預設 = 顯示）。
+    // 讀寫全部包 try/catch —— 隱私模式 / 停用儲存時不該讓整個插件炸掉。
+    // =========================================================================
+    var FLOAT_VISIBLE_KEY = 'cute-clock:floating-visible';
+
+    function readFloatVisible() {
+      try {
+        var raw = window.localStorage.getItem(FLOAT_VISIBLE_KEY);
+        if (raw === null) return true;          // 沒存過 → 預設顯示
+        return raw !== '0';                     // '0' 才算關閉
+      } catch (err) {
+        return true;                            // 讀不到就當作預設值，不影響渲染
+      }
+    }
+
+    function writeFloatVisible(visible) {
+      try {
+        window.localStorage.setItem(FLOAT_VISIBLE_KEY, visible ? '1' : '0');
+      } catch (err) {
+        // 存不了就只在本次生命週期內生效，不拋錯
+      }
+    }
+
+    var floatVisible = readFloatVisible();
+    var floatListeners = [];
+
+    function currentFloatVisible() {
+      return floatVisible;
+    }
+
+    function setFloatVisible(visible) {
+      var next = !!visible;
+      if (next === floatVisible) return;
+      floatVisible = next;
+      writeFloatVisible(next);
+      var snapshot = floatListeners.slice();
+      for (var i = 0; i < snapshot.length; i += 1) {
+        try { snapshot[i](); } catch (err) { /* 單一訂閱者出錯不影響其他人 */ }
+      }
+    }
+
+    function subscribeFloatVisible(listener) {
+      floatListeners.push(listener);
+      return function unsubscribe() {
+        var idx = floatListeners.indexOf(listener);
+        if (idx >= 0) floatListeners.splice(idx, 1);
+      };
+    }
+
+    /**
+     * 訂閱「浮動時鐘是否顯示」。
+     *
+     * 優先用 `React.useSyncExternalStore`（React 18+，不會有撕裂讀取）；
+     * 拿不到就退化為 `useState` + `useEffect` 訂閱 —— 行為一致，只是多一次 render。
+     * DSH 出貨的 React 版本不一定有這個 hook，所以兩條路都要留。
+     *
+     * @returns 目前是否顯示浮動時鐘（預設 true）。
+     */
+    function useFloatVisible() {
+      if (typeof React.useSyncExternalStore === 'function') {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        return React.useSyncExternalStore(subscribeFloatVisible, currentFloatVisible, currentFloatVisible);
+      }
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      var pair = useState(function () { return readFloatVisible(); });
+      var value = pair[0];
+      var setValue = pair[1];
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      useEffect(function () {
+        function sync() { setValue(currentFloatVisible()); }
+        sync();                                 // 掛載時先對齊 store 現值
+        return subscribeFloatVisible(sync);
+      }, []);
+      return value;
+    }
 
     // =========================================================================
     // 3. 元氣時鐘的錶面（SVG）—— 一個圓潤鐘面
@@ -775,10 +913,128 @@ window.__ModuleLoader__.load({
       }, card);
     }
 
+    /**
+     * 浮動卡片外面再包一層：它是唯一訂閱「顯示 / 隱藏」的地方。
+     *
+     * 為什麼要包：`ctx.slots.register` 的渲染函式本身不是 React 組件（不能放 hook），
+     * 所以訂閱必須落在一個真正的組件裡。關閉時**整個 `.cute-clock-overlay`
+     * 都不渲染**（連同 `position:fixed` 的定位盒一起消失），而不是只藏卡片 ——
+     * 這樣右下角真的乾乾淨淨，也不會留下會吃點擊的透明層。
+     *
+     * `data-cute-clock-float="on|off"` 給驗證探針讀。
+     */
+    function FloatingClockSlot() {
+      var visible = useFloatVisible();
+      if (!visible) return null;
+      return e('div', {
+        className: 'cute-clock-overlay',
+        'data-cute-clock-float': 'on',
+      }, e(FloatingClock, null));
+    }
+
     // =========================================================================
     // 6. 元件 B —— 全域面板的大時鐘（main keyed）
     // =========================================================================
     var PETALS = ['🌸', '✿', '❀', '🌼', '✦', '❋', '·', '✿', '·'];
+
+    /**
+     * 量出「要補多少位移」才能把絕對定位的子節點釘回內容區左下角。
+     *
+     * 為什麼不寫死：`.cute-clock-page` 自己帶 `transform`（補側欄偏移），子節點的
+     * 絕對座標系因此不是視窗，而 transform 的實際值會隨 DSH 版面變（實測這版
+     * 是 translateX(-190px) translateY(96px)）。寫死一變就飄掉，所以掛載時量：
+     *
+     *   目標點 = (內容區左緣 + 18, 視窗高 - 18)
+     *   「內容區左緣」取最近的 `overflow:hidden` 祖先（centerCol / frame）——
+     *   側欄把視窗左邊 0–208 整條佔住了，直接貼視窗左緣的開關會被側欄蓋掉
+     *   （實測 elementFromPoint 命中的是側欄的 label）。
+     *
+     * @returns {{dx:number,dy:number}|null} 量不到（節點消失 / SSR）時回傳 null。
+     */
+    function measureCornerCompensation(node) {
+      if (!node || typeof node.getBoundingClientRect !== 'function') return null;
+      var page = node.parentElement ? node.parentElement.closest('.cute-clock-page') : null;
+      if (!page) return null;
+      var pr = page.getBoundingClientRect();
+      if (!pr.width || !pr.height) return null;
+
+      var bound = window.innerWidth || 0;
+      var el = page.parentElement;
+      while (el && el !== document.documentElement) {
+        var s = window.getComputedStyle(el);
+        if (s.overflow !== 'visible' && s.overflow !== '') {
+          var br = el.getBoundingClientRect();
+          if (br.width > 0) { bound = br.left; break; }
+        }
+        el = el.parentElement;
+      }
+
+      var nr = node.getBoundingClientRect();
+      return {
+        dx: Math.round(bound + 18 - nr.left),
+        dy: Math.round(((window.innerHeight || 0) - 18) - nr.bottom),
+      };
+    }
+
+    /**
+     * 「右下角浮動時鐘」開關 —— 釘在**內容區左下角**，只有一顆膠囊開關，沒有說明文字。
+     *
+     * 位置靠 `measureCornerCompensation` 在掛載後量出補償值再套用；第一次 render
+     * 先放在看不見的地方（`left:-9999px`），量完才歸位，避免在側欄上閃一下。
+     *
+     * 它和 `FloatingClockSlot` 訂閱同一份 store，所以切換後右下角立刻出現 / 消失；
+     * 狀態寫進 localStorage（預設＝顯示）。
+     */
+    function FloatVisibleToggle() {
+      var visible = useFloatVisible();
+      var readyPair = useState(false);
+      var ready = readyPair[0];
+      var setReady = readyPair[1];
+      var compPair = useState(null);
+      var comp = compPair[0];
+      var setComp = compPair[1];
+      var boxRef = React.useRef(null);
+
+      // 掛載後量一次位置補償值，並啟用開關（避免 localStorage 未讀完時誤點）。
+      useEffect(function () {
+        setComp(measureCornerCompensation(boxRef.current));
+        setReady(true);
+      }, []);
+
+      function onChange() {
+        setFloatVisible(!currentFloatVisible());
+      }
+
+      // 第一次 render 先落在 CSS 的 left:18px;bottom:18px（page 內座標），
+      // effect 裡量出補償值再套 translate 歸位。不能先隱藏到 -9999px —— 那樣
+      // 量到的是隱藏後的位置，補償值會變成 +10000 之類的垃圾。
+      var style = comp
+        ? { transform: 'translate(' + comp.dx + 'px,' + comp.dy + 'px)' }
+        : undefined;
+
+      return e('div', {
+        ref: boxRef,
+        className: 'cute-toggle',
+        style: style,
+        'data-cute-toggle': 'floating-visible',
+        'data-on': visible ? '1' : '0',
+        title: visible ? '隱藏右下角浮動時鐘' : '顯示右下角浮動時鐘',
+      },
+        e('label', { className: 'cute-toggle__switch' },
+          e('input', {
+            type: 'checkbox',
+            className: 'cute-toggle__input',
+            checked: visible,
+            disabled: !ready,
+            role: 'switch',
+            'aria-checked': visible ? 'true' : 'false',
+            'aria-label': '右下角浮動時鐘',
+            onChange: onChange,
+          }),
+          e('span', { className: 'cute-toggle__knob' })
+        )
+      );
+    }
 
     function PetalRain() {
       // 用 useMemo 讓 18 片花瓣只生成一次（位置／延遲）
@@ -845,6 +1101,8 @@ window.__ModuleLoader__.load({
           title: '點一下，換一條活力 slogan 💪',
           onClick: rollSlogan
         }, '✿  ' + quote + '  ✿'),
+        // 全域開關：關掉右下角那塊浮動時鐘（預設顯示，狀態存 localStorage）
+        e(FloatVisibleToggle, null),
         // 用量小卡：使用 `position:fixed; right:18px; top:18px;`，視窗-相對定位，
         // 不被 `.cute-clock-page` 的 transform 拉走。仍在這個 React 子樹裡，
         // 所以 mount/unmount 跟 BigClockPage 走（切到主面板就出現，切走就消失）。
@@ -1222,14 +1480,14 @@ window.__ModuleLoader__.load({
       // ① CSS 注入（disposer 由 ctx.effect 自動管理）
       ctx.effect(installStyles, 'cute-clock: styles');
 
-      // ② 幀級浮層 —— 漂浮的元氣小時鐘
+      // ② 幀級浮層 —— 漂浮的元氣小時鐘（受面板上的「右下角浮動時鐘」開關控制）
       ctx.slots.inject('shell.overlay', function () {
         return ctx.slots.register({
           name: 'shell.overlay',
           id: 'cute-clock-overlay',
           order: 100
         }, function () {
-          return e('div', { className: 'cute-clock-overlay' }, e(FloatingClock, null));
+          return e(FloatingClockSlot, null);
         });
       });
 

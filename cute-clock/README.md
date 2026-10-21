@@ -18,6 +18,27 @@
 
 舊版相反：它會讀 `SessionListState` 自己判斷，遇到 `HIDDEN_PRESETS = ['office']` 裡的 preset 就整塊退場（如果人正停在時鐘頁上還會順手切回工作階段）。那段開關已刪除，`useSessions` / `useHiddenHere` / `HIDDEN_PRESETS` 都不再存在。
 
+## 🔘 右下角浮動時鐘的開關
+
+時鐘頁面左下角有一顆**只有膠囊開關、沒有文字**的總開關，可以全域關掉右下角那塊浮動時鐘。
+
+- **預設＝顯示**：從沒存過設定時 `localStorage['cute-clock:floating-visible']` 不存在，視為開。
+- **全域生效**：關掉後 `shell.overlay` 整個 `.cute-clock-overlay` 都不渲染（連 `position:fixed`
+  的定位盒一起消失，不會留下吃點擊的透明層），切換後右下角**立刻**消失／回來，不需重開面板。
+- **持久化**：狀態寫進 `localStorage`，重載頁面、下次開機都記得；讀寫全包 `try/catch`，
+  隱私模式或停用儲存時退化成「只在本次生命週期內生效」，不會讓插件炸掉。
+- **共用一份狀態**：`shell.overlay`（浮動卡片）和 `main`（時鐘頁面）是兩個互不相干的 slot，
+  沒有共同祖先可以掛 Context，而這個版本的 React 也沒有 `createPortal`，所以用模組層級的
+  小 store：`subscribeFloatVisible` / `currentFloatVisible` / `setFloatVisible`，
+  由 `useFloatVisible()` 訂閱（優先 `useSyncExternalStore`，沒有就退化成 `useState` + 訂閱）。
+- **位置**：內容區左下角（`left = 內容區左緣 + 18px`、`bottom = 18px`）。不能直接貼視窗左緣 ——
+  側欄把左邊整條佔住了，貼視窗左緣的開關會被側欄蓋掉（實測 `elementFromPoint` 命中的是側欄的
+  label）。`.cute-clock-page` 自帶 `transform`，子節點絕對定位的座標系不是視窗，所以元件掛載後
+  用 `measureCornerCompensation()` **量一次**再補位移，不在 CSS 裡寫死補償值。
+- 驗證：`node test/verify-float-toggle.js`（17 項：預設顯示、關閉後浮層消失、localStorage 寫入、
+  重載保持、再開、位置與可點擊性、以及「沒有文字說明」）。
+
+
 ## 🚧 擋到輸入區就整塊隱藏
 
 角落那張浮動卡片是 `position:fixed`（右下角），而「輸入區」是頁面自己排版的 —— 輸入卡片會長高、輸入框上方有場景面板、下方有模板牆，**高度都隨內容變**（hero 與一般會話也不同），所以窄視窗或模板多的時候卡片會壓在輸入區上。
