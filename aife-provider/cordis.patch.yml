@@ -28,19 +28,29 @@
         api: openai-completions
         baseURL: https://routellm.feg.cn/v1
         apiKeyEnv: AIFE_API_KEY
+        compat:
+          supportsReasoningEffort: true
+          thinkingFormat: openai
         models:
           - id: MiniMax-M3
             name: MiniMax-M3
             input:
               - text
               - image
+            reasoningEfforts: false
           - id: MiniMax-M3.1-Flash
             name: MiniMax-M3.1-Flash
             input:
               - text
               - image
+            reasoningEfforts:
+              low: low
+              medium: medium
+              high: high
+              max: max
 - id: agent-default-model
   name: "@deepseek-ai/dsh-agent-default-model"
   config:
     provider: aife
-    model: MiniMax-M3
+    model: MiniMax-M3.1-Flash
+    reasoningEffort: high
