@@ -20,7 +20,7 @@ $uvExe = "$uvDir\uv.exe"
 
 # Git repository
 $repoDir = "$base\jeeflow"
-$repoUrl = "https://github.com/wuzhiping/jeeflow"
+$repoUrl = "https://git.feg.cn/shawoo/jeeflow"
 # $targetBranch = "main"
 $targetBranch = "dev"
 
@@ -30,8 +30,10 @@ $uvLock = "$repoDir\uv.lock"
 
 # Download URLs
 $gitZipName = "MinGit-$gitVersion-64-bit.zip"
-$gitUrl = "https://github.com/git-for-windows/git/releases/download/v$gitVersion.windows.1/$gitZipName"
-$uvUrl = "https://github.com/astral-sh/uv/releases/download/$uvVersion/uv-x86_64-pc-windows-msvc.zip"
+$gitUrl =  "https://abc.feg.com.tw/share/ehr/pages/dev/dsh/MinGit-2.51.0-64-bit.zip"  
+          #"https://github.com/git-for-windows/git/releases/download/v$gitVersion.windows.1/$gitZipName"
+$uvUrl = "https://abc.feg.com.tw/share/ehr/pages/dev/dsh/uv-x86_64-pc-windows-msvc.zip"
+        #"https://github.com/astral-sh/uv/releases/download/$uvVersion/uv-x86_64-pc-windows-msvc.zip"
 
 # Startup
 Write-Host "Base: $base"

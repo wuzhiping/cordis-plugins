@@ -28,15 +28,17 @@ $dshHome   = Join-Path $base "dsh"
 
 $nodeZip   = Join-Path $base "node.zip"
 
+
+$env:NPM_CONFIG_USERCONFIG = "$base\.npmrc"
 # ============================================================
 # Configuration
 # ============================================================
 
 $nodeVersion = "node-v24.19.0-win-x64"
 
-$nodeUrl = "https://abc.feg.com.tw/share/ehr/pages/dev/node-v24.19.0-win-x64.zip"
+$nodeUrl = "https://abc.feg.com.tw/share/ehr/pages/dev/dsh/node-v24.19.0-win-x64.zip"
 
-$dshVersion = "0.2.0-rc.2"
+$dshVersion = "0.2.1-rc.2"
 
 $dshBaseUrl = "https://abc.feg.com.tw/vx"
 
@@ -101,8 +103,8 @@ $gitZipName = "MinGit-$gitVersion-64-bit.zip"
 $gitDir = "$base\git"
 $gitExe = "$gitDir\cmd\git.exe"
 $gitUrl = `
-    "https://github.com/git-for-windows/git/releases/download/" +
-    "v$gitVersion.windows.1/$gitZipName"
+    "https://abc.feg.com.tw/share/ehr/pages/dev/dsh/MinGit-2.51.0-64-bit.zip"
+    #"https://github.com/git-for-windows/git/releases/download/" + "v$gitVersion.windows.1/$gitZipName"
 
 if (-not (Test-Path $gitExe)) {
 
@@ -176,8 +178,11 @@ else {
 }
 
 # git join in Path
+$mcDir = "$base\mc"
+$env:MC_CONFIG_DIR = "$mcDir\.mc"
+
 $uvDir = "$base\uv"
-$env:Path = "$uvDir;$gitDir\cmd;$gitDir\usr\bin;$env:Path"
+$env:Path = "$mcDir;$uvDir;$gitDir\cmd;$gitDir\usr\bin;$env:Path"
 
 # ============================================================
 # 1. Node.js
@@ -222,6 +227,10 @@ else {
     Log "Node.js already exists."
 }
 
+
+& "$bin\npm.cmd"  config set registry https://registry.feg.cn
+& "$bin\npm.cmd"  config get registry
+
 # ============================================================
 # 2. dsh
 # ============================================================
@@ -261,7 +270,7 @@ if ($needDshInstall) {
     & $npmCmd `
         --prefix $globalDir `
         --cache $cacheDir `
-        install -g "@deepseek-ai/dsh@$dshVersion" --registry http://registry.npmmirror.com
+        install -g "@deepseek-ai/dsh@$dshVersion" --registry https://registry.feg.cn
 
     if ($LASTEXITCODE -ne 0) {
         Fail "dsh installation failed."
@@ -287,7 +296,7 @@ if (-not (Test-Path $pnpmCmd)) {
     & $npmCmd `
         --prefix $globalDir `
         --cache $cacheDir `
-        install -g pnpm --registry http://registry.npmmirror.com
+        install -g pnpm --registry https://registry.feg.cn
 
     if ($LASTEXITCODE -ne 0) {
         Fail "pnpm installation failed."
@@ -299,57 +308,97 @@ else {
     Log "pnpm already exists."
 }
 
+& "$globalDir\pnpm.cmd" config set registry https://registry.feg.cn
+& "$globalDir\pnpm.cmd" config get registry
+
 # ============================================================
 # 4. Plugins
 # ============================================================
+$ABC  = "git+https://git.feg.cn/shawoo"  # "github:wuzhiping"
 
 $plugins = @(
     @{
         Name    = "zhtw-traditional-chinese"
         Version = "0.1.4"
-        Source  = "github:wuzhiping/cordis-plugins#path:/zhtw-traditional-chinese"
+        Source  = "$ABC/cordis-plugins#path:/zhtw-traditional-chinese"
         Profile = "web"
     }
 
     @{
         Name    = "no-browser-auth"
         Version = "0.1.0"
-        Source  = "github:wuzhiping/cordis-plugins#path:/no-browser-auth"
+        Source  = "$ABC/cordis-plugins#path:/no-browser-auth"
         Profile = "web"
     }
 
     @{
         Name    = "scene-template"
         Version = "0.1.0"
-        Source  = "github:wuzhiping/cordis-plugins#path:/scene-template"
+        Source  = "$ABC/cordis-plugins#path:/scene-template"
         Profile = "web"
     }
 
     @{
         Name    = "fdep-api-request-bundle"
         Version = "0.1.0"
-        Source  = "github:wuzhiping/cordis-plugins#path:/fdep-api-request"
+        Source  = "$ABC/cordis-plugins#path:/fdep-api-request"
         Profile = "web"
     }
 
     @{
         Name    = "@local/aife-provider"
         Version = "1.0.0"
-        Source  = "github:wuzhiping/cordis-plugins#path:/aife-provider"
+        Source  = "$ABC/cordis-plugins#path:/aife-provider"
+        Profile = "web"
+    }
+
+    @{
+        Name    = "rm-deepseek-provider"
+        Version = "1.0.0"
+        Source  = "$ABC/cordis-plugins#path:/rm-deepseek-provider"
         Profile = "web"
     }
 
     @{
         Name    = "cute-clock"
-        Version = "0.2.0"
-        Source  = "github:wuzhiping/cordis-plugins#path:/cute-clock"
+        Version = "0.3.0"
+        Source  = "$ABC/cordis-plugins#path:/cute-clock"
         Profile = "web"
     }
 
     @{
         Name    = "ntfy-teams"
         Version = "0.2.1"
-        Source  = "github:wuzhiping/cordis-plugins#path:/ntfy-teams"
+        Source  = "$ABC/cordis-plugins#path:/ntfy-teams"
+        Profile = "web"
+    }
+
+    @{
+        Name    = "kaneo-web"
+        Version = "0.1.0"
+        Source  = "$ABC/cordis-plugins#path:/kaneo-web"
+        Profile = "web"
+    }
+
+    @{
+        Name    = "sidebar-plugins-toggle"
+        Version = "1.0.0"
+        Source  = "$ABC/cordis-plugins#path:/sidebar-plugins-toggle"
+        Profile = "web"
+    }
+
+
+    @{
+        Name    = "dsh-minio-s3"
+        Version = "1.0.0"
+        Source  = "$ABC/cordis-plugins#path:/dsh-minio-s3"
+        Profile = "web"
+    }
+
+    @{
+        Name    = "vi-VN"
+        Version = "0.1.0"
+        Source  = "$ABC/cordis-plugins#path:/vi-VN"
         Profile = "web"
     }
 
@@ -547,7 +596,7 @@ Log "Starting dsh web..."
     web `
     --host $hostAddress `
     --port $port `
-    --no-open 2>&1 |
+    --no-open |
     ForEach-Object {
         Process-ProcessOutput ([string]$_)
     }
