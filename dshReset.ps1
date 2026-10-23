@@ -169,7 +169,8 @@ $plugins |
 #& "$bin\npx.cmd" degit github:wuzhiping/skills/ponytail          dsh\skills\ponytail --force
 
 
-cmd.exe /d /c 'mc.exe alias set public http://oss.feg.cn "" "" '
+#cmd.exe /d /c 'mc.exe alias set public http://oss.feg.cn "" "" '
+mc alias set public http://oss.feg.cn dsh dshP@ssw0rd
 
 mc ls public/aife
 
