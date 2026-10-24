@@ -30,7 +30,7 @@ $uvExe = "$uvDir\uv.exe"
 
 # Git repository
 $repoDir = "$base\project"
-$repoUrl = "https://github.com/wuzhiping/cattle.git"
+$repoUrl = "https://git.feg.cn/shawoo/cattle.git"
 
 # Actual uv project
 $projectDir = "$repoDir\agents"
@@ -50,16 +50,16 @@ $syncMarker = "$projectDir\.uv-sync"
 $gitZipName = "MinGit-$gitVersion-64-bit.zip"
 
 $gitUrl = `
-    "https://github.com/git-for-windows/git/releases/download/" +
-    "v$gitVersion.windows.1/$gitZipName"
+    "https://abc.feg.com.tw/share/ehr/pages/dev/dsh/MinGit-2.51.0-64-bit.zip"
+    #"https://github.com/git-for-windows/git/releases/download/" +  "v$gitVersion.windows.1/$gitZipName"
 
 $uvUrl = `
-    "https://github.com/astral-sh/uv/releases/download/" +
-    "$uvVersion/uv-x86_64-pc-windows-msvc.zip"
+    "https://abc.feg.com.tw/share/ehr/pages/dev/dsh/uv-x86_64-pc-windows-msvc.zip"
+    #"https://github.com/astral-sh/uv/releases/download/" + "$uvVersion/uv-x86_64-pc-windows-msvc.zip"
 
 $winswUrl = `
-    "https://github.com/winsw/winsw/releases/download/" +
-    "$winswVersion/WinSW-x64.exe"
+    "https://abc.feg.com.tw/share/ehr/pages/dev/dsh/WinSW-x64.exe"
+    # "https://github.com/winsw/winsw/releases/download/" + "$winswVersion/WinSW-x64.exe"
 
 # ============================================================
 # Startup
