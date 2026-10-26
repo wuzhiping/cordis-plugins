@@ -1,5 +1,7 @@
 # rm-deepseek-provider — remove the DeepSeek LLM provider routes from every
-# model surface.
+# model surface, and hide the Plugins page's third-party install controls.
+#
+# 1. DeepSeek routes
 #
 # Two rows register the DeepSeek routes: `llm-deepseek` registers the
 # API-key route `deepseek-official`, and `llm-deepseek-account` registers the
@@ -25,8 +27,15 @@
 - id: llm-deepseek-account
   disabled: true
 
-# The Host half only reports whether the composed registry matches the intent
-# above; it writes nothing.
+# 2. The bundle's own row
+#
+# `name` is the package name, exactly like every other bundle row. The browser
+# half is served from the same package, and the client module service caches
+# each package manifest per (resolution base, module specifier) until the
+# process restarts — so a profile that loaded this bundle before it declared
+# `dsh.client` keeps the "not a client package" verdict cached under the old
+# specifier. A scoped package name is a different specifier, so the manifest
+# is read again and the browser half joins the module graph without a restart.
 - insert:
     - id: rm-deepseek-provider
-      name: rm-deepseek-provider
+      name: '@local/rm-deepseek-provider'

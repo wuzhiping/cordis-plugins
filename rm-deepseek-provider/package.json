@@ -1,12 +1,13 @@
 {
-  "name": "rm-deepseek-provider",
+  "name": "@local/rm-deepseek-provider",
   "version": "1.0.0",
   "private": true,
-  "description": "Keeps the DeepSeek LLM provider routes out of Settings → Models, the composer model menu, and the /model picker by disabling the rows that register them.",
+  "description": "Keeps the DeepSeek LLM provider routes out of Settings → Models and the model picker, and hides the Plugins page's add-plugin controls so no third-party plugin can be installed from the GUI.",
   "type": "module",
   "main": "index.js",
   "exports": {
     ".": "./index.js",
+    "./client": "./client.js",
     "./package.json": "./package.json",
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./locale/*.json": "./locale/*.json",
@@ -14,6 +15,7 @@
   },
   "files": [
     "index.js",
+    "client.js",
     "cordis.patch.yml",
     "icon.svg",
     "locale/*.json",
@@ -23,6 +25,10 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "移除 DeepSeek 提供者",
-    "description": "停用 DeepSeek 的 LLM provider 路由：設定 → 模型頁面與輸入框／`/model` 選單都不再提供 DeepSeek。"
+    "title": "移除 DeepSeek 與第三方安裝",
+    "description": "停用 DeepSeek 的 LLM provider 路由，並隱藏「插件」頁面的新增插件按鈕：設定 → 模型與模型選單不再出現 DeepSeek，GUI 也不能再安裝第三方插件。"
   }
 }

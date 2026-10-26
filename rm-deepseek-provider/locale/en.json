@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Remove DeepSeek Providers",
-    "description": "Disables the DeepSeek LLM provider routes, so Settings → Models and the composer /model picker no longer offer DeepSeek."
+    "title": "Remove DeepSeek & third-party installs",
+    "description": "Disables the DeepSeek LLM provider routes and hides the Plugins page's add-plugin controls, so Settings → Models and the model picker offer no DeepSeek and no third-party plugin can be installed from the GUI."
   }
 }
