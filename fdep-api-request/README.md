@@ -25,8 +25,9 @@ The tool posts to `https://abc.feg.com.tw/oauth2/fdep` with `Content-Type: appli
 ### Client side
 
 A sidebar entry labelled **MCP網關**, marked with a green hexagon glyph, that opens a panel
-titled **MCP網關**. The panel is a three-step flow — three numbered cards in order (1 → 2 → 3),
-followed by the response and the fallback prompt:
+titled **MCP網關** with the subtitle **Subject to PDP authorization** under it. The panel is a
+three-step flow — three numbered cards in order (1 → 2 → 3), followed by the response and the
+fallback prompt:
 
 1. **選擇 API** (Choose the API) — an API ID input (monospace) with **歷史 ▾** (history) and
    **取得文件** (Fetch docs). Enter submits; Escape closes the history menu. The field starts
@@ -60,7 +61,8 @@ three tools the theme *does* provide:
 - **Text colours in three steps**: `label-primary` for titles and values, `label-secondary` for
   hints, `label-tertiary` for the quietest meta (step suffixes, placeholders).
 
-Type scale: panel title 21px/650 with a divider under the header, card band titles 13.5px/650,
+Type scale: panel title 21px/650 with a 12.5px subtitle under it and a divider under the header,
+card band titles 13.5px/650,
 uppercase 11px field labels, 13px inputs, 11.5px hint text. Inputs are filled with the same tint and
 go white with a brand-coloured border on focus. Nothing here hard-codes a colour, so both themes get
 the same treatment — `node test/shoot.js` renders the preview in light and dark and checks both.
@@ -99,7 +101,9 @@ is known to answer.
 **Language.** The panel's UI is **Traditional Chinese (zh-TW idiom)**, matching this profile's
 `locale.preference: zh-TW` and the sibling `scene-template` bundle; the api ids, field names, types
 and JSON stay verbatim because those are the wire contract. The same applies to the two pieces of
-text the model receives: the clipboard brief and the injected runtime context.
+text the model receives: the clipboard brief and the injected runtime context. The one English
+string is the header's subtitle, **Subject to PDP authorization** — that is the product's own
+wording, so it stays verbatim.
 
 ### Field types come from the docs examples
 

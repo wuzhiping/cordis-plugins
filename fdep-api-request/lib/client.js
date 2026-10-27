@@ -459,6 +459,9 @@ const PANEL_CSS = [
   /* header */
   '.fdep__head { margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--fdep-line); }',
   '.fdep__title { margin: 0; font-size: 21px; line-height: 28px; font-weight: 650; letter-spacing: -0.015em; }',
+  // The subtitle qualifies the title; it is not a second heading. It sits under the
+  // title in the secondary text colour, so the title still leads the header.
+  '.fdep__subtitle { margin: 3px 0 0; font-size: 12.5px; line-height: 18px; font-weight: 500; color: var(--fdep-text-2); }',
 
   /* card: a tinted header band over a white body — the theme has no layer colour
      to lean on, so the band is what separates a card's title from its content.
@@ -1226,11 +1229,14 @@ function makeMainPanel(e, React, services) {
 
         // ---- header ----
         // 只有標題：端點細節（POST /oauth2/fdep、abc.feg.com.tw、skill 名）不再顯示，
-        // 那些是實作資訊，使用者不需要看到。
+        // 那些是實作資訊，使用者不需要看到。標題下的副標題則是使用者要看的限定說明。
         e(
           'header',
           { className: 'fdep__head' },
           e('h2', { className: 'fdep__title' }, 'MCP網關'),
+          // The qualifier the title needs: every call behind this panel is authorized
+          // by the PDP, so the panel says so right where the title is read.
+          e('p', { className: 'fdep__subtitle' }, 'Subject to PDP authorization'),
         ),
 
         e(Status, { status: status }),
