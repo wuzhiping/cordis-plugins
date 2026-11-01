@@ -45,18 +45,23 @@ layer's override survives the later profile layer.
 
 ### 2. Plugin Manager install controls (Client half)
 
-`client.js` hides the add-plugin group of the Plugins page. It selects by plain
-attributes, never by a hashed CSS-module class:
+`client.js` hides the add-plugin group of the Plugins page with two
+independent selectors, so one upstream markup change cannot silently disable
+the hiding:
 
 ```css
-[data-plugin-panel] span[role="group"][aria-label] { display: none !important; }
+[data-plugin-panel] span[role="group"][aria-label],
+[data-plugin-panel] [class*="addGroup"] { display: none !important; }
 ```
 
-`[data-plugin-panel]` is the Plugins page root; the group is the page's only
-`span[role="group"][aria-label]`. The page's other `role="group"` is the
-install-approval `<section>`, which uses `aria-labelledby` and therefore does
-not match. The rule is locale-independent — no text is matched — so it holds
-for every UI language.
+- `[data-plugin-panel]` is the Plugins page root; the group is the page's only
+  `span[role="group"][aria-label]`. The page's other `role="group"` is the
+  install-approval `<section>`, which uses `aria-labelledby` and therefore
+  does not match. This selector survived DSH 0.2.1-rc.2 → rc.5 unchanged.
+- `[class*="addGroup"]` matches the group's CSS-module class, whose readable
+  suffix survives a rebuild even though the hash prefix changes.
+
+Neither selector matches on text, so the hiding holds for every UI language.
 
 Two layers, as in the sibling `sidebar-plugins-toggle` plugin: the stylesheet
 rule (survives React re-renders) plus an inline `display:none` mark reapplied
@@ -68,8 +73,27 @@ page never dispatches, so nothing renders; read them with
 cordis_inspect_query  platform=client  provider=Slots  method=listSubTree  root=plugins.row.config
 ```
 
-which reports `rmdp-diag:panel=… group=… disp=…` (`panel` counts mounted
-Plugins pages, `group` counts hidden add-plugin groups).
+which reports `rmdp-diag:panel=… group=… sel=…/… disp=…` (`panel` counts
+mounted Plugins pages, `group` counts hidden add-plugin groups, `sel` counts
+the hits per selector).
+
+### After a DSH upgrade: check the bundle selection
+
+Both halves of this plugin are a **bundle layer**. A profile applies that layer
+only while `@local/rm-deepseek-provider` is listed in
+`dsh.profile.bundles`; a dependency entry in `dependencies` alone does not
+compose the patch. When an upgrade or a profile rewrite drops that list entry,
+the plugin goes completely inert — the DeepSeek routes come back *and* the
+install button reappears — while the package stays installed.
+
+Check it with:
+
+```
+dsh plugin --profile web list          # the bundle must show as enabled
+```
+
+or re-select it from the Plugins page (the bundle's switch), which writes the
+entry back into `dsh.profile.bundles`.
 
 ### Why the package name is scoped
 

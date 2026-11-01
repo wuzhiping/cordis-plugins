@@ -11,15 +11,22 @@
 // removes every third-party install path the page offers. Installed bundles
 // keep their own switches and uninstall actions.
 //
-// The selector uses plain attributes only — never a hashed CSS-module class —
-// so an upstream rebuild of the Plugins page cannot silently miss it:
+// Two independent selectors mark that group, so one upstream markup change
+// cannot silently disable the hiding:
 //
-//   [data-plugin-panel]             the Plugins page root (`data-plugin-panel`)
-//   span[role="group"][aria-label]  the add-plugin group; the page's only
-//                                    other `role="group"` is the
-//                                    install-approval <section>, which uses
-//                                    aria-labelledby and therefore does not
-//                                    match.
+//   1. `[data-plugin-panel] span[role="group"][aria-label]`
+//      Plain attributes only. `[data-plugin-panel]` is the Plugins page root;
+//      the group is the page's only `span[role="group"][aria-label]`. The
+//      page's other `role="group"` is the install-approval <section>, which
+//      uses aria-labelledby and therefore does not match. This selector
+//      survived DSH 0.2.1-rc.2 → rc.5 unchanged.
+//
+//   2. `[data-plugin-panel] [class*="addGroup"]`
+//      The group's CSS-module class keeps the readable suffix `addGroup`
+//      across builds even though the hash prefix changes. This one still
+//      matches when the attributes above are renamed.
+//
+// Neither selector matches on text, so the hiding holds for every UI language.
 //
 // Two layers, like the sibling sidebar plugin: a stylesheet rule (survives
 // React re-renders) plus an inline `display:none` mark reapplied by a
@@ -32,7 +39,10 @@
 window.__ModuleLoader__.load({
   id: '@local/rm-deepseek-provider',
   factory: function (require) {
-    var GROUP_SELECTOR = '[data-plugin-panel] span[role="group"][aria-label]';
+    var GROUP_SELECTORS = [
+      '[data-plugin-panel] span[role="group"][aria-label]',
+      '[data-plugin-panel] [class*="addGroup"]'
+    ];
     var PANEL_SELECTOR = '[data-plugin-panel]';
     var DIAG_SLOT = 'plugins.row.config';
     var DIAG_PREFIX = 'rmdp-diag:';
@@ -44,7 +54,7 @@ window.__ModuleLoader__.load({
         ctx.effect(function () {
           var style = document.createElement('style');
           style.setAttribute('data-rm-deepseek-provider', 'hide-install');
-          style.textContent = GROUP_SELECTOR + '{display:none !important;}';
+          style.textContent = GROUP_SELECTORS.join(',') + '{display:none !important;}';
           document.head.appendChild(style);
 
           var diagDispose = null;
@@ -75,19 +85,34 @@ window.__ModuleLoader__.load({
             }
           }
 
+          /** Every add-plugin group any selector currently matches, without duplicates. */
+          function groups() {
+            var found = [];
+            for (var s = 0; s < GROUP_SELECTORS.length; s += 1) {
+              var hits = toArray(GROUP_SELECTORS[s]);
+              for (var i = 0; i < hits.length; i += 1) {
+                if (found.indexOf(hits[i]) === -1) found.push(hits[i]);
+              }
+            }
+            return found;
+          }
+
           /** Hide every add-plugin group currently mounted and report what was found. */
           function pass() {
-            var groups = toArray(GROUP_SELECTOR);
-            for (var i = 0; i < groups.length; i += 1) {
-              groups[i].style.display = 'none';
-              groups[i].setAttribute(HIDDEN_ATTR, '1');
+            var nodes = groups();
+            for (var i = 0; i < nodes.length; i += 1) {
+              nodes[i].style.display = 'none';
+              nodes[i].setAttribute(HIDDEN_ATTR, '1');
             }
             var panels = toArray(PANEL_SELECTOR).length;
             var display = '-';
-            if (groups.length > 0) {
-              try { display = window.getComputedStyle(groups[0]).display; } catch (e) {}
+            if (nodes.length > 0) {
+              try { display = window.getComputedStyle(nodes[0]).display; } catch (e) {}
             }
-            publishDiag('panel=' + panels + ' group=' + groups.length + ' disp=' + display);
+            var perSelector = GROUP_SELECTORS.map(function (selector) {
+              return toArray(selector).length;
+            }).join('/');
+            publishDiag('panel=' + panels + ' group=' + nodes.length + ' sel=' + perSelector + ' disp=' + display);
           }
 
           pass();
@@ -119,10 +144,10 @@ window.__ModuleLoader__.load({
               observer.disconnect();
               observer = null;
             }
-            var groups = toArray(GROUP_SELECTOR);
-            for (var k = 0; k < groups.length; k += 1) {
-              groups[k].style.display = '';
-              groups[k].removeAttribute(HIDDEN_ATTR);
+            var nodes = groups();
+            for (var k = 0; k < nodes.length; k += 1) {
+              nodes[k].style.display = '';
+              nodes[k].removeAttribute(HIDDEN_ATTR);
             }
             if (style.parentNode !== null) style.parentNode.removeChild(style);
             if (diagDispose !== null) {
