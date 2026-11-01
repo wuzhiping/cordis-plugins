@@ -16,6 +16,10 @@ Two independent cleanups for a deployment that runs its own model gateway:
      dropdown (whose entry is "Install a third-party plugin" / 安装第三方插件)
      are hidden. Both opened the same install dialog; both are gone now.
      Installed bundles keep their switches and uninstall actions.
+   - **The three region-local More menus** — the "Browse other plugins" row
+     (浏览更多插件) is gone from the left sidebar, the Conversation View tabs
+     and the right sidebar. The folded Conversation Views and the "Create your
+     plugin" row stay.
 
 ## How it works
 
@@ -73,9 +77,40 @@ page never dispatches, so nothing renders; read them with
 cordis_inspect_query  platform=client  provider=Slots  method=listSubTree  root=plugins.row.config
 ```
 
-which reports `rmdp-diag:panel=… group=… sel=…/… disp=…` (`panel` counts
-mounted Plugins pages, `group` counts hidden add-plugin groups, `sel` counts
-the hits per selector).
+which reports `rmdp-diag:panel=… group=… sel=…/… disp=… menu=… slots=…`
+(`panel` counts mounted Plugins pages, `group` counts hidden add-plugin
+groups, `sel` counts the hits per selector, `menu` reports the More-menu
+takeover state, `slots` reports each More menu's winner id).
+
+### 3. The region-local More menus (Client half)
+
+DSH 0.2.1-rc.5 ships `@deepseek-ai/dsh-client-ui-entry-customization`: one
+component that registers into the three region-local More menus —
+
+| Slot                                          | Region       |
+| --------------------------------------------- | ------------ |
+| `sidebar.panellist.actions`                   | left sidebar |
+| `conversation.session.header.views.actions`   | View tabs    |
+| `sidebar.right.tab.guide.actions`             | right sidebar |
+
+— under the cell id `entry-customization`. It renders the folded Conversation
+Views (the View-tabs region only) and then two rows: "Browse other plugins"
+and "Create your plugin".
+
+A **list** slot refuses a second entry with an occupied id ("already has an
+entry with id …"), so this bundle cannot take that cell over by reusing the id.
+The bundle patch therefore disables the shipped row, and the client half
+registers its own rows into the same three slots under its own id
+(`rm-deepseek-provider`): the folded Conversation Views and "Create your
+plugin", without the browse row.
+
+Consequences to know:
+
+- The shipped plugin shows as **disabled** in the Plugins page. Re-enabling it
+  brings the browse row back (the slot then holds both entries).
+- The folded Conversation Views and the Creator are reimplemented here, so the
+  copy follows the upstream behaviour of rc.5; a future DSH that changes the
+  Creator flow needs this component updated.
 
 ### After a DSH upgrade: check the bundle selection
 

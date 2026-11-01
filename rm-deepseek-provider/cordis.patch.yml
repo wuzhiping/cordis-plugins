@@ -27,7 +27,26 @@
 - id: llm-deepseek-account
   disabled: true
 
-# 2. The bundle's own row
+# 2. The shipped "Browse other plugins" rows
+#
+# DSH 0.2.1-rc.5 ships `@deepseek-ai/dsh-client-ui-entry-customization`, one
+# component that registers into the three region-local More menus (left
+# sidebar, Conversation View tabs, right sidebar) under the cell id
+# `entry-customization`. It renders the folded Conversation Views and then two
+# rows: "Browse other plugins" and "Create your plugin".
+#
+# A list slot refuses a second entry with an occupied id ("already has an
+# entry with id ..."), so this bundle cannot take that cell over by reusing the
+# id. The shipped component is therefore disabled here, and this bundle's
+# client half registers its own rows into the same three slots: the folded
+# Conversation Views and "Create your plugin", without the browse row.
+#
+# The row is a normal plugin row, so this is the same switch the Plugins page
+# offers; the bundle layer just keeps it off across restarts.
+- id: entry-customization
+  disabled: true
+
+# 3. The bundle's own row
 #
 # `name` is the package name, exactly like every other bundle row. The browser
 # half is served from the same package, and the client module service caches
