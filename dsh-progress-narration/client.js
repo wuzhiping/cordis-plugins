@@ -291,6 +291,15 @@ window.__ModuleLoader__.load({
       return value;
     }
 
+    /**
+     * 主机设置写入期间保持上一次已确认档位：快照短暂未就绪时不要把界面拉回默认档。
+     */
+    function useStableMode(config) {
+      const lastRef = useRef(null);
+      if (config !== null) lastRef.current = config.mode;
+      return config === null ? (lastRef.current ?? 'balanced') : config.mode;
+    }
+
     /** 语气图标：描边+点数=克制/标准，实心+射线=话多。 */
     function BubbleIcon({ kind, size = 18 }) {
       const path =
@@ -338,25 +347,15 @@ window.__ModuleLoader__.load({
      * 拖动时只移动胶囊的视觉位置（不写入设置）；松手后吸附到最近一档，
      * 档位有变化才保存一次；取消拖动回到原档，不保存。点击与方向键仍然可用。
      */
-    function DensitySlider({ index, disabled, onChange, trackRef, modes: localizedModes }) {
+    function DensitySlider({ index, pending, disabled, onCommit, onCancel, trackRef, modes: localizedModes }) {
       const segmentsRef = useRef(null);
       const dragRef = useRef(null);
       const [preview, setPreview] = useState(null);
-      const [settle, setSettle] = useState(null);
       const last = localizedModes.length - 1;
-      const position = preview ?? settle ?? index;
       const clamp = (value) => Math.min(Math.max(value, 0), last);
-
-      /** 目标档位真正生效（或等待超时）后撤掉吸附态，避免视觉与实际档位长期不一致。 */
-      useEffect(() => {
-        if (settle === null) return undefined;
-        if (index === settle) {
-          setSettle(null);
-          return undefined;
-        }
-        const timer = setTimeout(() => setSettle(null), 800);
-        return () => clearTimeout(timer);
-      }, [settle, index]);
+      /** 待宿主确认的档位优先于已确认档位：写入期间保持新位置，不做超时回弹。 */
+      const position = preview ?? pending ?? index;
+      const announced = preview !== null ? clamp(Math.round(preview)) : (pending ?? index);
 
       const finishDrag = (pointerId) => {
         dragRef.current = null;
@@ -385,7 +384,10 @@ window.__ModuleLoader__.load({
           default: return;
         }
         event.preventDefault();
-        if (active === null && target !== index) onChange(target);
+        if (active === null) {
+          if (target !== index) onCommit(target);
+          else if (pending !== null) onCancel();
+        }
       };
 
       const startDrag = (event) => {
@@ -396,12 +398,11 @@ window.__ModuleLoader__.load({
         track.setPointerCapture(event.pointerId);
         dragRef.current = {
           startX: event.clientX,
-          startPos: index,
+          startPos: position,
           moved: false,
           pointerId: event.pointerId,
         };
-        setSettle(null);
-        setPreview(index);
+        setPreview(position);
       };
 
       const isDragMovement = (dx) => Math.abs(dx) > 3;
@@ -427,9 +428,11 @@ window.__ModuleLoader__.load({
         const target = active.moved || isDragMovement(dx)
           ? Math.round(clamp(active.startPos + dx / step))
           : clamp(Math.floor((event.clientX - left) / step));
-        if (target === index) return;
-        setSettle(target);
-        onChange(target);
+        if (target === index) {
+          if (pending !== null) onCancel();
+          return;
+        }
+        onCommit(target);
       };
 
       const cancelDrag = (event) => {
@@ -446,8 +449,8 @@ window.__ModuleLoader__.load({
           'aria-label': text('density'),
           'aria-valuemin': 0,
           'aria-valuemax': last,
-          'aria-valuenow': index,
-          'aria-valuetext': localizedModes[index].label,
+          'aria-valuenow': announced,
+          'aria-valuetext': localizedModes[announced].label,
           'aria-disabled': disabled ? 'true' : undefined,
           style: { '--pnn-pos': String(position), '--pnn-segments': String(localizedModes.length) },
           onKeyDown,
@@ -479,7 +482,7 @@ window.__ModuleLoader__.load({
       const isOpen = useOpen();
       const config = useConfig();
       const localizedModes = modes();
-      const mode = config === null ? 'balanced' : config.mode;
+      const mode = useStableMode(config);
       const active = localizedModes.find((item) => item.id === mode) ?? localizedModes[1];
       const label = text('trigger', { mode: active.label });
       const tooltip = primitives?.Tooltip;
@@ -511,8 +514,14 @@ window.__ModuleLoader__.load({
       useLocale();
       const isOpen = useOpen();
       const config = useConfig();
+      const mode = useStableMode(config);
+      const localizedModes = modes();
+      const index = Math.max(0, localizedModes.findIndex((item) => item.id === mode));
       const menuRef = useRef(null);
       const sliderRef = useRef(null);
+      /** 已提交但宿主尚未确认的档位：胶囊先停在目标位置，等设置写入回来。 */
+      const [pending, setPending] = useState(null);
+      const lastIndexRef = useRef(index);
       const menuPos = primitives.useAnchoredPosition({
         open: isOpen,
         anchorRef: triggerRef,
@@ -550,13 +559,30 @@ window.__ModuleLoader__.load({
         };
       }, [isOpen]);
 
+      /** 宿主档位一变就以宿主为准：要么正是待确认值（撤掉乐观态），要么是外部改动。 */
+      useEffect(() => {
+        if (lastIndexRef.current === index) return;
+        lastIndexRef.current = index;
+        setPending(null);
+      }, [index]);
+
       if (!isOpen) return null;
 
-      const localizedModes = modes();
-      const current = config === null ? 'balanced' : config.mode;
-      const index = Math.max(0, localizedModes.findIndex((mode) => mode.id === current));
       const active = localizedModes[index] ?? localizedModes[1];
-      const isDefault = current === 'balanced';
+      const isDefault = mode === 'balanced';
+
+      /** 提交档位：先移动胶囊，再等宿主确认；被拒绝或写入失败才回退。 */
+      const commit = (next) => {
+        if (api === null) return;
+        const writing = api.write('mode', MODE_DEFS[next].id);
+        if (writing === false || writing === undefined || writing === null) return;
+        setPending(next);
+        if (typeof writing.then === 'function') {
+          writing.then((accepted) => {
+            if (accepted !== true) setPending(null);
+          }, () => setPending(null));
+        }
+      };
 
       const render = typeof ReactDOM?.createPortal === 'function' ? ReactDOM.createPortal : (node) => node;
       return render(
@@ -592,7 +618,7 @@ window.__ModuleLoader__.load({
                   'aria-label': text('reset'),
                   onClick: () => {
                     sliderRef.current?.focus({ preventScroll: true });
-                    api?.write('mode', 'balanced');
+                    commit(1);
                   },
                 },
                 h(
@@ -615,10 +641,12 @@ window.__ModuleLoader__.load({
             ),
             h(DensitySlider, {
               index,
+              pending,
               trackRef: sliderRef,
               modes: localizedModes,
               disabled: config === null,
-              onChange: (next) => api?.write('mode', MODE_DEFS[next].id),
+              onCommit: commit,
+              onCancel: () => setPending(null),
             }),
           ),
         ),
@@ -677,8 +705,8 @@ window.__ModuleLoader__.load({
           },
           write(field, value) {
             const ready = readyForm();
-            if (ready === null) return;
-            void ready.form.set(field, value);
+            if (ready === null) return false;
+            return ready.form.set(field, value);
           },
         };
 
