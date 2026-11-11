@@ -116,6 +116,39 @@ function textFromDataUrl(url) {
 }
 
 /**
+ * The template half of the injected context: which template is in play, where
+ * its preview lives, and the tip that makes the template govern the output.
+ *
+ * The tip matters more than the extracted prose: the preview page *is* the
+ * template (markup + CSS), so pointing the model at the URL lets it copy the
+ * real layout instead of guessing one from flattened text. Inline `data:` URLs
+ * are skipped — they are the content itself and kilobytes long.
+ * @param selection - the stored selection.
+ * @param cached - the cached template content, or undefined.
+ * @returns the lines to inject.
+ */
+function templateContextLines(selection, cached) {
+	const lines = [];
+	lines.push("【參考模板】" + selection.templateTitle);
+	const hasPreviewUrl = selection.previewUrl.length > 0
+		&& selection.previewUrl.indexOf("data:") !== 0;
+	if (hasPreviewUrl) {
+		lines.push("預覽地址: " + selection.previewUrl);
+		lines.push("tips: 如果需要生成文件輸出,請參考 " + selection.previewUrl
+			+ " 的模板和樣式(可抓取該網址取得原始 HTML 與 CSS,沿用其版面、區塊順序與配色,內容則依本次任務重新撰寫)");
+	}
+	if (cached !== undefined && cached.text.length > 0) {
+		lines.push("模板案例內容(僅為範例:人名/數值/日期請依本次任務重新產出):");
+		lines.push(cached.text);
+	} else if (hasPreviewUrl) {
+		lines.push("(案例內容未能自動取出，需要時可抓取上面的預覽地址查看完整範例)");
+	} else {
+		lines.push("(模板案例內容暫不可用)");
+	}
+	return lines;
+}
+
+/**
  * Read one small request body, refusing anything oversized.
  * @param req - the HTTP request.
  * @returns the body as UTF-8 text.
@@ -347,22 +380,8 @@ module.exports = {
 				lines.push("【已選分支】" + selection.branchName + "(該分支的 preset 已寫入輸入框,若使用者改過則以輸入框內容為準)");
 			}
 			if (selection.templateTitle) {
-				lines.push("【參考模板】" + selection.templateTitle);
-				// The preview address is the model's fallback reference when the
-				// extracted content is thin or missing. Inline `data:` URLs are
-				// skipped: they *are* the content, and they are kilobytes long.
-				const hasPreviewUrl = selection.previewUrl.length > 0
-					&& selection.previewUrl.indexOf("data:") !== 0;
-				if (hasPreviewUrl) lines.push("預覽地址: " + selection.previewUrl);
 				const cached = contents.get(selection.templateId);
-				if (cached !== undefined && cached.text.length > 0) {
-					lines.push("模板案例內容(生成檔案時可參考):");
-					lines.push(cached.text);
-				} else if (hasPreviewUrl) {
-					lines.push("(案例內容未能自動取出，需要時可抓取上面的預覽地址查看完整範例)");
-				} else {
-					lines.push("(模板案例內容暫不可用)");
-				}
+				lines.push.apply(lines, templateContextLines(selection, cached));
 			}
 			if (lines.length === 0) {
 				lastInjection = { at: Date.now(), sessionId, chars: 0, reason: "empty", via };
@@ -555,5 +574,7 @@ module.exports = {
 		maskKey,
 		maskedCredential,
 		ROUTE_PATH,
+		templateContextLines,
+		stripHtml,
 	},
 };

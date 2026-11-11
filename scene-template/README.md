@@ -243,9 +243,16 @@ Two runtime facts shape the code:
 【已選分支】指标异动归因分析(該分支的 preset 已寫入輸入框,若使用者改過則以輸入框內容為準)
 【參考模板】經營看板速覽
 預覽地址: https://abc.feg.com.tw/share/ehr/pages/dev/preview/template_preview.html
-模板案例內容(生成檔案時可參考):
+tips: 如果需要生成文件輸出,請參考 https://abc.feg.com.tw/share/ehr/pages/dev/preview/template_preview.html 的模板和樣式(可抓取該網址取得原始 HTML 與 CSS,沿用其版面、區塊順序與配色,內容則依本次任務重新撰寫)
+模板案例內容(僅為範例:人名/數值/日期請依本次任務重新產出):
 …reduced preview text…
 ```
+
+**How the template governs the output.** The preview page *is* the template (markup + CSS), so
+the block carries one tip line pointing at it: the model fetches that URL and copies the real
+layout instead of guessing one from flattened text. The extracted prose below stays as the
+fallback — and is marked `僅為範例` so the sample's names, numbers and dates are not copied
+verbatim into the answer.
 
 **Template reference content.** `previewUrl` is fetched once per template, cached by
 id + URL, and reduced to text (`<script>`/`<style>` dropped, tags stripped, entities decoded,
