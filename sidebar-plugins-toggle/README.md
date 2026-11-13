@@ -15,24 +15,39 @@
 
 ### A. 側欄那一列（三層保險）
 
+**DOM 結構注意**：DSH 0.2.2 起，側欄每一列多包了一層 `div._panelEntry`：
+
+```html
+<nav class="…_panelList">
+  <div class="…_panelEntry">          <!-- 新增的包裝層 -->
+    <button class="…_panelRow" aria-label="插件">…</button>
+  </div>
+  …
+  <button class="…_panelRow" aria-haspopup="menu">   <!-- 列尾「更多」，不是面板 -->
+```
+
+所以選擇器用**後代**而不是直接子元素，且隱藏的單位是 `panelEntry`（只藏按鈕會留下空白間距）：
+
 1. 一條 CSS 規則命中該列：
 
    ```css
-   nav[class*="_panelList"] > button[class*="_panelRow"]:nth-of-type(1){display:none !important}
+   nav[class*="_panelList"] div[class*="_panelEntry"]:has(> button[class*="_panelRow"][aria-label="插件"]){display:none !important}
+   nav[class*="_panelList"] button[class*="_panelRow"][aria-label="插件"]{display:none !important}
    ```
 
-   列的識別有兩條路，兩條都寫進規則：
+   列的識別有三條路，都寫進規則：
 
    - `aria-label` 幾種寫法：`插件`（zh 基底）、`外掛`（zhtw-traditional-chinese 的片語改寫）、
      `系统外掛`（zhtw 的側欄改名 hack）、`Plugins`（en），外加 `[aria-label$="外掛"]` 後綴。
-   - `:nth-of-type(n)`：n 由 `ctx.slots.entriesOfSlot('sidebar.panellist')` 依 `order` 排序後
-     `id === 'plugins'` 的位置算出 —— 跟側欄自己 `syncPanels()` 的排序同源，**不依賴文案**。
+   - `:has()`：直接命中「包含該按鈕的外層 panelEntry」，新結構下才藏得乾淨。
+   - `:nth-of-type(1)`：plugins 的 order 是 0 且側欄的 `setPinned` 對它直接 return（永遠釘在頂），
+     所以它一定是 nav 裡第一個面板列 —— **不依賴文案**的位置後備。
 
-   `nav … > button …` 這一層確保不會誤傷「設定 → 外掛」那一項（它不是 `_panelRow`）。
+   `button[aria-haspopup="menu"]` 是列尾的「更多」按鈕，已排除，不會誤傷。
 
-2. 同一組選擇器再對命中節點寫一次 inline `style.display`，並用 `MutationObserver`
-   （childList + `aria-label`/`class` 變更）重跑，所以 React 重建節點或別人動過樣式表之後
-   仍會再蓋上去。
+2. 同一組選擇器再對命中節點（收斂成 `panelEntry`）寫一次 inline `style.display`，並用
+   `MutationObserver`（childList + `aria-label`/`class` 變更）重跑，所以 React 重建節點或
+   別人動過樣式表之後仍會再蓋上去。
 
 3. 開關狀態存在 `localStorage` 的 `sidebar-plugins-toggle:hidden`
    （`"1"` 隱藏（預設）、`"0"` 顯示）。**每個瀏覽器各自一份**。
@@ -59,26 +74,32 @@
 `listSubTree` root = `plugins.row.config`）讀，例如：
 
 ```
-spt-diag:h=1 nav=1 row=6 sel=1 nth=1 m=1 by=label lab=插件 disp=none
+spt-diag:h=1 nav=1 ent=8 row=9 sel=2 nth=1 m=1 by=label lab=系统外掛 disp=none
+         rows=系统外掛/IM機器人/超級智慧體/自動化任務/元氣時鐘
          trg=1 ag=0 sgn=0 mi=0 more=0 mt=- loc=http://127.0.0.1:3080
 ```
 
-`h` 側欄開關狀態、`nav`/`row` DOM 裡的側欄容器與列數、`sel` 標籤選擇器命中數、
-`nth` 算出來的位置、`m`/`by` 最後用哪條路命中、`disp` 命中節點的 computed display、
+`h` 側欄開關狀態、`nav` 側欄容器數、`ent` 面板列包裝層數、`row` 列按鈕數（含「更多」）、
+`sel` 標籤選擇器命中數、`nth` 位置規則、`m`/`by` 最後用哪條路命中、`lab` 命中的 aria-label、
+`disp` 命中按鈕的 computed display、`rows` 目前 DOM 裡前幾個列標籤（排查語系／改名最有用）、
 `trg` 找到幾個帳號選單 trigger、`ag` 選單是否開著、`sgn` 是否未登入、`mi` 選單有幾項、
 `more` 這次隱藏了幾項、`mt` 選單目前看到的項目文字（選單關著時是 `-`）、
 `loc` 是哪個頁面在回答。
 
+> 判讀訣竅：`row=0` 代表選擇器對不上 DOM 結構（多半是 DSH 升級改了包裝層）；
+> `rows=` 會直接告訴你現在列標籤長什麼樣。2026-11-13 的 0.2.2 就是這樣發現的。
+
 ## 已知脆弱點
 
-- `_panelList` / `_panelRow` 是 CSS Module 的雜湊後綴（DSH 前端重建時前綴會變、後綴通常不變）。
-  若哪天側欄改了類名，診斷會顯示 `nav=0 row=0`。
+- `_panelList` / `_panelRow` / `_panelEntry` 是 CSS Module 的雜湊後綴（DSH 前端重建時前綴會變、
+  後綴通常不變）。**DSH 升級最容易動到的就是這裡**：0.2.2 就把 `nav > button` 改成
+  `nav > div > button`，讓舊選擇器整排落空。升級後先看診斷的 `nav/ent/row`。
 - 「更多」兩項靠**位置**（第 2、3 項）。DSH 若要動帳號選單的項目順序／數量，診斷的 `mi=` 會先
   顯示出來（`mi≠3` 時退回文字比對，`mt=` 會顯示選單實際文字）。
-- **部署路徑**：這個 bundle 在 profile 裡目前是 `github:` spec 安裝的**實體複本**
-  （`profiles/web/node_modules/sidebar-plugins-toggle/`），不是 `link:`。
-  所以工作區改完要嘛同步複本、要嘛 push 後重裝（或 `install_bundle` 指到工作區，改回 `link:`）——
-  否則線上跑的是舊 commit，會出現「改了沒生效」的假象。
+- **部署路徑**：這個 bundle 在 profile 裡是 `git+https://git.feg.cn/shawoo/cordis-plugins#path:/sidebar-plugins-toggle`
+  裝下來的**實體複本**（`profiles/web/node_modules/sidebar-plugins-toggle/`），不是 `link:`。
+  所以工作區改完要嘛同步複本、要嘛 push 後重裝 —— 否則線上跑的是 git 上那一版，
+  會出現「改了沒生效」的假象（2026-10-18 就踩過一次）。
 - 若整條規則都不見了，先重新整理頁面（用戶端外掛的模組世代在 HMR／重啟後可能沒被重新套用）。
 
 ## 安裝 / 移除

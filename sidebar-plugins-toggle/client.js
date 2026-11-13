@@ -34,7 +34,11 @@ window.__ModuleLoader__.load({
     var STORAGE_KEY = "sidebar-plugins-toggle:hidden";
     var PANEL_ID = "plugins";
     var NAV_SEL = 'nav[class*="_panelList"]';
-    var ROW_SEL = NAV_SEL + ' > button[class*="_panelRow"]';
+    // DSH 0.2.2 起每一列外面多包了一層 `div._panelEntry`（裡面才是 button._panelRow），
+    // 舊版是 `nav > button._panelRow`。這裡一律用「後代選擇器」並以 panelEntry 為隱藏單位，
+    // 新舊結構都命中；`aria-haspopup="menu"` 的是列尾「更多」按鈕，要排除。
+    var ENTRY_SEL = NAV_SEL + ' div[class*="_panelEntry"]';
+    var ROW_SEL = NAV_SEL + ' button[class*="_panelRow"]';
     var PANEL_LABELS = ["系统外掛", "外掛", "插件", "Plugins"];
     // 底部「更多」選單兩項的各種語系寫法（只當「選單形狀不是 3 項」時的後備；主要靠位置）。
     var MORE_LABELS = [
@@ -117,31 +121,63 @@ window.__ModuleLoader__.load({
           };
         }, "sidebar-plugins-toggle: dictionaries");
 
+        // CSS 規則：優先用 `:has()` 直接命中「包含該按鈕的 panelEntry」；另外保留
+        // 舊結構（button 直接在 nav 下）的規則，並加上由 DOM 實際位置算出的 :nth-of-type。
         var labelRules = [];
         for (var i = 0; i < PANEL_LABELS.length; i += 1) {
-          labelRules.push(ROW_SEL + '[aria-label="' + PANEL_LABELS[i] + '"]');
+          var label = PANEL_LABELS[i];
+          labelRules.push(NAV_SEL + ' button[class*="_panelRow"][aria-label="' + label + '"]');
+          labelRules.push(ENTRY_SEL + ':has(> button[class*="_panelRow"][aria-label="' + label + '"])');
         }
-        labelRules.push(ROW_SEL + '[aria-label$="外掛"]');
+        labelRules.push(NAV_SEL + ' button[class*="_panelRow"][aria-label$="外掛"]:not([aria-haspopup="menu"])');
         var labelSelector = labelRules.join(",");
 
-        /** 由 slot 條目（與側欄 syncPanels 相同的 order 排序）推出那一列的位置。 */
+        function navRoot() {
+          var nav = document.querySelector(NAV_SEL);
+          return nav === null ? null : nav;
+        }
+
+        function isMoreRow(button) {
+          return button.getAttribute("aria-haspopup") === "menu";
+        }
+
+        /** nav 底下真正的「面板列」按鈕（排除列尾的「更多」）。 */
+        function panelRows() {
+          var nav = navRoot();
+          if (nav === null) return [];
+          var rows = toArrayIn(nav, 'button[class*="_panelRow"]');
+          var out = [];
+          for (var k = 0; k < rows.length; k += 1) {
+            if (!isMoreRow(rows[k])) out.push(rows[k]);
+          }
+          return out;
+        }
+
+        /** 一個面板列要隱藏的最小單位：外層 panelEntry（有就用它，沒有就用按鈕本身）。 */
+        function hideUnitOf(button) {
+          var entry = button.closest('div[class*="_panelEntry"]');
+          return entry === null ? button : entry;
+        }
+
+        /**
+         * 位置後備：plugins 的 order 是 0 且永遠不可取消釘選（sidebar 的 setPinned 直接 return），
+         * 所以它一定是 nav 裡第一個「面板列」。用它做一條不依賴文案的規則。
+         */
         function nthRule() {
-          try {
-            var entries = ctx.slots.entriesOfSlot("sidebar.panellist");
-            var rows = [];
-            for (var k = 0; k < entries.length; k += 1) {
-              var options = entries[k].options;
-              rows.push({ id: options.id, order: options.order == null ? 0 : options.order });
+          var nav = navRoot();
+          if (nav === null) return null;
+          var index = 0;
+          for (var k = 0; k < nav.children.length; k += 1) {
+            var child = nav.children[k];
+            if (child.tagName !== "DIV" || !/_panelEntry/.test(child.className)) continue;
+            index += 1;
+            var row = child.querySelector('button[class*="_panelRow"]');
+            if (row !== null && !isMoreRow(row)) {
+              return index === 1
+                ? { index: 1, selector: ENTRY_SEL + ":nth-of-type(1)" }
+                : null;
             }
-            rows.sort(function (a, b) {
-              return a.order - b.order;
-            });
-            for (var j = 0; j < rows.length; j += 1) {
-              if (rows[j].id === PANEL_ID) {
-                return { index: j + 1, selector: ROW_SEL + ":nth-of-type(" + (j + 1) + ")" };
-              }
-            }
-          } catch (e) {}
+          }
           return null;
         }
 
@@ -183,6 +219,14 @@ window.__ModuleLoader__.load({
         function toArray(selector) {
           try {
             return Array.prototype.slice.call(document.querySelectorAll(selector));
+          } catch (e) {
+            return [];
+          }
+        }
+
+        function toArrayIn(root, selector) {
+          try {
+            return Array.prototype.slice.call(root.querySelectorAll(selector));
           } catch (e) {
             return [];
           }
@@ -251,19 +295,36 @@ window.__ModuleLoader__.load({
 
           hideCss.textContent = hidden ? hideRules.join(",") + "{display:none !important;}" : "";
 
+          // 先把上一輪標記清乾淨，再依狀態重新標。
+          var previous = toArray('[data-spt-hidden="1"]');
+          for (var p = 0; p < previous.length; p += 1) {
+            previous[p].style.display = "";
+            previous[p].removeAttribute("data-spt-hidden");
+          }
+
           if (hidden) {
-            matched = toArray(labelSelector);
-            if (matched.length > 0) {
-              by = "label";
-            } else if (nth !== null) {
+            // 主要路徑：按 aria-label 找列（各語系寫法都在 PANEL_LABELS）。
+            matched = panelRows().filter(function (button) {
+              var label = button.getAttribute("aria-label") || "";
+              return PANEL_LABELS.indexOf(label) !== -1 || /外掛$/.test(label);
+            });
+            if (matched.length > 0) by = "label";
+            if (matched.length === 0 && nth !== null) {
+              // 後備：第一列（plugins 永遠排第一）。
               matched = toArray(nth.selector);
               if (matched.length > 0) by = "nth";
             }
-            for (var k = 0; k < matched.length; k += 1) matched[k].style.display = "none";
-          } else {
-            // 顯示狀態：把我們蓋過去的 inline 樣式收回，交給原本的樣式。
-            var rows = toArray(ROW_SEL);
-            for (var j = 0; j < rows.length; j += 1) rows[j].style.display = "";
+          }
+
+          // 收斂成「要隱藏的元素」：按鈕 → 外層 panelEntry。
+          var units = [];
+          for (var k = 0; k < matched.length; k += 1) {
+            var unit = hideUnitOf(matched[k]);
+            if (units.indexOf(unit) === -1) units.push(unit);
+          }
+          for (var u = 0; u < units.length; u += 1) {
+            units[u].style.display = "none";
+            units[u].setAttribute("data-spt-hidden", "1");
           }
 
           var menu = applyMenuItems();
@@ -276,11 +337,18 @@ window.__ModuleLoader__.load({
               display = window.getComputedStyle(matched[0]).display;
             } catch (e) {}
           }
+          var rowLabels = [];
+          var rowsNow = panelRows();
+          for (var r = 0; r < rowsNow.length && rowLabels.length < 5; r += 1) {
+            var text = (rowsNow[r].getAttribute("aria-label") || "?").slice(0, 8);
+            if (rowLabels.indexOf(text) === -1) rowLabels.push(text);
+          }
           var menuText = menu.seen.length === 0 ? "-" : menu.seen.join("|");
           if (menuText.length > 60) menuText = menuText.slice(0, 60);
           publishDiag(
             "h=" + (hidden ? 1 : 0) +
             " nav=" + countAll(NAV_SEL) +
+            " ent=" + countAll(ENTRY_SEL) +
             " row=" + countAll(ROW_SEL) +
             " sel=" + countAll(labelSelector) +
             " nth=" + (nth === null ? "none" : nth.index) +
@@ -288,6 +356,7 @@ window.__ModuleLoader__.load({
             " by=" + by +
             " lab=" + label +
             " disp=" + display +
+            " rows=" + (rowLabels.length === 0 ? "-" : rowLabels.join("/")) +
             " trg=" + menu.triggers +
             " ag=" + (menu.open ? 1 : 0) +
             " sgn=" + (menu.signedOut ? 1 : 0) +
@@ -341,8 +410,11 @@ window.__ModuleLoader__.load({
               scheduled = null;
             }
             if (observer !== null) observer.disconnect();
-            var rows = toArray(ROW_SEL);
-            for (var k = 0; k < rows.length; k += 1) rows[k].style.display = "";
+            var units = toArray('[data-spt-hidden="1"]');
+            for (var k = 0; k < units.length; k += 1) {
+              units[k].style.display = "";
+              units[k].removeAttribute("data-spt-hidden");
+            }
             var marked = toArray('[data-spt-more="1"]');
             for (var j = 0; j < marked.length; j += 1) {
               marked[j].style.display = "";
