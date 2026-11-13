@@ -24,8 +24,8 @@ const path = require('node:path');
 const CHROME = 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe';
 const GUI_URL = 'http://127.0.0.1:3080/';
 const OUT_DIR = __dirname;
-const PANEL_LABEL = '團隊協同';        // task-6 redesign: Traditional Chinese (was 团队协同)
-const LEGACY_LABELS = ['团队协同'];      // kept so the harness still works against the old build
+const PANEL_LABEL = 'ATeam +';          // 2026-11-13 使用者指定改名（原「團隊協同」）
+const LEGACY_LABELS = ['團隊協同', '团队协同'];  // 舊建置 / 舊標籤仍可辨識，避免探針在過渡期失效
 const PANEL_ID = 'ntfy-teams';
 const TOPIC = 'pub_demo';
 const NTFY_BASE = 'https://msn.feg.cn';
@@ -833,7 +833,7 @@ async function modePanelTest(cdp) {
       headerVisible: Array.from(document.querySelectorAll('[class*="ntfy-teams-title"]')).filter(e => e.offsetParent !== null).length,
       roots: document.querySelectorAll('[class*="ntfy-teams-root"]').length,
       allNtfy: document.querySelectorAll('[class*="ntfy-teams"]').length,
-      selected: Array.from(document.querySelectorAll('button[class*="panelRow"]')).filter(b => /团队协同/.test(b.innerText) && (b.getAttribute('aria-current') || b.getAttribute('aria-selected') || /active|selected/i.test(String(b.className)))).map(b => ({ cls: String(b.className).slice(0,80), aria: b.getAttribute('aria-selected') || b.getAttribute('aria-current') })),
+      selected: Array.from(document.querySelectorAll('button[class*="panelRow"]')).filter(b => b.innerText.includes(${JSON.stringify(PANEL_LABEL)}) && (b.getAttribute('aria-current') || b.getAttribute('aria-selected') || /active|selected/i.test(String(b.className)))).map(b => ({ cls: String(b.className).slice(0,80), aria: b.getAttribute('aria-selected') || b.getAttribute('aria-current') })),
     })`);
     log(`[${tag}] ${json} exceptionsSoFar=${cdp.errors.length}`);
     return JSON.parse(json);
@@ -852,7 +852,7 @@ async function modePanelTest(cdp) {
   const s1 = await state('after-glyph-click');
   const glyphErrors = cdp.errors.slice(errBefore).map((e) => `${e.type}: ${e.text.split('\n')[0]}`);
 
-  const row = await evaluate(cdp, `(() => { const b = Array.from(document.querySelectorAll('button[class*="panelRow"]')).find(x => /团队协同/.test(x.innerText)); if (!b) return null; const r = b.getBoundingClientRect(); return JSON.stringify({ x: r.x + r.width - 12, y: r.y + r.height/2, w: r.width }); })()`);
+  const row = await evaluate(cdp, `(() => { const b = Array.from(document.querySelectorAll('button[class*="panelRow"]')).find(x => x.innerText.includes(${JSON.stringify(PANEL_LABEL)})); if (!b) return null; const r = b.getBoundingClientRect(); return JSON.stringify({ x: r.x + r.width - 12, y: r.y + r.height/2, w: r.width }); })()`);
   log('shell row box (right edge):', row);
   const errBefore2 = cdp.errors.length;
   if (row) { const b = JSON.parse(row); await clickAt(cdp, b.x, b.y); }
@@ -1288,13 +1288,13 @@ async function modeFull2(cdp, argv) {
 const BADGE_EXPR = `(() => {
   const badge = document.querySelector('.ntfy-teams-unreadbadge');
   const rows = Array.from(document.querySelectorAll('button[class*="panelRow"]'));
-  const row = rows.find(b => ((b.innerText || '') + (b.getAttribute('title') || '')).includes('團隊協同')) || null;
+  const row = rows.find(b => ((b.innerText || '') + (b.getAttribute('title') || '')).includes(${JSON.stringify(PANEL_LABEL)})) || null;
   const R = (el) => { if (!el) return null; const b = el.getBoundingClientRect(); return { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height), left: Math.round(b.left), top: Math.round(b.top), right: Math.round(b.right), bottom: Math.round(b.bottom) }; };
   const hit = (a, b) => !!a && !!b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
   let titleEl = null, iconEl = null;
   if (row) {
     const cands = Array.from(row.querySelectorAll('span,div'))
-      .filter(e => (e.innerText || '').trim() === '團隊協同');
+      .filter(e => (e.innerText || '').trim() === PANEL_LABEL);
     cands.sort((a, b) => { const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); return ra.width * ra.height - rb.width * rb.height; });
     titleEl = cands[0] || null;
     iconEl = row.querySelector('[class*="ntfy-teams-glyphwrap"]') || row.querySelector('svg');
@@ -1367,7 +1367,7 @@ async function selectTopicChip(cdp, topic) {
   return { ok: true, chip, active };
 }
 
-/** make sure the 團隊協同 panel is mounted (its effect starts SSE + loadPersisted) */
+/** make sure the ATeam + panel is mounted (its effect starts SSE + loadPersisted) */
 async function openPanel(cdp) {
   if (await evaluate(cdp, `!!document.querySelector('[class*="ntfy-teams-root"]')`)) return { ok: true, alreadyOpen: true };
   await clickText(cdp, PANEL_LABEL, { exact: false, tags: ['button', 'a', '[role=button]'] });

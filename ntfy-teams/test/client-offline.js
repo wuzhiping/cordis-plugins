@@ -296,8 +296,8 @@ test('apply(ctx) 挂上三个座位且不抛错', () => {
   assert.strictEqual(seats['sidebar.panellist:ntfy-teams'].options.id, 'ntfy-teams');
   assert.strictEqual(
     seats['sidebar.panellist:ntfy-teams'].options.label(),
-    '團隊協同',
-    '側欄標籤必須是「團隊協同」（繁體，與宿主介面語言一致）',
+    'ATeam +',
+    '側欄標籤必須是「ATeam +」（2026-11-13 使用者指定改名）',
   );
 });
 
@@ -1041,7 +1041,7 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
       '應有撰寫區');
 
     const txt = allText(nodes);
-    assert.ok(txt.indexOf('團隊協同') !== -1, '群組名稱應為繁體「團隊協同」，實際：' + txt.slice(0, 120));
+    assert.ok(txt.indexOf('ATeam +') !== -1, '面板標題應為「ATeam +」，實際：' + txt.slice(0, 120));
     assert.ok(txt.indexOf('#shawoo') !== -1, '應顯示發送者 #shawoo');
   });
 
@@ -1155,7 +1155,7 @@ test('core 缺失时面板座位仍可渲染（不会炸掉整个 slot）', () =
     assert.strictEqual(t.titleFor('#shawoo'), '#shawoo', 'titleFor 應冪等');
     assert.strictEqual(t.titleFor('  bob  '), '#bob', 'titleFor 應 trim');
     assert.strictEqual(t.titleFor(''), '', 'titleFor(\'\') 應為空');
-    assert.strictEqual(t.PANEL_LABEL, '團隊協同');
+    assert.strictEqual(t.PANEL_LABEL, 'ATeam +');
     assert.deepStrictEqual(
       t.identityOf('#shawoo'),
       { handle: 'shawoo', isMention: true },

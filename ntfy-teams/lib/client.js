@@ -3210,7 +3210,11 @@ window.__ModuleLoader__.load({
 
     /** 座位 id：sidebar.panellist 的 id 与 main 的 key 必须是同一个字串。 */
     var PANEL_ID = 'ntfy-teams';
-    var PANEL_LABEL = '團隊協同';
+    // 顯示名（2026-11-13 由使用者指定改為「ATeam +」）。
+    // 這是**唯一來源**：sidebar.panellist 的 label、面板標題 h2、健康狀態提示
+    // 全部由它派生，所以改這裡三處一起變，不會出現「側欄叫 A、面板叫 B」。
+    // 純 ASCII，不經過 zhtw-traditional-chinese 的簡繁轉換（那層只處理中文）。
+    var PANEL_LABEL = 'ATeam +';
 
     // =========================================================================
     // 0. 纯工具
