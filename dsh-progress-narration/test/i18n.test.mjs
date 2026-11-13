@@ -23,7 +23,7 @@ function findElement(node, matches) {
 }
 
 /** 以給定語言裝載插件；localeId 為 null 時模擬沒有 locale 服務的退化環境。 */
-function mount(localeId) {
+function mount(localeId, primitives = { MenuSurface: 'dialog' }) {
   const react = {
     createElement: (type, props, ...children) => ({ type, props, children: children.flat() }),
     createRef: () => ({ current: null }),
@@ -37,10 +37,7 @@ function mount(localeId) {
   const modules = {
     react,
     'react-dom': { createPortal: (node) => node },
-    '@deepseek-ai/dsh-client-ui-primitives': {
-      MenuSurface: 'dialog',
-      useAnchoredPosition: () => ({ top: 10, left: 10 }),
-    },
+    '@deepseek-ai/dsh-client-ui-primitives': primitives,
   };
   const slots = new Map();
   const registered = [];
@@ -135,4 +132,17 @@ test('沒有 locale 服務時不崩，回落到英文文案', () => {
   const { slots } = mount(null);
   const trigger = findElement(slots.get('conversation.input.right')(), (node) => node.type === 'button');
   assert.equal(trigger.props['aria-label'], 'Progress narration: Balanced');
+});
+
+test('primitives 缺少 MenuSurface 時仍註冊入口，面板退回普通容器（rc.2 回歸）', () => {
+  const { slots } = mount('zh', {});
+  const trigger = findElement(slots.get('conversation.input.right')(), (node) => node.type === 'button');
+  assert.ok(trigger, '入口必須存在');
+  assert.equal(trigger.props['aria-label'], '过程播报：标准');
+
+  trigger.props.onClick();
+  const overlay = slots.get('shell.overlay')();
+  const panel = findElement(overlay, (node) => node.props?.role === 'dialog');
+  assert.ok(panel, '面板仍應渲染');
+  assert.equal(panel.type, 'div', '缺少 MenuSurface 時退回 div');
 });

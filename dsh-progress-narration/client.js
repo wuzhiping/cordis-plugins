@@ -16,12 +16,10 @@ window.__ModuleLoader__.load({
     }
     const ReactDOM = optional('react-dom');
     const primitives = optional('@deepseek-ai/dsh-client-ui-primitives') ?? {};
-    /** 菜单外壳与锚定都来自 primitives；缺失时保持惰性，不做半残的降级 UI。 */
-    if (typeof primitives.MenuSurface === 'undefined' || typeof primitives.useAnchoredPosition !== 'function') {
-      return { inject: [], apply() {} };
-    }
+    /** 菜单外壳在 primitives 之间可选：不同 DSH 版本导出会变，缺失时退回普通容器。 */
+    const MenuSurface = primitives.MenuSurface ?? 'div';
     const h = React.createElement;
-    const { useEffect, useRef, useState } = React;
+    const { useEffect, useLayoutEffect = useEffect, useRef, useState } = React;
 
     /** 宿主插件条目 id 的候选写法，取第一个就绪的。 */
     const ENTRY_IDS = ['progress-narration', 'include:progress-narration'];
@@ -510,6 +508,47 @@ window.__ModuleLoader__.load({
       );
     }
 
+    /**
+     * 面板在视口内的定位：量触发器与面板，优先放在上方；上方放不下时翻到下方，
+     * 两侧按 margin 夹紧。自带实现（不依赖 primitives 的定位 hook），
+     * 这样 primitives 增删导出时插件也不会整体失效。
+     */
+    function useAnchoredPosition({ open, anchorRef, panelRef, gap = 8, margin = 12 }) {
+      const [position, setPosition] = useState(null);
+
+      useLayoutEffect(() => {
+        if (!open) {
+          setPosition(null);
+          return undefined;
+        }
+        const measure = () => {
+          const anchor = anchorRef.current;
+          const panel = panelRef.current;
+          if (anchor === null || anchor === undefined || panel === null || panel === undefined) return;
+          const anchorRect = anchor.getBoundingClientRect();
+          const panelRect = panel.getBoundingClientRect();
+          const viewportWidth = window.innerWidth;
+          const viewportHeight = window.innerHeight;
+          const left = Math.max(margin, Math.min(anchorRect.right - panelRect.width, viewportWidth - panelRect.width - margin));
+          let top = anchorRect.top - gap - panelRect.height;
+          if (top < margin) top = anchorRect.bottom + gap;
+          top = Math.min(top, viewportHeight - panelRect.height - margin);
+          if (top < margin) top = margin;
+          setPosition({ left, top });
+        };
+        measure();
+        const onViewportChange = () => measure();
+        window.addEventListener('resize', onViewportChange);
+        window.addEventListener('scroll', onViewportChange, true);
+        return () => {
+          window.removeEventListener('resize', onViewportChange);
+          window.removeEventListener('scroll', onViewportChange, true);
+        };
+      }, [open, anchorRef, panelRef]);
+
+      return open ? position : null;
+    }
+
     function Overlay() {
       useLocale();
       const isOpen = useOpen();
@@ -522,12 +561,10 @@ window.__ModuleLoader__.load({
       /** 已提交但宿主尚未确认的档位：胶囊先停在目标位置，等设置写入回来。 */
       const [pending, setPending] = useState(null);
       const lastIndexRef = useRef(index);
-      const menuPos = primitives.useAnchoredPosition({
+      const menuPos = useAnchoredPosition({
         open: isOpen,
         anchorRef: triggerRef,
         panelRef: menuRef,
-        side: 'top',
-        align: 'end',
         gap: 8,
         margin: 12,
       });
@@ -587,7 +624,7 @@ window.__ModuleLoader__.load({
       const render = typeof ReactDOM?.createPortal === 'function' ? ReactDOM.createPortal : (node) => node;
       return render(
         h(
-          primitives.MenuSurface,
+          MenuSurface,
           {
             ref: menuRef,
             role: 'dialog',
