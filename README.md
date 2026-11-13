@@ -1,4 +1,4 @@
-# [dsh-v0.2.2-rc.1](https://github.com/deepseek-ai/deepseek-harness/tree/dsh-v0.2.2-rc.1)
+# [dsh-v0.2.2-rc.2](https://github.com/deepseek-ai/deepseek-harness/tree/dsh-v0.2.2-rc.2)
 
 # cordis-plugins
 
