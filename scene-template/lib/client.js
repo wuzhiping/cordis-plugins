@@ -1662,7 +1662,10 @@ window.__ModuleLoader__.load({
               preview.url && e("iframe", {
                 src: preview.url,
                 style: S.iframe,
-                sandbox: "",
+                // 預覽頁需要跑 JavaScript 才有內容（data: 離線頁也是腳本產生的），
+                // 所以放行 allow-scripts;allow-same-origin：同源頁面才能存取
+                // 自己的 storage / cookie,跨源頁面則仍被當成不透明來源隔離。
+                sandbox: "allow-scripts allow-same-origin",
                 onLoad: function () { setPreviewLoaded(true); },
               }),
               !previewLoaded && e("div", { style: S.previewOverlay },

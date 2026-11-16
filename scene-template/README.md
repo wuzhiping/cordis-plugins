@@ -131,8 +131,13 @@ while `/share/ehr/pages/dev/preview/tpl_weekly.html` is a `404`. So double-click
 the same preview until the backend parameterizes the page by template id (or serves one page per
 template).
 
-Also note the iframe is `sandbox=""` (no scripts, no same-origin): if the real preview page needs
-JavaScript to render a template, relax it to `sandbox="allow-scripts"`.
+Also note the iframe is `sandbox="allow-scripts allow-same-origin"` (it used to be `sandbox=""`):
+the preview page needs JavaScript to render (the offline `data:text/html` samples are drawn by a
+script), so scripts are allowed; `allow-same-origin` keeps a same-origin preview's own
+storage/cookie semantics. Cross-origin previews (`abc.feg.com.tw`) are still an opaque origin, so
+the pair does not grant them access to this page. If a preview ever moves to a **same-origin**
+address, drop `allow-same-origin` — on a same-origin document the two flags together cancel the
+sandbox.
 
 **When does it fetch?** The scene list and the scenario detail are keyed on the slot's
 `sessionId` (the detail additionally on the scenario id), so **every new or switched session
