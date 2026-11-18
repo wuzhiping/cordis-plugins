@@ -14,6 +14,7 @@
 
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 
 const DSH_ROOT = process.env.DSH_TREE
@@ -23,6 +24,7 @@ const NEEDED = {
   systemPrompt: path.join(DSH_ROOT, 'dsh-system-prompt'),
   tools: path.join(DSH_ROOT, 'dsh-tools'),
   webServer: path.join(DSH_ROOT, 'dsh-host-webserver'),
+  executor: path.join(DSH_ROOT, 'dsh-tool-executor-native'),
 };
 for (const [name, dir] of Object.entries(NEEDED)) {
   if (!fs.existsSync(dir)) {
@@ -32,6 +34,7 @@ for (const [name, dir] of Object.entries(NEEDED)) {
 }
 
 const { Context } = require(NEEDED.cordis);
+const { pathToFileURL } = require('node:url');
 const systemPromptMod = require(NEEDED.systemPrompt);
 const toolsMod = require(NEEDED.tools);
 const webServerMod = require(NEEDED.webServer);
@@ -55,6 +58,10 @@ async function main() {
   const ctx = new Context();
   await ctx.plugin(systemPromptMod.default, {});
   await ctx.plugin(toolsMod.default, {});
+  // dsh-tools 0.2.x selects a tool executor from the mounting scope; assemble()
+  // throws without one. The harness composes the native executor by default.
+  const executorMod = await import(pathToFileURL(path.join(NEEDED.executor, 'lib', 'index.js')).href);
+  await ctx.plugin({ name: executorMod.name, inject: executorMod.inject, apply: executorMod.apply }, {});
   try {
     await ctx.plugin(webServerMod.default, {
       host: '127.0.0.1',
@@ -155,6 +162,70 @@ async function main() {
     const kept = again.contexts.filter((c) => c.name === 'fdep-api-request/docs' && c.text !== '');
     assert.equal(kept.length, 1);
   });
+
+  console.log('\n=== execute route: the key stays in the host ===');
+  // The route is the panel's execute path. The gateway call itself is intercepted
+  // (this test must not reach the real FDEP host), while the route is exercised
+  // over real HTTP.
+  const CALL_URL = 'http://127.0.0.1:' + PORT + '/plugins/fdep-api-request/call';
+  const realFetch = globalThis.fetch;
+  let gatewayBodies = [];
+  const credsPath = path.join(os.tmpdir(), 'fdep-http-credentials-' + process.pid + '.yaml');
+  fs.writeFileSync(credsPath, 'version: 1\nrefs:\n  AIFE_API_KEY: sk-ExampleKeyReplaceMe001\n', 'utf8');
+  const savedCreds = process.env.DSH_CREDENTIALS_PATH;
+  process.env.DSH_CREDENTIALS_PATH = credsPath;
+  globalThis.fetch = async (target, init) => {
+    if (String(target).startsWith('https://abc.feg.com.tw/')) {
+      gatewayBodies.push(JSON.parse(init.body));
+      return {
+        ok: true,
+        status: 200,
+        async text() { return JSON.stringify({ data: { echoed: 'ok' }, trace_id: 'trace-route' }); },
+      };
+    }
+    return realFetch(target, init);
+  };
+  const postCall = (payload, method) => realFetch(CALL_URL, {
+    method: method || 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  try {
+    const ok = await (await postCall({ api: 'test.demo', do: true, inbound: { name: 'aaa' } })).json();
+    check('execute route forwards the call and reports the key source', () => {
+      assert.equal(ok.ok, true, JSON.stringify(ok));
+      assert.equal(ok.keyRef, 'AIFE_API_KEY');
+      assert.equal(ok.body.trace_id, 'trace-route');
+      assert.equal(gatewayBodies.length, 1);
+      assert.equal(typeof gatewayBodies[0].apiKey, 'string');
+      assert.equal(gatewayBodies[0].apiKey.length, 71, 'expected MASK.md display form');
+    });
+    check('the route never echoes the key back to the browser', () => {
+      assert.equal(JSON.stringify(ok).indexOf(gatewayBodies[0].apiKey), -1, 'masked key leaked into the reply');
+      assert.equal(JSON.stringify(ok).indexOf('sk-Example'), -1, 'raw key leaked into the reply');
+    });
+    const docs = await (await postCall({ api: 'test.demo', do: false, inbound: {} })).json();
+    check('docs through this route is refused, so it cannot carry a key', () => {
+      assert.equal(docs.ok, false);
+      assert.match(docs.error, /do: true/);
+      assert.equal(gatewayBodies.length, 1, 'a docs request reached the gateway through the execute route');
+    });
+
+    process.env.DSH_CREDENTIALS_PATH = path.join(os.tmpdir(), 'fdep-http-missing-' + process.pid + '.yaml');
+    gatewayBodies = [];
+    const noKey = await (await postCall({ api: 'test.demo', do: true, inbound: { name: 'aaa' } })).json();
+    check('a missing credential fails closed instead of running unauthenticated', () => {
+      assert.equal(noKey.ok, false);
+      assert.equal(noKey.keyRef, null);
+      assert.match(String(noKey.error), /apiKey/);
+      assert.equal(gatewayBodies.length, 0, 'an unauthenticated execute reached the gateway');
+    });
+  } finally {
+    globalThis.fetch = realFetch;
+    if (savedCreds === undefined) delete process.env.DSH_CREDENTIALS_PATH;
+    else process.env.DSH_CREDENTIALS_PATH = savedCreds;
+  }
 
   console.log('\nAll ' + pass + ' HTTP-level checks passed.');
 

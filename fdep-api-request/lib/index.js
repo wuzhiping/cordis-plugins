@@ -18,6 +18,212 @@
 
 const FDEP_URL = 'https://abc.feg.com.tw/oauth2/fdep';
 
+// ---------------------------------------------------------------------------
+// apiKey — the gateway's authorization credential, for `do: true` only.
+//
+// Measured on 2026-11-18 against the live endpoint (see README "apiKey"):
+//
+//   body {api, do:true, inbound}                     -> 200, no authorization
+//   body {api, do:true, inbound, apiKey: <mask71>}   -> the gateway accepts the
+//                                                       shape and then runs its
+//                                                       authorization step
+//   body {..., apiKey: <mask67>}                     -> 500 "invalid key..."
+//   body {..., apiKey: <raw sk-…>}                   -> 500 "invalid key..."
+//   body {..., apiKey: <mask71 of a synthetic key>}  -> 500 "invalid key..."
+//
+// So the accepted shape is MASK.md's *display* formula (the key keeps its `sk-`
+// inside the base64), which is what every other `abc.feg.com.tw` client in this
+// workspace sends. MASK.md's "apiKey for abc.feg.com.tw" section describes a
+// 67-character variant that drops the `sk-` from the inner string; that shape
+// is rejected by this endpoint, so it is deliberately not used here.
+//
+// Sending it is not optional: an execute without a usable key would run
+// unauthorized, so a missing credential fails the call instead of falling back.
+// ---------------------------------------------------------------------------
+
+/** Where the raw key lives, in preference order (the first hit wins). */
+const API_KEY_REFS = ['AIFE_API_KEY', 'FEG_API_KEY', 'DEEPSEEK_API_KEY'];
+/** A masked key is ~71 bytes; refuse anything absurd rather than masking it. */
+const API_KEY_MAX = 4096;
+
+/**
+ * The credentials file DSH itself reads. `DSH_CREDENTIALS_PATH` wins when set
+ * (the shipped dotenv-ish override), otherwise `$DSH_HOME/.credentials.yaml`.
+ * @returns the absolute path.
+ */
+function credentialsFilePath() {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const override = process.env.DSH_CREDENTIALS_PATH;
+  if (typeof override === 'string' && override.trim() !== '') return override.trim();
+  const home = process.env.DSH_HOME || path.join(os.homedir(), '.dsh');
+  return path.join(home, '.credentials.yaml');
+}
+
+/**
+ * Read one `refs:` entry out of the credentials YAML text.
+ *
+ * Deliberately a minimal line parser: the file is written by DSH and this needs
+ * exactly one scalar from one block. It stops at the first unindented line, so a
+ * same-named key in a later top-level block cannot be picked up by accident.
+ *
+ * @param text - the credentials file contents.
+ * @param name - the reference name, e.g. `AIFE_API_KEY`.
+ * @returns the raw value, or null.
+ */
+function readCredentialRef(text, name) {
+  if (typeof text !== 'string' || typeof name !== 'string' || name === '') return null;
+  const lines = text.split(/\r?\n/);
+  let inRefs = false;
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (/^refs:\s*$/.test(line)) { inRefs = true; continue; }
+    if (!inRefs) continue;
+    if (/^\S/.test(line)) break;
+    const m = /^\s+([A-Za-z0-9_.-]+):\s*(.*)$/.exec(line);
+    if (!m || m[1] !== name) continue;
+    let value = m[2].trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    return value === '' ? null : value;
+  }
+  return null;
+}
+
+/**
+ * Mask one key exactly as MASK.md's display formula specifies:
+ * `"sk-" + base64(key + "@" + ISO)`. Reversible by construction — see MASK.md —
+ * so the result is a credential: send it to `abc.feg.com.tw` and nowhere else.
+ *
+ * @param key - the raw `sk-…` key.
+ * @param now - the timestamp to embed (tests pin this).
+ * @returns the masked value.
+ */
+function maskApiKey(key, now) {
+  if (typeof key !== 'string' || key === '') throw new Error('maskApiKey: key must be a non-empty string');
+  const stamp = '@' + (now instanceof Date ? now : new Date()).toISOString();
+  return 'sk-' + Buffer.from(key + stamp, 'utf8').toString('base64');
+}
+
+/**
+ * Resolve the first available reference and return its masked form.
+ * Never returns the raw key: the caller only ever forwards the masked value.
+ *
+ * @param options - `{ now, text }`; `text` lets tests skip the filesystem.
+ * @returns `{ ok: true, apiKey, ref, source }` or `{ ok: false, error }`.
+ */
+function maskedApiKey(options) {
+  const opts = options || {};
+  const file = credentialsFilePath();
+  let text = opts.text;
+  if (typeof text !== 'string') {
+    try {
+      text = require('node:fs').readFileSync(file, 'utf8');
+    } catch (err) {
+      return {
+        ok: false,
+        error: 'execute 需要 apiKey，但讀不到憑證檔（' + file + '）：' + (err && err.message ? err.message : String(err)),
+      };
+    }
+  }
+  for (const ref of API_KEY_REFS) {
+    const key = readCredentialRef(text, ref);
+    if (!key) continue;
+    if (key.length > API_KEY_MAX) {
+      return { ok: false, error: '憑證 ' + ref + ' 長度不尋常（' + key.length + ' bytes），拒絕使用' };
+    }
+    try {
+      return { ok: true, apiKey: maskApiKey(key, opts.now), ref, source: file };
+    } catch (err) {
+      return { ok: false, error: '遮蔽失敗（' + ref + '）：' + (err && err.message ? err.message : String(err)) };
+    }
+  }
+  return {
+    ok: false,
+    error: '憑證檔裡找不到可用的 apiKey（試過 ' + API_KEY_REFS.join('、') + '）——檔案：' + file,
+  };
+}
+
+/** Exact route the browser posts "run this api through the host" to. */
+const CALL_ROUTE = '/plugins/fdep-api-request/call';
+/** One call's own budget; the tool's registry timeout is the outer bound. */
+const CALL_TIMEOUT_MS = 25000;
+
+/**
+ * The one place the FDEP request body is built.
+ *
+ * `do: false` (docs) is anonymous by contract and must NOT carry a key — the
+ * gateway answers it without one, and sending one would run its authorization
+ * step for a request that does not need it (measured: it then stalls).
+ * `do: true` (execute) always carries the masked key; a missing credential is
+ * an error, never a silent unauthenticated call.
+ *
+ * @param apiId - the api identifier.
+ * @param doExec - true to execute, false to fetch docs.
+ * @param inbound - the business argument object.
+ * @param signal - external abort signal (optional).
+ * @returns `{ ok, status, parsed, raw, error, keyRef }`.
+ */
+async function callFdep(apiId, doExec, inbound, signal, options) {
+  const body = { api: apiId, do: doExec === true, inbound: inbound && typeof inbound === 'object' ? inbound : {} };
+  let keyRef = null;
+  if (body.do === true) {
+    const cred = maskedApiKey(options);
+    if (!cred.ok) return { ok: false, status: 0, parsed: null, raw: '', error: cred.error, keyRef: null };
+    body.apiKey = cred.apiKey;
+    keyRef = cred.ref;
+  }
+
+  const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch (_) {} }, CALL_TIMEOUT_MS) : null;
+  if (ctrl && signal) {
+    if (signal.aborted) { try { ctrl.abort(); } catch (_) {} }
+    else if (typeof signal.addEventListener === 'function') signal.addEventListener('abort', () => { try { ctrl.abort(); } catch (_) {} });
+  }
+  try {
+    const res = await fetch(FDEP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: ctrl ? ctrl.signal : undefined,
+    });
+    const raw = await res.text();
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (_) {
+      parsed = { _raw: raw };
+    }
+    if (!res.ok) {
+      return {
+        ok: false,
+        status: res.status,
+        parsed,
+        raw,
+        keyRef,
+        error: 'upstream HTTP ' + res.status
+          + (body.do === true ? '（已帶 apiKey' + (keyRef ? ' from ' + keyRef : '') + '）' : ''),
+      };
+    }
+    return { ok: true, status: res.status, parsed, raw, keyRef, error: null };
+  } catch (err) {
+    const aborted = err && err.name === 'AbortError';
+    return {
+      ok: false,
+      status: 0,
+      parsed: null,
+      raw: '',
+      keyRef,
+      error: (aborted ? 'upstream did not answer within ' + CALL_TIMEOUT_MS + 'ms' : 'network error: ' + (err && err.message ? err.message : String(err)))
+        + (body.do === true ? '（已帶 apiKey' + (keyRef ? ' from ' + keyRef : '') + '）' : ''),
+    };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 /** Exact route the browser posts "arm this api's docs as context" to. */
 const CONTEXT_ROUTE = '/plugins/fdep-api-request/context';
 /** Prompt-context name; unique in the registry, and how it reads in a trace. */
@@ -381,12 +587,81 @@ module.exports = {
       });
     }
 
+    /**
+     * Route handler: run an api through the host, so the panel's 執行 never has to
+     * hold the key. Execute only — docs is anonymous and the panel already talks
+     * to the gateway directly for it, so this route cannot be used to proxy
+     * arbitrary traffic.
+     *
+     * @param req - the HTTP request.
+     * @param res - the HTTP response.
+     */
+    async function handleCallRoute(req, res) {
+      const send = (status, payload) => {
+        res.statusCode = status;
+        res.setHeader('content-type', 'application/json; charset=utf-8');
+        res.setHeader('cache-control', 'no-store');
+        res.end(JSON.stringify(payload));
+      };
+      if (req.method !== 'POST') {
+        send(405, { ok: false, error: '只接受 POST' });
+        return;
+      }
+      let body;
+      try {
+        body = await readBody(req);
+      } catch (err) {
+        send(413, { ok: false, error: err && err.message ? err.message : 'body rejected' });
+        return;
+      }
+      let payload;
+      try {
+        payload = JSON.parse(body);
+      } catch (err) {
+        send(400, { ok: false, error: 'invalid json' });
+        return;
+      }
+      const apiId = str(payload && payload.api).trim();
+      if (apiId === '' || apiId.length > 200) {
+        send(400, { ok: false, error: 'api 必須是非空的字串' });
+        return;
+      }
+      if (payload && payload.do !== true) {
+        // Keeping the route execute-only is what makes "docs carries no key"
+        // true by construction rather than by convention.
+        send(400, { ok: false, error: '這個路由只接受 do: true（查文件請直接呼叫端點）' });
+        return;
+      }
+      const inbound = payload && typeof payload.inbound === 'object' && payload.inbound !== null && !Array.isArray(payload.inbound)
+        ? payload.inbound
+        : {};
+      const result = await callFdep(apiId, true, inbound);
+      // The masked key is never echoed back — only whether one was used and where
+      // it came from.
+      send(result.ok ? 200 : (result.status ? 502 : 500), {
+        ok: result.ok,
+        status: result.status,
+        body: result.parsed,
+        error: result.error,
+        keyRef: result.keyRef,
+      });
+    }
+
     /** `webServer` is optional: without it the panel cannot arm the context. */
     function registerArmRoute(webServer) {
       return webServer.register({
         kind: 'exact',
         path: CONTEXT_ROUTE,
         handler: handleContextArm,
+      });
+    }
+
+    /** Same optional service, second route: the panel's execute goes through here. */
+    function registerCallRoute(webServer) {
+      return webServer.register({
+        kind: 'exact',
+        path: CALL_ROUTE,
+        handler: handleCallRoute,
       });
     }
 
@@ -398,6 +673,7 @@ module.exports = {
       });
       ctx.inject(['webServer'], (scope) => {
         ctx.effect(() => registerArmRoute(scope.webServer), 'fdep-api-request: docs arm route');
+        ctx.effect(() => registerCallRoute(scope.webServer), 'fdep-api-request: execute call route');
       });
     } else if (typeof ctx.get === 'function') {
       const systemPrompt = ctx.get('systemPrompt');
@@ -407,6 +683,7 @@ module.exports = {
       const webServer = ctx.get('webServer');
       if (webServer !== undefined && webServer !== null) {
         ctx.effect(() => registerArmRoute(webServer), 'fdep-api-request: docs arm route');
+        ctx.effect(() => registerCallRoute(webServer), 'fdep-api-request: execute call route');
       }
     }
 
@@ -422,6 +699,7 @@ module.exports = {
         'Call the FDEP API as documented by the fdep-api-request skill. ' +
         'Set mode="docs" with an empty inbound to fetch the parameter schema for an api_id; ' +
         'set mode="execute" with the filled inbound object (using exactly the field names returned by docs, excluding `desc`) to run the call. ' +
+        'Execute is authorized by the gateway: this tool attaches the apiKey itself (from the local credentials file), so never put an apiKey in `inbound`. ' +
         'The skill remains the source of truth for the workflow; this tool only encodes the deterministic POST shape so the model does not have to repeat it by hand.',
       // `parameters` is a RAW JSON Schema object, which the registry projects
       // verbatim into the model-facing schema. This is the documented
@@ -532,45 +810,21 @@ module.exports = {
           return { api_id: apiId, mode, error: err.message };
         }
 
-        const body = {
-          api: apiId,
-          do: mode === 'execute',
-          inbound,
-        };
-
-        let response;
-        try {
-          response = await fetch(FDEP_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-            signal: exec && exec.signal ? exec.signal : undefined,
-          });
-        } catch (err) {
-          return {
+        // One place builds the body: docs stays anonymous, execute carries the
+        // masked apiKey (see callFdep). A missing credential is an error result,
+        // never a silent unauthenticated execute.
+        const result = await callFdep(apiId, mode === 'execute', inbound, exec && exec.signal ? exec.signal : undefined);
+        if (!result.ok) {
+          const out = {
             api_id: apiId,
             mode,
-            error: 'network error: ' + (err && err.message ? err.message : String(err)),
+            error: result.error,
           };
+          if (result.status) out.upstream_status = result.status;
+          if (result.parsed) out.upstream_body = result.parsed;
+          return out;
         }
-
-        let parsed;
-        const text = await response.text();
-        try {
-          parsed = JSON.parse(text);
-        } catch (_) {
-          parsed = { _raw: text };
-        }
-
-        if (!response.ok) {
-          return {
-            api_id: apiId,
-            mode,
-            error: 'upstream HTTP ' + response.status,
-            upstream_status: response.status,
-            upstream_body: parsed,
-          };
-        }
+        const parsed = result.parsed;
 
         if (mode === 'docs') {
           const docs = parsed && parsed.data && parsed.data.docs;
@@ -600,5 +854,15 @@ module.exports = {
         return true;
       },
     });
+  },
+  /** Offline test surface: the credential helpers are pure and worth pinning. */
+  __test: {
+    CALL_ROUTE,
+    API_KEY_REFS,
+    credentialsFilePath,
+    readCredentialRef,
+    maskApiKey,
+    maskedApiKey,
+    callFdep,
   },
 };

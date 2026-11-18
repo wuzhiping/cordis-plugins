@@ -22,6 +22,55 @@ The tool posts to `https://abc.feg.com.tw/oauth2/fdep` with `Content-Type: appli
 - `execute` mode returns `{api_id, trace_id, data, inbound_sent}`.
 - Failures return `{api_id, mode, error, upstream_status?, upstream_body?}` and never throw.
 
+#### `apiKey`: execute is authorized, docs is not
+
+The gateway now authorizes `do: true` (execute) with the `apiKey` field in the POST body, so
+execute and docs are **not** the same request shape any more:
+
+| Mode | `do` | `apiKey` in the body | Why |
+|---|---|---|---|
+| `docs` | `false` | **never** | The gateway answers docs anonymously; sending a key makes it run its authorization step for a request that does not need one. |
+| `execute` | `true` | **always** | The key is the caller's identity. There is no silent unauthenticated fallback — a missing key fails the call. |
+
+The value is MASK.md's *display* formula, which is also the shape the gateway accepts:
+
+```
+apiKey = "sk-" + base64(refs.<NAME> + "@" + new Date().toISOString())     // 71 chars
+```
+
+It is built on the host from `$DSH_HOME/.credentials.yaml` (`refs.AIFE_API_KEY` →
+`refs.FEG_API_KEY` → `refs.DEEPSEEK_API_KEY`, first hit wins; `DSH_CREDENTIALS_PATH`
+overrides the path). The same reader/masker is duplicated in this bundle on purpose, the way the
+sibling bundles do it: they are published separately, so a shared module would let one of them
+break the other.
+
+Three rules the code (and the tests) hold to:
+
+1. **The key never reaches the browser.** The panel's **執行** POSTs to
+   `/plugins/fdep-api-request/call` and the host makes the call. That route is execute-only —
+   `do: false` is refused — so "docs carries no key" is true by construction. The reply reports
+   `keyRef` (where the key came from) and never the value; the route never echoes it back.
+2. **The raw key never leaves the credentials file.** Only the masked form is put on the wire, and
+   it is sent to `abc.feg.com.tw` and nowhere else (MASK.md: the masked value *is* the key in
+   transit).
+3. **No credential, no call.** A missing or unreadable credentials file, or one with none of the
+   searched refs, returns an error result whose text starts with `execute 需要 apiKey` — the
+   request is not dispatched.
+
+> **Measured, 2026-11-18 (this matters — MASK.md's "API contract" section says otherwise).**
+> The 67-character variant (`base64(key.slice(3) + "@" + ISO)`, the `sk-` dropped from the inner
+> string) is **rejected** by `/oauth2/fdep`: `500 invalid key...`. So is the raw `sk-…` value and a
+> mask of an unknown key. The 71-character variant above passes the shape check and then enters the
+> gateway's authorization step. Separately, at the time of this measurement, that step itself was
+> stalling: a request carrying a valid-format mask of the real key — even a `do: false` one —
+> returned `504` from openresty after ~60 s, while the same request without `apiKey` answered
+> normally. That is a server-side condition, not something this bundle can work around; the error
+> text says `已帶 apiKey from …` so it is obvious which side is at fault.
+
+The timeout budget is deliberately ordered: the route's own abort fires at 25 s, inside the
+registry's 30 s tool timeout, so a stalled gateway produces this bundle's error message rather than
+a generic timeout.
+
 ### Client side
 
 A sidebar entry labelled **MCP網關**, marked with a green hexagon glyph, that opens a panel
@@ -37,7 +86,9 @@ fallback prompt:
    the **type inferred from its example value** plus that example. Before the first fetch the card
    carries an empty-state hint; an API with no parameters says so instead of rendering an empty box.
 3. **執行** (Run) — the primary action, plus **複製提示** (Copy prompt) and **開新工作階段**
-   (New session). A response gets its own flush card with the `trace_id` and a copy button.
+   (New session). It runs the call **through the host** (`POST /plugins/fdep-api-request/call`), so
+   the host attaches the `apiKey`; see *`apiKey`: execute is authorized, docs is not*. A response
+   gets its own flush card with the `trace_id` and a copy button.
    Both fallbacks need an **injection set**, not necessarily this api's docs: they are enabled once
    取得文件 succeeds *or* the collected list has an entry (see below). **執行** still needs this api's
    own docs, because it is the thing that calls it. **開新工作階段** opens a blank session (the same action as the sidebar's 新工作階段) whose
@@ -258,12 +309,18 @@ a filled core — that paints with `currentColor`; the stylesheet points that at
 `--dsw-alias-state-success-primary`, so the glyph is green in both themes (a deep green on light,
 a bright green on dark) without the component knowing a colour exists.
 
-The panel tries `fetch()` directly from the browser first. Because FDEP is an internal-looking
-endpoint, browser CORS will likely block the call. When that happens the status strip explains the
-fallback: click **開新工作階段** (it copies the api brief — api id + docs + inbound — and opens a
-blank session) or **複製提示** to grab the same text, then paste it into a session so the
-host-side `fdep_call` tool does the actual HTTP work (no CORS in the Node host). Both buttons are
-disabled until the docs are loaded, because that brief is the docs.
+**Docs** is fetched straight from the browser (that request is anonymous, and the endpoint answers
+`Access-Control-Allow-Origin: *`, so it succeeds where a blocked CORS preflight would not). If that
+request is blocked anyway, the status strip explains the fallback: click **開新工作階段** (it copies
+the api brief — api id + docs + inbound — and opens a blank session) or **複製提示** to grab the same
+text, then paste it into a session so the host-side `fdep_call` tool does the actual HTTP work.
+Both buttons are disabled until the docs are loaded, because that brief is the docs.
+
+**Execute** never runs from the page: it POSTs to the host's
+`/plugins/fdep-api-request/call`, because the request has to carry the `apiKey` and the key must not
+travel to the browser (see *`apiKey`: execute is authorized, docs is not*). A host half that predates
+this route answers 404/405 and the panel says so — "宿主端外掛是較舊的版本（請重啟 dsh web）" — rather
+than falling back to an unauthenticated call.
 
 ### Previewing the panel without restarting
 
@@ -335,12 +392,19 @@ Six suites, each a separate process:
 
 | Suite | What it proves | Needs the DSH tree |
 |---|---|---|
-| `host-integration.test.js` | Mounts the **real** `@deepseek-ai/cordis` Context, the real `dsh-system-prompt`, and the real `dsh-tools` registry, then drives `fdep_call` through the live execute pipeline — and arms the docs route to assert the **real assembler** carries them for the session created after the arm (and not for one that predates it). Only `fetch` is stubbed. | yes (exit 2 = skipped) |
-| `host-http.test.js` | Mounts the **real** `dsh-host-webserver` on a loopback port and POSTs the arm route over real HTTP — proving the registered exact route wins over the `/plugins` fallback (which is what makes the client's POST work in the GUI), that a non-POST is refused, and that disarming works. Set `DSH_TEST_PORT` if 41337 is taken (a busy port = skip, not fail). | yes (exit 2 = skipped) |
+| `host-integration.test.js` | Mounts the **real** `@deepseek-ai/cordis` Context, the real `dsh-system-prompt`, and the real `dsh-tools` registry, then drives `fdep_call` through the live execute pipeline — and arms the docs route to assert the **real assembler** carries them for the session created after the arm (and not for one that predates it). Only `fetch` is stubbed. It also pins the apiKey contract: docs carries none, execute carries the 71-char mask, the raw key appears in neither the request nor the result, and a missing credential fails closed. Credentials come from a synthetic temp file via `DSH_CREDENTIALS_PATH`. | yes (exit 2 = skipped) |
+| `host-http.test.js` | Mounts the **real** `dsh-host-webserver` on a loopback port and POSTs the arm route over real HTTP — proving the registered exact route wins over the `/plugins` fallback (which is what makes the client's POST work in the GUI), that a non-POST is refused, and that disarming works. The second half drives the **execute route** the same way: it forwards the call with a key, refuses `do: false`, never echoes the key, and fails closed without a credential. Set `DSH_TEST_PORT` if 41337 is taken (a busy port = skip, not fail). | yes (exit 2 = skipped) |
 | `host-shape.test.js` | Pins the host-plugin shape contract: a direct `{name, inject, apply}` mounts, the factory form fails **silently**, and an undeclared service access throws `... without inject`. | yes (exit 2 = skipped) |
-| `host-localhost.test.js` | Dependency-free unit checks against a mocked ctx: plugin shape, schema, argument parsing, inbound normalisation, and the arm/bind/expire rules of the runtime context. | no |
-| `client-contract.test.js` | The static-bundle wrapper, the `require("react")` dependency, the `slots.inject`/`slots.register` contract, a real render of the panel with its buttons clicked (including the api-id history, the collected api set with add/remove/清空, "the arm must reach the host before the session exists", and the degrade-to-clipboard path), and the presentation contract (every CSS variable is a real token, no hard-coded light/dark fork). | no |
+| `host-localhost.test.js` | Dependency-free unit checks against a mocked ctx: plugin shape, schema, argument parsing, inbound normalisation, the arm/bind/expire rules of the runtime context, and the apiKey helpers (MASK.md's display formula against a pinned stamp, the refs order, and the 67-char variant being *not* the one used). | no |
+| `client-contract.test.js` | The static-bundle wrapper, the `require("react")` dependency, the `slots.inject`/`slots.register` contract, a real render of the panel with its buttons clicked (including the api-id history, the collected api set with add/remove/清空, "the arm must reach the host before the session exists", execute going to the host route with no key in the page request, both execute failure modes, and the degrade-to-clipboard path), and the presentation contract (every CSS variable is a real token, no hard-coded light/dark fork). | no |
 | `preview.js` | Regenerates `preview.html` and validates its own markup before writing it. | no |
+
+> **Both real-package suites mount a tool executor.** Since `dsh-tools` 0.2.x, `execute()` and
+> `systemPrompt.assemble()` select a *tool executor* from the mounting scope and throw
+> `ToolExecutorUnavailableError` when none is registered; the batch API also changed to
+> `{calls: [{id, name, arguments}]}` → `{results: [{callId, result}]}`. The tests mount
+> `@deepseek-ai/dsh-tool-executor-native` the way the harness does. If a future DSH release moves
+> that seam again, this is the first place the suite will say so.
 
 A companion design guide for this kind of work lives at [`../../FDEP-API.md`](../../FDEP-API.md).
 

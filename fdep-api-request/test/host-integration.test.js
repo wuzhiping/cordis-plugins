@@ -14,14 +14,20 @@
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const fs = require('node:fs');
+const os = require('node:os');
 
 // ---- resolve the real DSH packages ----------------------------------------
 const DSH_ROOT = 'D:/Refine/Books/ntop/AI/node/global/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai';
 const CORDIS = path.join(DSH_ROOT, 'cordis');
 const DSH_TOOLS = path.join(DSH_ROOT, 'dsh-tools');
 const DSH_SYSTEM_PROMPT = path.join(DSH_ROOT, 'dsh-system-prompt');
+// Since dsh-tools 0.2.x, `execute()` and `assemble()` select a *tool executor*
+// from the mounting scope and throw `ToolExecutorUnavailableError` when none is
+// registered. The harness composes one (native or PTC); this test mounts the
+// native one so the real pipeline can run.
+const DSH_TOOL_EXECUTOR = path.join(DSH_ROOT, 'dsh-tool-executor-native');
 
-for (const p of [CORDIS, DSH_TOOLS, DSH_SYSTEM_PROMPT]) {
+for (const p of [CORDIS, DSH_TOOLS, DSH_SYSTEM_PROMPT, DSH_TOOL_EXECUTOR]) {
   if (!fs.existsSync(p)) {
     console.error('SKIP: real DSH packages not found at ' + p);
     console.error('      this test needs the installed @deepseek-ai/dsh tree.');
@@ -30,10 +36,26 @@ for (const p of [CORDIS, DSH_TOOLS, DSH_SYSTEM_PROMPT]) {
 }
 
 const { Context } = require(CORDIS);
+const { pathToFileURL } = require('node:url');
 const toolsMod = require(DSH_TOOLS);
 const systemPromptMod = require(DSH_SYSTEM_PROMPT);
 
 const fdepPlugin = require('../lib/index.js');
+
+// ---- credentials -----------------------------------------------------------
+// Execute carries the gateway's apiKey, read from the credentials file. Point
+// the plugin at a synthetic file so the test is hermetic and never touches the
+// real key: MASK.md's own example token is used.
+const CREDS_PATH = path.join(os.tmpdir(), 'fdep-test-credentials-' + process.pid + '.yaml');
+fs.writeFileSync(CREDS_PATH, 'version: 1\nrefs:\n  AIFE_API_KEY: sk-ExampleKeyReplaceMe001\n', 'utf8');
+process.env.DSH_CREDENTIALS_PATH = CREDS_PATH;
+const SYNTHETIC_KEY = 'sk-ExampleKeyReplaceMe001';
+const { maskApiKey } = fdepPlugin.__test;
+
+/** The masked key for `stamp`, used to compare without pinning the clock. */
+function maskedFor(stamp) {
+  return maskApiKey(SYNTHETIC_KEY, new Date(stamp));
+}
 
 // ---- stub fetch ------------------------------------------------------------
 let fetchCalls = [];
@@ -91,12 +113,22 @@ function check(label, fn) {
 }
 
 async function execute(tools, args, callId) {
-  return tools.execute({
-    callId: callId || ('call-' + Math.random().toString(36).slice(2)),
-    name: 'fdep_call',
-    arguments: args,
+  // dsh-tools 0.2.x takes a *batch*: `{calls: [{id, name, arguments}]}` and
+  // answers `{results: [{callId, result}]}`. Unwrap the single call so the
+  // assertions below keep reading one result at a time.
+  const out = await tools.execute({
+    calls: [{
+      id: callId || ('call-' + Math.random().toString(36).slice(2)),
+      name: 'fdep_call',
+      arguments: JSON.stringify(args),
+    }],
     signal: new AbortController().signal,
   });
+  const first = out && Array.isArray(out.results) ? out.results[0] : null;
+  if (!first || !first.result) {
+    throw new Error('no tool result in batch: ' + JSON.stringify(out));
+  }
+  return first.result;
 }
 
 // ---- main ------------------------------------------------------------------
@@ -105,6 +137,9 @@ async function main() {
   const ctx = new Context();
   await ctx.plugin(systemPromptMod.default, {});
   await ctx.plugin(toolsMod.default, {});
+  // The executor is a separate ESM package; mount it as the deployment default.
+  const executorMod = await import(pathToFileURL(path.join(DSH_TOOL_EXECUTOR, 'lib', 'index.js')).href);
+  await ctx.plugin({ name: executorMod.name, inject: executorMod.inject, apply: executorMod.apply }, {});
   const tools = ctx.get('tools');
   check('ctx.tools is live after mounting real dsh-tools', () => {
     assert.ok(tools, 'ctx.get("tools") returned undefined');
@@ -158,6 +193,14 @@ async function main() {
     assert.equal(sent.do, false);
     assert.deepEqual(sent.inbound, {});
   });
+  check('docs mode carries NO apiKey (the gateway answers it anonymously)', () => {
+    // The user-facing rule: authorization applies to execute only. Sending the
+    // credential with a docs request would run the gateway's auth step for a
+    // request that does not need it (measured: it then stalls).
+    const sent = JSON.parse(fetchCalls[0].init.body);
+    assert.equal(sent.apiKey, undefined, 'docs request carried an apiKey');
+    assert.deepEqual(Object.keys(sent).sort(), ['api', 'do', 'inbound']);
+  });
   check('docs content is a rendered text block', () => {
     assert.equal(docsRes.content.length, 1);
     assert.equal(docsRes.content[0].type, 'text');
@@ -182,6 +225,39 @@ async function main() {
     const sent = JSON.parse(fetchCalls[0].init.body);
     assert.equal(sent.do, true);
     assert.deepEqual(sent.inbound, { name: 'aaa' });
+  });
+  check('execute carries the masked apiKey, and it is the ONLY added field', () => {
+    const sent = JSON.parse(fetchCalls[0].init.body);
+    assert.deepEqual(Object.keys(sent).sort(), ['api', 'apiKey', 'do', 'inbound']);
+    assert.equal(typeof sent.apiKey, 'string');
+    // MASK.md's display formula: "sk-" + base64(key + "@" + ISO), 71 chars for a
+    // 25-char key. The 67-char variant is rejected by this endpoint (measured),
+    // so the shape is pinned here rather than left to drift.
+    assert.equal(sent.apiKey.length, 71);
+    const decoded = Buffer.from(sent.apiKey.slice(3), 'base64').toString('utf8');
+    assert.ok(decoded.startsWith(SYNTHETIC_KEY), 'inner value must keep the sk- prefix');
+    assert.match(decoded, /@\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    const stamp = decoded.slice(SYNTHETIC_KEY.length);
+    assert.equal(sent.apiKey, maskApiKey(SYNTHETIC_KEY, new Date(stamp.slice(1))));
+  });
+  check('the raw key never appears in the request or in the result', () => {
+    const sent = JSON.parse(fetchCalls[0].init.body);
+    assert.equal(JSON.stringify(sent).indexOf(SYNTHETIC_KEY + '@'), -1, 'raw key leaked into the wire body');
+    assert.equal(JSON.stringify(execRes.value).indexOf(SYNTHETIC_KEY), -1, 'raw key leaked into the result');
+    assert.equal(JSON.stringify(execRes.content).indexOf(SYNTHETIC_KEY), -1, 'raw key leaked into the rendered content');
+  });
+
+  console.log('\n=== 4b. execute fails closed when no credential is available ===');
+  // A missing key must never produce a silent unauthenticated execute.
+  process.env.DSH_CREDENTIALS_PATH = path.join(os.tmpdir(), 'fdep-missing-' + process.pid + '.yaml');
+  fetchCalls = [];
+  const noKey = await execute(tools, { api_id: 'test.demo', mode: 'execute', inbound: { name: 'aaa' } }, 'call-nokey');
+  process.env.DSH_CREDENTIALS_PATH = CREDS_PATH;
+  check('a missing credential becomes an error result, not a call', () => {
+    assert.equal(noKey.isError, false, 'it must be a result, not a throw: ' + JSON.stringify(noKey.content));
+    assert.equal(noKey.value.api_id, 'test.demo');
+    assert.match(String(noKey.value.error), /apiKey/);
+    assert.equal(fetchCalls.length, 0, 'an execute without a key still reached the gateway');
   });
 
   console.log('\n=== 5. our execute() validates before dispatch ===');

@@ -352,6 +352,11 @@ function buildPrompt(entries) {
 // the fields. Best-effort: when it fails, the clipboard brief is the fallback.
 var CONTEXT_ROUTE = '/plugins/fdep-api-request/context';
 
+// Same-origin route that runs an api through the host. Execute needs the
+// gateway's apiKey, which lives in the host's credentials file — so the panel
+// asks the host to make that call instead of holding the credential itself.
+var CALL_ROUTE = '/plugins/fdep-api-request/call';
+
 /**
  * Arm one whole set of apis at once. The host renders the same sections the
  * clipboard brief carries, so both channels describe an identical set.
@@ -381,6 +386,10 @@ async function tryBrowserCall(apiId, mode, inbound) {
   // Direct browser fetch. CORS likely blocks this against FDEP; the caller
   // treats any failure as "fall back to the prompt path" rather than
   // hard-failing the form.
+  //
+  // Docs only. Execute carries the gateway's apiKey, and that credential stays
+  // in the host: running it from here would either leak the key into the page or
+  // send an unauthorized call. `tryHostCall` is the execute path.
   const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = ctrl
     ? setTimeout(function () { try { ctrl.abort(); } catch (_) {} }, 15000)
@@ -407,6 +416,58 @@ async function tryBrowserCall(apiId, mode, inbound) {
     return { ok: false, error: (err && err.message) || String(err), body: null, cors: true };
   } finally {
     if (timer) clearTimeout(timer);
+  }
+}
+
+/**
+ * Run an api through the host, which attaches the apiKey for `do: true`.
+ *
+ * Execute cannot be done from here any more: the key lives in the host's
+ * credentials file and must not travel to the page. The route answers
+ * `{ ok, status, body, error, keyRef }`; `keyRef` names *where* the key came
+ * from and never carries its value.
+ *
+ * @param apiId - the api identifier.
+ * @param inbound - the typed inbound object.
+ * @returns `{ ok, body, error, keyRef, blocked }`.
+ */
+async function tryHostCall(apiId, inbound) {
+  try {
+    const res = await fetch(CALL_ROUTE, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ api: apiId, do: true, inbound: inbound || {} }),
+    });
+    if (res.status === 404 || res.status === 405) {
+      // The host half is older than this client (no execute route yet); say so
+      // instead of falling back to an unauthenticated call.
+      return {
+        ok: false,
+        blocked: true,
+        error: '宿主端沒有 execute 路由（HTTP ' + res.status + '）',
+        keyRef: null,
+        body: null,
+      };
+    }
+    const payload = await res.json().catch(function () { return null; });
+    if (!payload || typeof payload !== 'object') {
+      return { ok: false, blocked: false, error: '宿主端回應不是 JSON', keyRef: null, body: null };
+    }
+    return {
+      ok: payload.ok === true,
+      blocked: false,
+      error: payload.error || null,
+      keyRef: payload.keyRef || null,
+      body: payload.body,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      blocked: true,
+      error: (err && err.message) || String(err),
+      keyRef: null,
+      body: null,
+    };
   }
 }
 
@@ -1050,22 +1111,26 @@ function makeMainPanel(e, React, services) {
       }
       const inbound = assembled.inbound;
       setBusy('execute');
-      setStatus({ kind: 'busy', title: '執行 ' + id, detail: 'POST（do: true）' });
-      const r = await tryBrowserCall(id, 'execute', inbound);
+      setStatus({ kind: 'busy', title: '執行 ' + id, detail: 'POST（do: true，由宿主帶 apiKey）' });
+      const r = await tryHostCall(id, inbound);
       setBusy(null);
       if (!r.ok) {
         setResult(r.body);
-        setStatus(
-          r.cors
-            ? {
-                kind: 'warn',
-                title: '瀏覽器請求被擋下',
-                detail:
-                  '看起來是網路或 CORS 被拒（' + r.error + '）。\n' +
-                  '請改用宿主端 fdep_call 工具 —— 複製下面的提示帶到工作階段執行。',
-              }
-            : { kind: 'err', title: '執行失敗', detail: r.error },
-        );
+        if (r.blocked) {
+          setStatus({
+            kind: 'warn',
+            title: '宿主端沒有 execute 路由',
+            detail:
+              '執行需要宿主帶上 apiKey，但這個路由沒有回應（' + r.error + '）。\n' +
+              '宿主端外掛是較舊的版本 —— 請重啟 dsh web，或改用「複製提示」帶到工作階段執行。',
+          });
+          return;
+        }
+        setStatus({
+          kind: 'err',
+          title: '執行失敗',
+          detail: (r.error || '未知錯誤') + (r.keyRef ? '\n（apiKey 來源：refs.' + r.keyRef + '）' : ''),
+        });
         return;
       }
       setResult(r.body);

@@ -9,8 +9,18 @@
 // Run from the bundle root: `node test/host-localhost.test.js`
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const moduleAlias = require('node:module');
+const os = require('node:os');
 const path = require('node:path');
+
+// Execute carries the gateway's apiKey, read from the credentials file. Point
+// the plugin at a synthetic file (MASK.md's placeholder token) so this test is
+// hermetic and never sees a real key.
+const CREDS = path.join(os.tmpdir(), 'fdep-local-credentials-' + process.pid + '.yaml');
+fs.writeFileSync(CREDS, 'version: 1\nrefs:\n  AIFE_API_KEY: sk-ExampleKeyReplaceMe001\n', 'utf8');
+process.env.DSH_CREDENTIALS_PATH = CREDS;
+const SYNTHETIC_KEY = 'sk-ExampleKeyReplaceMe001';
 
 // Stub `fetch` so we never hit the real FDEP endpoint during the test.
 const calls = [];
@@ -107,6 +117,9 @@ async function main() {
   assert.equal(sentBody.api, 'test.demo');
   assert.equal(sentBody.do, false);
   assert.deepEqual(sentBody.inbound, {});
+  // Docs is anonymous by contract — no key, ever.
+  assert.equal(sentBody.apiKey, undefined, 'docs request carried an apiKey');
+  assert.deepEqual(Object.keys(sentBody).sort(), ['api', 'do', 'inbound']);
 
   assert.equal(docsRes.api_id, 'test.demo');
   assert.equal(docsRes.desc, 'a tiny example');
@@ -122,6 +135,12 @@ async function main() {
   const execBody = JSON.parse(calls[0].init.body);
   assert.equal(execBody.do, true);
   assert.deepEqual(execBody.inbound, { name: 'aaa' });
+  // Execute carries the masked apiKey and nothing else.
+  assert.equal(typeof execBody.apiKey, 'string');
+  const decoded = Buffer.from(execBody.apiKey.slice(3), 'base64').toString('utf8');
+  assert.equal(decoded.slice(0, SYNTHETIC_KEY.length), SYNTHETIC_KEY,
+    'the inner value keeps the sk- prefix (the endpoint rejects the 67-char variant)');
+  assert.match(decoded.slice(SYNTHETIC_KEY.length), /^@\d{4}-\d{2}-\d{2}T/);
 
   assert.equal(execRes.api_id, 'test.demo');
   assert.equal(execRes.trace_id, 'fake-trace-id');
@@ -327,6 +346,37 @@ async function main() {
   console.log('  • a session-less assembly does not consume the arm');
   console.log('  • disarm + 30-minute expiry for unclaimed arms');
   console.log('  • {{ }} neutralised before the text becomes prompt context');
+
+  console.log('\nOK — apiKey helpers (MASK.md display formula, execute only).');
+  const helpers = plugin.__test;
+  // `mask()` from MASK.md: "sk-" + base64(key + "@" + ISO). Pinned against a
+  // deterministic stamp so a drift in either half fails here.
+  const stamp = new Date('2026-01-01T00:00:00.000Z');
+  const masked = helpers.maskApiKey(SYNTHETIC_KEY, stamp);
+  assert.equal(masked, 'sk-' + Buffer.from(SYNTHETIC_KEY + '@2026-01-01T00:00:00.000Z', 'utf8').toString('base64'));
+  assert.equal(masked.length, 71);
+  // The 67-character variant from MASK.md's "API contract" section is NOT used:
+  // the live endpoint answers `500 invalid key...` for it (measured).
+  const sixtySeven = 'sk-' + Buffer.from(SYNTHETIC_KEY.slice(3) + '@2026-01-01T00:00:00.000Z', 'utf8').toString('base64');
+  assert.equal(sixtySeven.length, 67);
+  assert.notEqual(masked, sixtySeven);
+
+  // refs parsing: the first configured name wins, and a later top-level block
+  // must not be mistaken for it.
+  assert.equal(helpers.readCredentialRef('refs:\n  AIFE_API_KEY: sk-a\n', 'AIFE_API_KEY'), 'sk-a');
+  assert.equal(helpers.readCredentialRef('refs:\n  AIFE_API_KEY: "sk-quoted"\n', 'AIFE_API_KEY'), 'sk-quoted');
+  assert.equal(helpers.readCredentialRef('refs:\n  OTHERS: x\nrecords:\n  AIFE_API_KEY: sk-late\n', 'AIFE_API_KEY'), null,
+    'a same-named key in a later block must not be picked up');
+  const fallback = helpers.maskedApiKey({ text: 'refs:\n  FEG_API_KEY: sk-fallback\n', now: stamp });
+  assert.equal(fallback.ok, true);
+  assert.equal(fallback.ref, 'FEG_API_KEY');
+  const none = helpers.maskedApiKey({ text: 'refs:\n  SOMETHING_ELSE: sk-x\n', now: stamp });
+  assert.equal(none.ok, false);
+  assert.match(none.error, /apiKey/i);
+
+  console.log('  • apiKey = "sk-" + base64(key + "@" + ISO) — 71 chars, the shape the gateway accepts');
+  console.log('  • refs order: ' + helpers.API_KEY_REFS.join(' → '));
+  console.log('  • a missing credential is an error, never an unauthenticated execute');
 
   console.log('\nOK — host plugin passes ' + calls.length + ' additional dummy checks; all assertions held.');
   console.log('  • plugin shape: { name, inject: [tools], apply }');

@@ -273,12 +273,19 @@ let fetchBehaviour = 'ok';
 // session creation happened (`seq` also gets 'start' from the fake uiWorkspace).
 let armCalls = [];
 let armBehaviour = 'ok';
+// Execute goes through the host route (the key never reaches the page), so the
+// stub models that route and its failure modes instead of the raw endpoint.
+let callCalls = [];
+let callBehaviour = 'ok';
 // The host half replies with `hooked` (is a systemPrompt provider registered?).
 // 'stale' models the older host build that predates the field.
 let armReplyShape = 'hooked';
 let seq = [];
 globalThis.fetch = async function (url, init) {
-  fetchCalls.push({ url, init });
+  // `fetchCalls` means "the page called the gateway itself". Host routes are
+  // recorded separately, so a regression that puts execute back on the page's
+  // own fetch is visible instead of being hidden by the route bookkeeping.
+  if (String(url).indexOf('/plugins/fdep-api-request/') === -1) fetchCalls.push({ url, init });
   if (String(url).indexOf('/plugins/fdep-api-request/context') !== -1) {
     let sent = {};
     try { sent = JSON.parse(init.body); } catch (_) {}
@@ -288,6 +295,41 @@ globalThis.fetch = async function (url, init) {
     const reply = { ok: true, armed: true, api_ids: (sent.apis || []).map((a) => a.apiId), chars: 100 };
     if (armReplyShape === 'hooked') reply.hooked = true;
     if (armReplyShape === 'unhooked') reply.hooked = false;
+    return {
+      ok: true, status: 200,
+      async json() { return reply; },
+      async text() { return JSON.stringify(reply); },
+    };
+  }
+  if (String(url).indexOf('/plugins/fdep-api-request/call') !== -1) {
+    // The execute route: the host attaches the apiKey, the panel only sees
+    // { ok, status, body, error, keyRef }. `callBehaviour` models its modes.
+    let sent = {};
+    try { sent = JSON.parse(init.body); } catch (_) {}
+    callCalls.push({ url, body: sent });
+    if (callBehaviour === 'missing-route') {
+      return { ok: false, status: 404, async json() { return null; }, async text() { return ''; } };
+    }
+    if (callBehaviour === 'no-key') {
+      const reply = { ok: false, status: 500, body: null, error: '憑證檔裡找不到可用的 apiKey（試過 AIFE_API_KEY）——檔案：/tmp/x', keyRef: null };
+      return {
+        ok: false, status: 500,
+        async json() { return reply; },
+        async text() { return JSON.stringify(reply); },
+      };
+    }
+    if (callBehaviour === 'upstream-504') {
+      const reply = { ok: false, status: 504, body: null, error: 'upstream HTTP 504（已帶 apiKey from AIFE_API_KEY）', keyRef: 'AIFE_API_KEY' };
+      return {
+        ok: false, status: 502,
+        async json() { return reply; },
+        async text() { return JSON.stringify(reply); },
+      };
+    }
+    const reply = {
+      ok: true, status: 200, keyRef: 'AIFE_API_KEY',
+      body: { data: { echoed: sent.inbound }, trace_id: 't-exec' },
+    };
     return {
       ok: true, status: 200,
       async json() { return reply; },
@@ -628,18 +670,19 @@ async function main() {
   listBox.props.onChange({ target: { value: '1402, 4904\n2330' } });
   tree = render();
   fetchCalls = [];
+  callCalls = [];
   await findButton(tree, '執行').props.onClick();
   tree = render();
   check('run sends the array field AS AN ARRAY', () => {
-    assert.equal(fetchCalls.length, 1);
-    const sent = JSON.parse(fetchCalls[0].init.body);
+    assert.equal(callCalls.length, 1);
+    const sent = callCalls[0].body;
     assert.equal(sent.do, true);
     assert.deepEqual(sent.inbound.watchlist, ['1402', '4904', '2330'],
       'watchlist must arrive as an array, got ' + JSON.stringify(sent.inbound.watchlist));
     assert.ok(Array.isArray(sent.inbound.watchlist));
   });
   check('a numeric field is sent as a number, not a string', () => {
-    const sent = JSON.parse(fetchCalls[0].init.body);
+    const sent = callCalls[0].body;
     assert.strictEqual(sent.inbound.limit, 25);
     assert.equal(typeof sent.inbound.limit, 'number');
   });
@@ -652,15 +695,22 @@ async function main() {
     assert.match(promptText, /"watchlist": \[/);
     assert.match(promptText, /"limit": 25/);
   });
-  check('run sent do:true with the fully typed inbound', () => {
-    assert.equal(fetchCalls.length, 1);
-    const sent = JSON.parse(fetchCalls[0].init.body);
+  check('run sent do:true with the fully typed inbound, through the host route', () => {
+    assert.equal(callCalls.length, 1);
+    assert.equal(callCalls[0].url, '/plugins/fdep-api-request/call');
+    const sent = callCalls[0].body;
     assert.equal(sent.do, true);
     assert.deepEqual(sent.inbound, {
       name: 'aaa',
       watchlist: ['1402', '4904', '2330'],
       limit: 25,
     });
+  });
+  check('the page never sends an apiKey and never calls the endpoint for execute', () => {
+    // The credential lives in the host. A page-side execute would either leak
+    // the key into the browser or run unauthenticated.
+    assert.equal(fetchCalls.length, 0, 'execute still hit the gateway directly');
+    assert.equal(callCalls[0].body.apiKey, undefined, 'apiKey leaked into the browser request');
   });
   check('result block rendered', () => {
     let sawResult = false;
@@ -669,6 +719,34 @@ async function main() {
     });
     assert.ok(sawResult, 'result pre block missing');
   });
+
+  // --- execute failure modes: both must be legible, neither may fall back to
+  // --- an unauthenticated page-side call.
+  callBehaviour = 'no-key';
+  callCalls = [];
+  await findButton(tree, '執行').props.onClick();
+  tree = render();
+  check('a missing host credential is reported with where it looked', () => {
+    const strip = findStatus(tree, 'fdep__status--err');
+    assert.ok(strip, 'no error status strip rendered');
+    assert.match(textOf(strip), /執行失敗/);
+    assert.match(textOf(strip), /apiKey/);
+    assert.equal(fetchCalls.length, 0, 'the panel fell back to its own unauthenticated call');
+  });
+
+  callBehaviour = 'missing-route';
+  callCalls = [];
+  tree = render();
+  await findButton(tree, '執行').props.onClick();
+  tree = render();
+  check('an older host half is named, not silently bypassed', () => {
+    const strip = findStatus(tree, 'fdep__status--warn');
+    assert.ok(strip, 'no warn status strip rendered');
+    assert.match(textOf(strip), /宿主端/);
+    assert.match(textOf(strip), /重啟 dsh web/);
+    assert.equal(fetchCalls.length, 0, 'the panel called the gateway itself after the route refused');
+  });
+  callBehaviour = 'ok';
 
   console.log('\n=== 7. CORS failure keeps the form usable ===');
   // fresh render state
